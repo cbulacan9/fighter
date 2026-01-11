@@ -60,14 +60,14 @@ func _find_horizontal_matches(grid: Grid) -> Array[MatchResult]:
 	var matches: Array[MatchResult] = []
 
 	for row in range(Grid.ROWS):
-		var current_type: TileTypes.Type = -1
+		var current_type: TileTypes.Type = TileTypes.Type.NONE
 		var current_run: Array[Vector2i] = []
 
 		for col in range(Grid.COLS):
 			var tile := grid.get_tile(row, col)
 			if not tile:
 				_record_match_if_valid(matches, current_type, current_run)
-				current_type = -1
+				current_type = TileTypes.Type.NONE
 				current_run = []
 				continue
 
@@ -88,14 +88,14 @@ func _find_vertical_matches(grid: Grid) -> Array[MatchResult]:
 	var matches: Array[MatchResult] = []
 
 	for col in range(Grid.COLS):
-		var current_type: TileTypes.Type = -1
+		var current_type: TileTypes.Type = TileTypes.Type.NONE
 		var current_run: Array[Vector2i] = []
 
 		for row in range(Grid.ROWS):
 			var tile := grid.get_tile(row, col)
 			if not tile:
 				_record_match_if_valid(matches, current_type, current_run)
-				current_type = -1
+				current_type = TileTypes.Type.NONE
 				current_run = []
 				continue
 
@@ -113,7 +113,7 @@ func _find_vertical_matches(grid: Grid) -> Array[MatchResult]:
 
 
 func _record_match_if_valid(matches: Array[MatchResult], tile_type: TileTypes.Type, run: Array[Vector2i]) -> void:
-	if tile_type >= 0 and run.size() >= 3:
+	if tile_type != TileTypes.Type.NONE and run.size() >= 3:
 		var typed_run: Array[Vector2i] = []
 		typed_run.assign(run)
 		matches.append(MatchResult.new(tile_type, typed_run))
@@ -146,10 +146,10 @@ func _merge_matches(horizontal: Array[MatchResult], vertical: Array[MatchResult]
 
 func _merge_overlapping_matches(tile_type: TileTypes.Type, matches: Array) -> Array[MatchResult]:
 	if matches.size() <= 1:
-		var result: Array[MatchResult] = []
+		var single_result: Array[MatchResult] = []
 		for m in matches:
-			result.append(m)
-		return result
+			single_result.append(m)
+		return single_result
 
 	# Use union-find to group connected matches
 	var all_positions: Array[Vector2i] = []
@@ -204,13 +204,13 @@ func _merge_overlapping_matches(tile_type: TileTypes.Type, matches: Array) -> Ar
 
 
 func _has_horizontal_match_in_row(grid: Grid, row: int) -> bool:
-	var current_type: TileTypes.Type = -1
+	var current_type: TileTypes.Type = TileTypes.Type.NONE
 	var run_length := 0
 
 	for col in range(Grid.COLS):
 		var tile := grid.get_tile(row, col)
 		if not tile:
-			current_type = -1
+			current_type = TileTypes.Type.NONE
 			run_length = 0
 			continue
 
@@ -227,13 +227,13 @@ func _has_horizontal_match_in_row(grid: Grid, row: int) -> bool:
 
 
 func _has_vertical_match_in_col(grid: Grid, col: int) -> bool:
-	var current_type: TileTypes.Type = -1
+	var current_type: TileTypes.Type = TileTypes.Type.NONE
 	var run_length := 0
 
 	for row in range(Grid.ROWS):
 		var tile := grid.get_tile(row, col)
 		if not tile:
-			current_type = -1
+			current_type = TileTypes.Type.NONE
 			run_length = 0
 			continue
 
