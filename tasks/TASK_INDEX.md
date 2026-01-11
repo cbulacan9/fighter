@@ -18,9 +18,9 @@ Tasks are organized in phases and should be completed in order. Each task builds
 ## Phase 2: Core Grid & Tiles
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 003 | Tile Entity | 002 | Pending |
-| 004 | Grid System | 003 | Pending |
-| 005 | Board Manager | 004 | Pending |
+| 003 | Tile Entity | 002 | Complete |
+| 004 | Grid System | 003 | Complete |
+| 005 | Board Manager | 004 | Complete |
 
 ## Phase 3: Input & Movement
 | Task | Name | Dependencies | Status |
