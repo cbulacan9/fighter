@@ -1,9 +1,12 @@
-[gd_scene load_steps=6 format=3 uid="uid://board_scene"]
+[gd_scene load_steps=9 format=3 uid="uid://board_scene"]
 
 [ext_resource type="Script" path="res://scripts/managers/board_manager.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/systems/grid.gd" id="2"]
 [ext_resource type="PackedScene" uid="uid://tile_scene" path="res://scenes/board/tile.tscn" id="3"]
 [ext_resource type="Script" path="res://scripts/systems/input_handler.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/systems/match_detector.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/systems/tile_spawner.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/systems/cascade_handler.gd" id="7"]
 
 [node name="Board" type="Node2D"]
 script = ExtResource("1")
@@ -18,3 +21,11 @@ script = ExtResource("2")
 script = ExtResource("4")
 
 [node name="MatchDetector" type="Node" parent="."]
+script = ExtResource("5")
+
+[node name="TileSpawner" type="Node" parent="."]
+script = ExtResource("6")
+tile_scene = ExtResource("3")
+
+[node name="CascadeHandler" type="Node" parent="."]
+script = ExtResource("7")

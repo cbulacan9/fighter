@@ -2,7 +2,7 @@ class_name BoardManager
 extends Node2D
 
 signal state_changed(new_state: BoardState)
-signal matches_resolved(match_results: Array)
+signal matches_resolved(result: CascadeHandler.CascadeResult)
 signal ready_for_input
 signal snap_back_started
 signal snap_back_finished
@@ -25,7 +25,9 @@ var is_player_controlled: bool = true
 
 var _tiles_container: Node2D
 var _input_handler: InputHandler
-var _tile_resources: Array[TileData] = []
+var _match_detector: MatchDetector
+var _tile_spawner: TileSpawner
+var _cascade_handler: CascadeHandler
 var _stun_timer: float = 0.0
 
 # Drag preview state
@@ -39,7 +41,10 @@ func _ready() -> void:
 	grid = $Grid
 	_tiles_container = $Grid/Tiles
 	_input_handler = $InputHandler
-	_setup_input_handler()
+	_match_detector = $MatchDetector
+	_tile_spawner = $TileSpawner
+	_cascade_handler = $CascadeHandler
+	_setup_systems()
 
 
 func _process(delta: float) -> void:
@@ -49,17 +54,24 @@ func _process(delta: float) -> void:
 			set_state(BoardState.IDLE)
 
 
-func _setup_input_handler() -> void:
+func _setup_systems() -> void:
 	_input_handler.setup(grid, global_position)
 	_input_handler.drag_started.connect(_on_drag_started)
 	_input_handler.drag_moved.connect(_on_drag_moved)
 	_input_handler.drag_ended.connect(_on_drag_ended)
 
+	_cascade_handler.setup(grid, _tile_spawner, _match_detector, _tiles_container)
+	_cascade_handler.cascade_complete.connect(_on_cascade_complete)
+
 
 func initialize(fighter: FighterData, is_player: bool) -> void:
 	fighter_data = fighter
 	is_player_controlled = is_player
-	_load_tile_resources()
+
+	# Configure spawner with fighter weights
+	if fighter_data and fighter_data.tile_weights:
+		_tile_spawner.set_weights(fighter_data.tile_weights)
+
 	grid.initialize()
 	generate_initial_board()
 	_input_handler.set_enabled(is_player)
@@ -70,7 +82,8 @@ func generate_initial_board() -> void:
 
 	for row in range(Grid.ROWS):
 		for col in range(Grid.COLS):
-			var tile := _create_random_tile(row, col)
+			var tile := _tile_spawner.spawn_tile()
+			tile.grid_position = Vector2i(row, col)
 			_place_tile(tile, row, col)
 
 	_remove_initial_matches()
@@ -146,8 +159,13 @@ func commit_shift() -> void:
 	_sync_visuals_to_grid()
 	_clear_drag_state()
 
-	# TODO: Trigger match detection in Phase 4
-	set_state(BoardState.IDLE)
+	# Find and process matches
+	set_state(BoardState.RESOLVING)
+	var matches := _match_detector.find_matches(grid)
+	if matches.size() > 0:
+		_cascade_handler.process_matches(matches)
+	else:
+		set_state(BoardState.IDLE)
 
 
 func revert_preview() -> void:
@@ -160,21 +178,7 @@ func check_move_validity() -> bool:
 	if cells_moved == 0:
 		return false
 
-	# Temporarily shift grid to check for matches
-	if _drag_axis == InputHandler.DragAxis.HORIZONTAL:
-		grid.shift_row(_drag_index, cells_moved)
-	else:
-		grid.shift_column(_drag_index, cells_moved)
-
-	var has_match := _check_any_match()
-
-	# Revert the temporary shift
-	if _drag_axis == InputHandler.DragAxis.HORIZONTAL:
-		grid.shift_row(_drag_index, -cells_moved)
-	else:
-		grid.shift_column(_drag_index, -cells_moved)
-
-	return has_match
+	return _match_detector.preview_match(grid, _drag_axis, _drag_index, cells_moved)
 
 
 func animate_snap_back() -> void:
@@ -198,6 +202,11 @@ func animate_snap_back() -> void:
 func _on_snap_back_finished() -> void:
 	_clear_drag_state()
 	snap_back_finished.emit()
+	set_state(BoardState.IDLE)
+
+
+func _on_cascade_complete(result: CascadeHandler.CascadeResult) -> void:
+	matches_resolved.emit(result)
 	set_state(BoardState.IDLE)
 
 
@@ -285,52 +294,6 @@ func _clear_drag_state() -> void:
 	_original_positions.clear()
 
 
-func _check_any_match() -> bool:
-	for row in range(Grid.ROWS):
-		for col in range(Grid.COLS):
-			if _has_match_at(row, col):
-				return true
-	return false
-
-
-func _load_tile_resources() -> void:
-	_tile_resources.clear()
-	_tile_resources.append(preload("res://resources/tiles/sword.tres"))
-	_tile_resources.append(preload("res://resources/tiles/shield.tres"))
-	_tile_resources.append(preload("res://resources/tiles/potion.tres"))
-	_tile_resources.append(preload("res://resources/tiles/lightning.tres"))
-	_tile_resources.append(preload("res://resources/tiles/filler.tres"))
-
-
-func _create_random_tile(row: int, col: int) -> Tile:
-	var tile: Tile = tile_scene.instantiate()
-	var tile_data := _get_weighted_random_tile()
-	tile.setup(tile_data, Vector2i(row, col))
-	return tile
-
-
-func _get_weighted_random_tile() -> TileData:
-	var total_weight := 0.0
-	var weights: Array[float] = []
-
-	for tile_res in _tile_resources:
-		var weight := 1.0
-		if fighter_data and fighter_data.tile_weights.has(tile_res.tile_type):
-			weight = fighter_data.tile_weights[tile_res.tile_type]
-		weights.append(weight)
-		total_weight += weight
-
-	var roll := randf() * total_weight
-	var cumulative := 0.0
-
-	for i in range(_tile_resources.size()):
-		cumulative += weights[i]
-		if roll <= cumulative:
-			return _tile_resources[i]
-
-	return _tile_resources[0]
-
-
 func _place_tile(tile: Tile, row: int, col: int) -> void:
 	grid.set_tile(row, col, tile)
 	_tiles_container.add_child(tile)
@@ -349,48 +312,16 @@ func _remove_initial_matches() -> void:
 	var iteration := 0
 
 	while iteration < max_iterations:
-		var has_match := false
-
-		for row in range(Grid.ROWS):
-			for col in range(Grid.COLS):
-				if _has_match_at(row, col):
-					has_match = true
-					_replace_tile_at(row, col)
-
-		if not has_match:
+		var matches := _match_detector.find_matches(grid)
+		if matches.is_empty():
 			break
+
+		# Replace tiles that are part of matches
+		for match_result in matches:
+			for pos in match_result.positions:
+				_replace_tile_at(pos.x, pos.y)
+
 		iteration += 1
-
-
-func _has_match_at(row: int, col: int) -> bool:
-	var tile := grid.get_tile(row, col)
-	if not tile:
-		return false
-
-	var tile_type := tile.get_type()
-
-	# Check horizontal (3 in a row)
-	var h_count := 1
-	for offset in [1, 2]:
-		var neighbor := grid.get_tile(row, col + offset)
-		if neighbor and neighbor.get_type() == tile_type:
-			h_count += 1
-		else:
-			break
-
-	if h_count >= 3:
-		return true
-
-	# Check vertical (3 in a column)
-	var v_count := 1
-	for offset in [1, 2]:
-		var neighbor := grid.get_tile(row + offset, col)
-		if neighbor and neighbor.get_type() == tile_type:
-			v_count += 1
-		else:
-			break
-
-	return v_count >= 3
 
 
 func _replace_tile_at(row: int, col: int) -> void:
@@ -398,5 +329,6 @@ func _replace_tile_at(row: int, col: int) -> void:
 	if old_tile:
 		old_tile.queue_free()
 
-	var new_tile := _create_random_tile(row, col)
+	var new_tile := _tile_spawner.spawn_tile()
+	new_tile.grid_position = Vector2i(row, col)
 	_place_tile(new_tile, row, col)

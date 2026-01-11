@@ -32,9 +32,9 @@ Tasks are organized in phases and should be completed in order. Each task builds
 ## Phase 4: Match & Cascade
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 009 | Match Detector | 005 | Pending |
-| 010 | Tile Spawner | 003 | Pending |
-| 011 | Cascade Handler | 009, 010 | Pending |
+| 009 | Match Detector | 005 | Complete |
+| 010 | Tile Spawner | 003 | Complete |
+| 011 | Cascade Handler | 009, 010 | Complete |
 
 ## Phase 5: Combat
 | Task | Name | Dependencies | Status |
