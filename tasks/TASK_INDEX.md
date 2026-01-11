@@ -59,8 +59,8 @@ Tasks are organized in phases and should be completed in order. Each task builds
 ## Phase 8: Integration
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 020 | Game Manager | All above | Pending |
-| 021 | Main Scene Integration | 020 | Pending |
+| 020 | Game Manager | All above | Complete |
+| 021 | Main Scene Integration | 020 | Complete |
 
 ---
 
