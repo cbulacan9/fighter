@@ -1,4 +1,3 @@
-class_name GameManager
 extends Node
 
 signal state_changed(new_state: GameState)
