@@ -55,8 +55,9 @@ func hide_stats() -> void:
 
 
 func _format_duration(seconds: float) -> String:
-	var minutes := int(seconds) / 60
-	var secs := int(seconds) % 60
+	@warning_ignore("integer_division")
+	var minutes: int = int(seconds) / 60
+	var secs: int = int(seconds) % 60
 	return "%d:%02d" % [minutes, secs]
 
 

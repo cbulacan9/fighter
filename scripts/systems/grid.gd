@@ -17,6 +17,8 @@ func initialize() -> void:
 
 
 func get_tile(row: int, col: int) -> Tile:
+	if _tiles.is_empty():
+		return null
 	var wrapped := wrap_position(row, col)
 	return _tiles[wrapped.x][wrapped.y]
 
