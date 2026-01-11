@@ -50,11 +50,11 @@ Tasks are organized in phases and should be completed in order. Each task builds
 ## Phase 7: UI
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 015 | HUD (Health Bars) | 012 | Pending |
-| 016 | Damage Numbers | 013 | Pending |
-| 017 | Stun Overlay | 013 | Pending |
-| 018 | Game Overlays | 001 | Pending |
-| 019 | Stats Screen | 013 | Pending |
+| 015 | HUD (Health Bars) | 012 | Complete |
+| 016 | Damage Numbers | 013 | Complete |
+| 017 | Stun Overlay | 013 | Complete |
+| 018 | Game Overlays | 001 | Complete |
+| 019 | Stats Screen | 013 | Complete |
 
 ## Phase 8: Integration
 | Task | Name | Dependencies | Status |
