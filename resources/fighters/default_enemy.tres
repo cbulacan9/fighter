@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="FighterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/fighter_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+fighter_name = "Enemy"
+max_hp = 100
+tile_weights = {
+0: 1.0,
+1: 1.0,
+2: 1.0,
+3: 1.0,
+4: 1.0
+}
