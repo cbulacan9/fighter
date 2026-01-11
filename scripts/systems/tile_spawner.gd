@@ -2,7 +2,7 @@ class_name TileSpawner
 extends Node
 
 @export var tile_scene: PackedScene
-@export var tile_resources: Array[TileData] = []
+@export var tile_resources: Array[PuzzleTileData] = []
 
 var weights: Dictionary = {}
 var _cumulative_weights: Array[float] = []
@@ -34,7 +34,7 @@ func spawn_tiles(count: int) -> Array[Tile]:
 	return tiles
 
 
-func get_tile_data(type: TileTypes.Type) -> TileData:
+func get_tile_data(type: TileTypes.Type) -> PuzzleTileData:
 	for tile_data in tile_resources:
 		if tile_data.tile_type == type:
 			return tile_data
@@ -80,7 +80,7 @@ func _get_weight_for_type(type: TileTypes.Type) -> float:
 			return 1.0
 
 
-func _select_random_tile_data() -> TileData:
+func _select_random_tile_data() -> PuzzleTileData:
 	if tile_resources.is_empty() or _total_weight <= 0:
 		return null
 

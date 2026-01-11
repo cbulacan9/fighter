@@ -1,4 +1,4 @@
-class_name TileData
+class_name PuzzleTileData
 extends Resource
 
 @export var tile_type: TileTypes.Type

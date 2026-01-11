@@ -30,7 +30,7 @@ func set_tile(row: int, col: int, tile: Tile) -> void:
 
 func clear_tile(row: int, col: int) -> Tile:
 	var wrapped := wrap_position(row, col)
-	var tile := _tiles[wrapped.x][wrapped.y]
+	var tile: Tile = _tiles[wrapped.x][wrapped.y]
 	_tiles[wrapped.x][wrapped.y] = null
 	return tile
 

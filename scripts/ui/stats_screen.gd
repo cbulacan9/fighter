@@ -50,7 +50,7 @@ func show_stats(stats: StatsTracker.MatchStats) -> void:
 	visible = true
 
 
-func hide() -> void:
+func hide_stats() -> void:
 	visible = false
 
 
@@ -61,7 +61,7 @@ func _format_duration(seconds: float) -> String:
 
 
 func _on_rematch_pressed() -> void:
-	hide()
+	hide_stats()
 	rematch_pressed.emit()
 
 

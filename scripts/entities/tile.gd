@@ -6,11 +6,11 @@ signal animation_finished
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 
-var tile_data: TileData
+var tile_data: PuzzleTileData
 var grid_position: Vector2i
 
 
-func setup(data: TileData, pos: Vector2i) -> void:
+func setup(data: PuzzleTileData, pos: Vector2i) -> void:
 	tile_data = data
 	grid_position = pos
 	_update_visual()

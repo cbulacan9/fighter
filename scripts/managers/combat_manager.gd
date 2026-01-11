@@ -152,6 +152,6 @@ func _load_tile_data() -> void:
 
 func _get_effect_value(tile_type: TileTypes.Type, count: int) -> int:
 	if _tile_data_cache.has(tile_type):
-		var tile_data: TileData = _tile_data_cache[tile_type]
+		var tile_data: PuzzleTileData = _tile_data_cache[tile_type]
 		return tile_data.get_value(count)
 	return 0
