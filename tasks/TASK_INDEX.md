@@ -66,6 +66,10 @@ Tasks are organized in phases and should be completed in order. Each task builds
 | Task | Name | Dependencies | Status | Priority |
 |------|------|--------------|--------|----------|
 | 022 | Fix Tile Display | 003 | Complete | Critical |
+| 023 | Debug Board Initialization | 022 | Complete | Critical |
+| 024 | Fix Initial State Transition | 023 | Complete | Critical |
+| 025 | Fix Drag Input State | 024 | Complete | Critical |
+| 026 | Fix Drag Cleanup | 025 | Complete | Critical |
 
 ---
 

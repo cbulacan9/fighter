@@ -92,8 +92,10 @@ func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 
 func _on_press(pos: Vector2) -> void:
 	var local_pos := _screen_to_board(pos)
+	var check_point := local_pos + _board_rect.position
+	var in_bounds := _board_rect.has_point(check_point)
 
-	if not _board_rect.has_point(local_pos + _board_rect.position):
+	if not in_bounds:
 		return
 
 	var grid_pos := _grid.world_to_grid(local_pos)

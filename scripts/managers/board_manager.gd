@@ -100,9 +100,13 @@ func set_state(new_state: BoardState) -> void:
 
 		match new_state:
 			BoardState.IDLE:
+				_sync_visuals_to_grid()
+				_clear_drag_state()
 				_input_handler.set_enabled(is_player_controlled)
 				ready_for_input.emit()
-			BoardState.DRAGGING, BoardState.RESOLVING, BoardState.STUNNED:
+			BoardState.DRAGGING:
+				pass  # Keep input enabled to track ongoing drag
+			BoardState.RESOLVING, BoardState.STUNNED:
 				_input_handler.set_enabled(false)
 
 
@@ -148,6 +152,7 @@ func commit_shift() -> void:
 
 	if cells_moved == 0:
 		_sync_visuals_to_grid()
+		_clear_drag_state()
 		set_state(BoardState.IDLE)
 		return
 
@@ -183,6 +188,10 @@ func check_move_validity() -> bool:
 
 func animate_snap_back() -> void:
 	snap_back_started.emit()
+
+	if _original_positions.is_empty():
+		_on_snap_back_finished()
+		return
 
 	if _snap_back_tween:
 		_snap_back_tween.kill()

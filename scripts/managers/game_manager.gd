@@ -14,7 +14,7 @@ enum GameState {
 @export var player_data_path: String = "res://resources/fighters/default_player.tres"
 @export var enemy_data_path: String = "res://resources/fighters/default_enemy.tres"
 
-var current_state: GameState = GameState.INIT
+var current_state: GameState = GameState.STATS  # Start at STATS so transition to INIT actually triggers
 var match_timer: float = 0.0
 var winner_id: int = 0
 
