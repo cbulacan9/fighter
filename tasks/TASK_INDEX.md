@@ -45,7 +45,7 @@ Tasks are organized in phases and should be completed in order. Each task builds
 ## Phase 6: AI
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 014 | AI Controller | 009, 013 | Pending |
+| 014 | AI Controller | 009, 013 | Complete |
 
 ## Phase 7: UI
 | Task | Name | Dependencies | Status |
