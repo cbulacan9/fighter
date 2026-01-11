@@ -10,6 +10,10 @@ var tile_data: PuzzleTileData
 var grid_position: Vector2i
 
 
+func _ready() -> void:
+	_update_visual()
+
+
 func setup(data: PuzzleTileData, pos: Vector2i) -> void:
 	tile_data = data
 	grid_position = pos

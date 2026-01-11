@@ -62,6 +62,11 @@ Tasks are organized in phases and should be completed in order. Each task builds
 | 020 | Game Manager | All above | Complete |
 | 021 | Main Scene Integration | 020 | Complete |
 
+## Bug Fixes
+| Task | Name | Dependencies | Status | Priority |
+|------|------|--------------|--------|----------|
+| 022 | Fix Tile Display | 003 | Complete | Critical |
+
 ---
 
 ## Task Status Legend
