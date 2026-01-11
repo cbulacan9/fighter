@@ -25,9 +25,9 @@ Tasks are organized in phases and should be completed in order. Each task builds
 ## Phase 3: Input & Movement
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 006 | Input Handler | 005 | Pending |
-| 007 | Row/Column Shifting | 006 | Pending |
-| 008 | Snap-Back Animation | 007 | Pending |
+| 006 | Input Handler | 005 | Complete |
+| 007 | Row/Column Shifting | 006 | Complete |
+| 008 | Snap-Back Animation | 007 | Complete |
 
 ## Phase 4: Match & Cascade
 | Task | Name | Dependencies | Status |
