@@ -97,14 +97,12 @@ func get_opponent(fighter: Fighter) -> Fighter:
 
 func tick(delta: float) -> void:
 	if player_fighter:
-		var was_stunned := player_fighter.is_stunned()
 		player_fighter.tick_stun(delta)
 		if _player_was_stunned and not player_fighter.is_stunned():
 			stun_ended.emit(player_fighter)
 		_player_was_stunned = player_fighter.is_stunned()
 
 	if enemy_fighter:
-		var was_stunned := enemy_fighter.is_stunned()
 		enemy_fighter.tick_stun(delta)
 		if _enemy_was_stunned and not enemy_fighter.is_stunned():
 			stun_ended.emit(enemy_fighter)
