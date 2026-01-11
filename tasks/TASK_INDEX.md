@@ -39,8 +39,8 @@ Tasks are organized in phases and should be completed in order. Each task builds
 ## Phase 5: Combat
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 012 | Fighter State | 002 | Pending |
-| 013 | Combat Manager | 011, 012 | Pending |
+| 012 | Fighter State | 002 | Complete |
+| 013 | Combat Manager | 011, 012 | Complete |
 
 ## Phase 6: AI
 | Task | Name | Dependencies | Status |
