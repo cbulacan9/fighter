@@ -1,0 +1,72 @@
+[gd_scene load_steps=16 format=3 uid="uid://d1ca8n7mi3i7m"]
+
+[ext_resource type="Texture2D" uid="uid://dbq05q5wvau23" path="res://Battle Stance/012-Picsart-BackgroundRemover.png" id="1_eupvx"]
+[ext_resource type="Texture2D" uid="uid://dt3pghjry1d23" path="res://Battle Stance/013-Picsart-BackgroundRemover.png" id="2_43kvf"]
+[ext_resource type="Texture2D" uid="uid://dj4ju4klmnxfh" path="res://Battle Stance/014-Picsart-BackgroundRemover.png" id="3_1a2kw"]
+[ext_resource type="Texture2D" uid="uid://c88rye76ea7qc" path="res://Battle Stance/015-Picsart-BackgroundRemover.png" id="4_dimbc"]
+[ext_resource type="Texture2D" uid="uid://dmteccrxtllmu" path="res://Battle Stance/016-Picsart-BackgroundRemover.png" id="5_up4qj"]
+[ext_resource type="Texture2D" uid="uid://bmugsbe1erj3p" path="res://Battle Stance/017-Picsart-BackgroundRemover.png" id="6_phca1"]
+[ext_resource type="Texture2D" uid="uid://b2t5plbh3262x" path="res://Battle Stance/018-Picsart-BackgroundRemover.png" id="7_co5yd"]
+[ext_resource type="Texture2D" uid="uid://b1vgcqemst033" path="res://Battle Stance/022-Picsart-BackgroundRemover - Copy.png" id="8_vrl3i"]
+[ext_resource type="Texture2D" uid="uid://rtlxvcsrub1p" path="res://Battle Stance/023-Picsart-BackgroundRemover - Copy.png" id="9_qixra"]
+[ext_resource type="Texture2D" uid="uid://7cau0t3mbnox" path="res://Battle Stance/024-Picsart-BackgroundRemover - Copy.png" id="10_tsl7u"]
+[ext_resource type="Texture2D" uid="uid://cxasw0l5irhwy" path="res://Battle Stance/025-Picsart-BackgroundRemover - Copy.png" id="11_bbw7y"]
+[ext_resource type="Texture2D" uid="uid://dw68bn4is8y1c" path="res://Battle Stance/026-Picsart-BackgroundRemover - Copy.png" id="12_bmi0i"]
+[ext_resource type="Texture2D" uid="uid://pi6djv4cneo8" path="res://Battle Stance/027-Picsart-BackgroundRemover - Copy.png" id="13_rjndx"]
+[ext_resource type="Texture2D" uid="uid://brrl4ro7sojr" path="res://Battle Stance/028-Picsart-BackgroundRemover - Copy.png" id="14_nnkvi"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_amosi"]
+animations = [{
+"frames": [{
+"duration": 0.1,
+"texture": ExtResource("1_eupvx")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_43kvf")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_1a2kw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_dimbc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_up4qj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_phca1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_co5yd")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_vrl3i")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_qixra")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_tsl7u")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_bbw7y")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_bmi0i")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_rjndx")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_nnkvi")
+}],
+"loop": true,
+"name": &"default",
+"speed": 8.0
+}]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_amosi")
+frame_progress = 0.16326047
