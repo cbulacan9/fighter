@@ -78,52 +78,79 @@ Tasks are organized in phases and should be completed in order. Each task builds
 ## Phase 9: Character Systems - Status Effects
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 028 | Status Effect Data & Types | 002 | Pending |
-| 029 | Status Effect Manager | 028 | Pending |
-| 030 | Status Effect Integration | 029, 013 | Pending |
-| 031 | Status Effect UI | 030, 015 | Pending |
-| 032 | Status Effect Tests | 030 | Pending |
+| 028 | Status Effect Data & Types | 002 | Complete |
+| 029 | Status Effect Manager | 028 | Complete |
+| 030 | Status Effect Integration | 029, 013 | Complete |
+| 031 | Status Effect UI | 030, 015 | Complete |
+| 032 | Status Effect Tests | 030 | Complete |
 
 ## Phase 10: Character Systems - Mana System
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 033 | Mana Config & Data | 002 | Pending |
-| 034 | Mana System Core | 033, 012, 013 | Pending |
-| 035 | Mana UI Components | 034, 015 | Pending |
-| 036 | Mana System Tests | 034 | Pending |
+| 033 | Mana Config & Data | 002 | Complete |
+| 034 | Mana System Core | 033, 012, 013 | Complete |
+| 035 | Mana UI Components | 034, 015 | Complete |
+| 036 | Mana System Tests | 034 | Complete |
 
 ## Phase 11: Character Systems - Clickable Tiles
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 037 | Tile Data Extension | 003, 002 | Pending |
-| 038 | Click Input Handler | 037, 006 | Pending |
-| 039 | Click Activation Flow | 038, 030, 034 | Pending |
-| 040 | Clickable Tiles Tests | 039 | Pending |
+| 037 | Tile Data Extension | 003, 002 | Complete |
+| 038 | Click Input Handler | 037, 006 | Complete |
+| 039 | Click Activation Flow | 038, 030, 034 | Complete |
+| 040 | Clickable Tiles Tests | 039 | Complete |
 
 ## Phase 12: Character Systems - Combo Sequences
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 041 | Sequence Pattern Data | 002 | Pending |
-| 042 | Sequence Tracker | 041, 009 | Pending |
-| 043 | Sequence UI Indicator | 042, 015 | Pending |
-| 044 | Sequence System Tests | 042 | Pending |
+| 041 | Sequence Pattern Data | 002 | Complete |
+| 042 | Sequence Tracker | 041, 009 | Complete |
+| 043 | Sequence UI Indicator | 042, 015 | Complete |
+| 044 | Sequence System Tests | 042 | Complete |
 
 ## Phase 13: Character Framework
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 045 | Character Data Resource | 033, 041, 037 | Pending |
-| 046 | Character Loading & Selection | 045, 020 | Pending |
-| 047 | Basic Starter Character | 045, 046 | Pending |
-| 048 | Unlock System | 046 | Pending |
+| 045 | Character Data Resource | 033, 041, 037 | Complete |
+| 046 | Character Loading & Selection | 045, 020 | Complete |
+| 047 | Basic Starter Character | 045, 046 | Complete |
+| 048 | Unlock System | 046 | Complete |
 
 ## Phase 14: Hunter Character
 | Task | Name | Dependencies | Status |
 |------|------|--------------|--------|
-| 049 | Hunter Character Data | 045, 041 | Pending |
-| 050 | Pet Tile Implementation | 049, 038, 042 | Pending |
-| 051 | Hunter Abilities (Bear/Hawk/Snake) | 050, 030, 039 | Pending |
-| 052 | Alpha Command Ultimate | 051, 034 | Pending |
-| 053 | Hunter AI Support | 052, 014 | Pending |
+| 049 | Hunter Character Data | 045, 041 | Complete |
+| 050 | Pet Tile Implementation | 049, 038, 042 | Complete |
+| 051 | Hunter Abilities (Bear/Hawk/Snake) | 050, 030, 039 | Complete |
+| 052 | Alpha Command Ultimate | 051, 034 | Complete |
+| 053 | Hunter AI Support | 052, 014 | Complete |
+
+## Phase 15: Assassin Character
+| Task | Name | Dependencies | Status |
+|------|------|--------------|--------|
+| 054 | Assassin Character Data | 045, 033 | Pending |
+| 055 | Smoke Bomb Implementation | 054, 039 | Pending |
+| 056 | Shadow Step Implementation | 054, 030 | Pending |
+| 057 | Predator's Trance Ultimate | 056, 034 | Pending |
+| 058 | Assassin AI Support | 057, 014 | Pending |
+
+## Phase 16: Apothecary Character
+| Task | Name | Dependencies | Status |
+|------|------|--------------|--------|
+| 059 | Variety Chain System | 009 | Pending |
+| 060 | Apothecary Character Data | 059, 045 | Pending |
+| 061 | Poison & Potion Implementation | 060, 030, 039 | Pending |
+| 062 | Transmute Ultimate | 061, 034 | Pending |
+| 063 | Apothecary AI Support | 062, 014 | Pending |
+
+## Phase 17: Mirror Warden Character
+| Task | Name | Dependencies | Status |
+|------|------|--------------|--------|
+| 064 | Defensive Queue System | 045, 030 | Pending |
+| 065 | Mirror Warden Character Data | 064 | Pending |
+| 066 | Reflection, Cancel, Absorb Implementation | 065 | Pending |
+| 067 | Invincibility Ultimate | 066, 034 | Pending |
+| 068 | Mirror Warden AI Support | 067, 014 | Pending |
 
 ---
 
