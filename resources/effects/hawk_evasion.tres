@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/effects/evasion_status.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "hawk_evasion"
+display_name = "Hawk Evasion"
+effect_type = 4
+target = 1
+base_value = 1
+duration = 0.0
+status_effect = ExtResource("2")
+custom_effect_id = ""
+status_types_to_remove = []
+description = "Grants evasion. Next attack against you auto-misses."

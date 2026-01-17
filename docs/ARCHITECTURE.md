@@ -33,8 +33,8 @@
                   └─────────────┬─────────────┘
                                 │
                   ┌─────────────▼─────────────┐
-                  │        UIManager          │
-                  │ (HUD, Feedback, Screens)  │
+                  │    Distributed UI Layer   │
+                  │  (HUD, Overlays, Screens) │
                   └───────────────────────────┘
 ```
 
@@ -51,7 +51,16 @@
 | **TileSpawner** | Creates new tiles with weighted random type selection |
 | **CombatManager** | Applies match effects (damage, heal, armor, stun), manages fighter state |
 | **AIController** | Evaluates board, selects moves based on difficulty |
-| **UIManager** | Health bars, damage numbers, stun overlay, victory/defeat screens |
+| **StatsTracker** | Collects match statistics (damage, healing, chains, duration) |
+
+### UI Components (Distributed Pattern)
+| Component | Responsibility |
+|-----------|----------------|
+| **HUD** | Health bars, armor display, fighter portraits |
+| **DamageNumberSpawner** | Spawns floating damage/heal/armor/stun numbers |
+| **StunOverlay** | Grey overlay on stunned board with timer display |
+| **GameOverlay** | Countdown, pause menu, victory/defeat splash |
+| **StatsScreen** | End-of-match statistics display |
 
 ## Data Flow
 
@@ -64,20 +73,24 @@
    - **TileSpawner** fills empty spaces
    - **MatchDetector** checks for chain reactions (loop until stable)
 5. **CombatManager** receives aggregated match data, applies effects
-6. **UIManager** displays feedback (damage numbers, HP changes)
+6. UI components react to signals (damage numbers spawn, health bars update)
 7. **BoardManager** unlocks input
 
 ### Combat Effect Flow
 ```
 Match Data → CombatManager → Target Fighter State
-                ↓
+                │
          Effect Resolution:
          - Sword → Damage (armor first, then HP)
          - Shield → Add armor (cap at max HP)
          - Potion → Heal (cap at max HP)
          - Lightning → Apply stun (diminishing returns)
-                ↓
-         UIManager → Visual Feedback
+                │
+                ├──→ Fighter.hp_changed ──→ HUD (health bar update)
+                ├──→ damage_dealt ────────→ DamageNumberSpawner
+                ├──→ healing_done ────────→ DamageNumberSpawner
+                ├──→ armor_gained ────────→ DamageNumberSpawner
+                └──→ stun_applied ────────→ GameManager → StunOverlay
 ```
 
 ## Scene Hierarchy
@@ -85,23 +98,28 @@ Match Data → CombatManager → Target Fighter State
 ```
 Main (Node)
 ├── GameManager (Node)
+│   └── [Coordinates all systems, holds UI references]
 ├── CombatManager (Node)
-│   ├── PlayerFighter (Resource/Node)
-│   └── EnemyFighter (Resource/Node)
-├── Boards (Node)
-│   ├── PlayerBoard (BoardManager)
-│   │   ├── Grid (Node2D)
-│   │   │   └── Tiles (Node2D) [64 Tile instances]
-│   │   ├── InputHandler (Node)
-│   │   └── MatchDetector (Node)
-│   └── EnemyBoard (BoardManager)
-│       └── [Same structure, AI-controlled]
-├── UIManager (CanvasLayer)
-│   ├── PlayerHUD (Control)
-│   ├── EnemyHUD (Control)
-│   ├── GameOverlay (Control)
-│   └── DamageNumbers (Node2D)
-└── AIController (Node)
+│   ├── player_fighter (Fighter instance)
+│   └── enemy_fighter (Fighter instance)
+├── Boards (Node2D)
+│   ├── EnemyBoard (BoardManager)
+│   │   └── [Grid, InputHandler, MatchDetector, etc.]
+│   └── PlayerBoard (BoardManager)
+│       └── [Grid, InputHandler, MatchDetector, etc.]
+├── AIController (Node)
+└── UI (CanvasLayer)
+    ├── HUD (Control)
+    │   ├── PlayerPanel (HealthBar, Portrait)
+    │   └── EnemyPanel (HealthBar, Portrait)
+    ├── PlayerStunOverlay (StunOverlay)
+    ├── EnemyStunOverlay (StunOverlay)
+    ├── DamageNumbers (DamageNumberSpawner)
+    ├── GameOverlay (CanvasLayer)
+    │   ├── CountdownPanel
+    │   ├── PausePanel
+    │   └── ResultPanel
+    └── StatsScreen (CanvasLayer)
 ```
 
 ## State Machines
@@ -128,14 +146,41 @@ Main (Node)
 
 Key signals for decoupled communication:
 
+### Game Flow Signals
 | Signal | Emitter | Listeners |
 |--------|---------|-----------|
-| `match_found(match_data)` | MatchDetector | BoardManager, CombatManager |
-| `cascade_complete` | CascadeHandler | BoardManager |
-| `effect_applied(effect_type, value, target)` | CombatManager | UIManager |
-| `fighter_defeated(fighter)` | CombatManager | GameManager |
-| `stun_applied(target, duration)` | CombatManager | BoardManager, UIManager |
-| `game_state_changed(new_state)` | GameManager | All systems |
+| `state_changed(new_state)` | GameManager | All systems |
+| `matches_resolved(cascade_result)` | BoardManager | GameManager |
+| `match_ended(winner_id)` | CombatManager | GameManager |
+
+### Combat Signals
+| Signal | Emitter | Listeners |
+|--------|---------|-----------|
+| `damage_dealt(target, result)` | CombatManager | GameManager, DamageNumberSpawner |
+| `healing_done(target, amount)` | CombatManager | GameManager, DamageNumberSpawner |
+| `armor_gained(target, amount)` | CombatManager | DamageNumberSpawner |
+| `stun_applied(target, duration)` | CombatManager | GameManager |
+| `stun_ended(fighter)` | CombatManager | GameManager |
+
+### Fighter Signals
+| Signal | Emitter | Listeners |
+|--------|---------|-----------|
+| `hp_changed(current, max_hp)` | Fighter | HUD |
+| `armor_changed(current)` | Fighter | HUD |
+
+### UI Signals (User Actions)
+| Signal | Emitter | Listeners |
+|--------|---------|-----------|
+| `countdown_finished` | GameOverlay | GameManager |
+| `resume_pressed` | GameOverlay | GameManager |
+| `quit_pressed` | GameOverlay | GameManager |
+| `continue_pressed` | GameOverlay | GameManager |
+| `rematch_pressed` | StatsScreen | GameManager |
+
+### Signal Wiring Location
+Signal connections are established in two places:
+1. **GameManager._connect_signals()** — Connects to CombatManager, BoardManager, GameOverlay, StatsScreen
+2. **Component.setup()** methods — HUD and DamageNumberSpawner connect to their data sources during setup
 
 ## Resource Definitions
 
@@ -164,6 +209,10 @@ Key signals for decoupled communication:
 | Resources for static data | Godot-native, editor-friendly configuration |
 | State machines for flow control | Clear state management, predictable behavior |
 | Grid as 2D array | Simple indexing, efficient for 6x8 size |
+| Distributed UI components | Each UI element is self-contained with own logic; GameManager coordinates via setup() calls and signal connections; avoids monolithic UIManager |
+| StunOverlay per board | Separate overlay instances allow independent stun states for player/enemy |
+| HUD connects to Fighter signals | Direct connection reduces indirection; Fighter owns HP/armor state |
+| DamageNumberSpawner listens to CombatManager | Centralizes visual feedback spawning for all effect types |
 
 ## File Structure
 
@@ -176,26 +225,39 @@ project/
 │   │   └── tile.tscn
 │   └── ui/
 │       ├── hud.tscn
+│       ├── health_bar.tscn
 │       ├── damage_number.tscn
-│       └── game_overlay.tscn
+│       ├── game_overlay.tscn
+│       ├── stats_screen.tscn
+│       └── stun_overlay.tscn
 ├── scripts/
 │   ├── managers/
 │   │   ├── game_manager.gd
 │   │   ├── board_manager.gd
-│   │   ├── combat_manager.gd
-│   │   └── ui_manager.gd
+│   │   └── combat_manager.gd
 │   ├── systems/
 │   │   ├── grid.gd
 │   │   ├── match_detector.gd
 │   │   ├── cascade_handler.gd
 │   │   ├── input_handler.gd
-│   │   └── tile_spawner.gd
+│   │   ├── tile_spawner.gd
+│   │   └── stats_tracker.gd
 │   ├── controllers/
 │   │   └── ai_controller.gd
 │   ├── entities/
-│   │   └── tile.gd
+│   │   ├── tile.gd
+│   │   └── fighter.gd
+│   ├── ui/
+│   │   ├── hud.gd
+│   │   ├── health_bar.gd
+│   │   ├── damage_number.gd
+│   │   ├── damage_number_spawner.gd
+│   │   ├── game_overlay.gd
+│   │   ├── stats_screen.gd
+│   │   └── stun_overlay.gd
 │   └── data/
 │       ├── tile_data.gd
+│       ├── tile_types.gd
 │       └── fighter_data.gd
 ├── resources/
 │   ├── tiles/

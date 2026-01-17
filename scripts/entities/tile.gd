@@ -2,12 +2,21 @@ class_name Tile
 extends Node2D
 
 signal animation_finished
+signal clicked
+signal activation_started
+signal activation_finished
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 
 var tile_data: PuzzleTileData
 var grid_position: Vector2i
+var is_clickable_highlighted: bool = false
+var is_hidden: bool = false
+
+var _highlight_tween: Tween
+var _activation_tween: Tween
+var _hidden_tween: Tween
 
 
 func _ready() -> void:
@@ -50,3 +59,115 @@ func _update_visual() -> void:
 
 func _on_animation_player_animation_finished(_anim_name: String) -> void:
 	animation_finished.emit()
+
+
+# --- Clickable State Management ---
+
+func update_clickable_state(can_click: bool) -> void:
+	if can_click and not is_clickable_highlighted:
+		_show_clickable_highlight()
+	elif not can_click and is_clickable_highlighted:
+		_hide_clickable_highlight()
+
+
+func _show_clickable_highlight() -> void:
+	is_clickable_highlighted = true
+
+	if _highlight_tween:
+		_highlight_tween.kill()
+
+	# Use highlight color from tile_data if available, otherwise default
+	var highlight_color := Color(1.2, 1.2, 0.8)
+	if tile_data and tile_data.clickable_highlight_color != Color.TRANSPARENT:
+		# Use a brightened version for the pulse effect
+		highlight_color = tile_data.clickable_highlight_color + Color(0.2, 0.2, 0.2, 0)
+
+	# Pulsing glow effect
+	_highlight_tween = create_tween()
+	_highlight_tween.set_loops()
+	_highlight_tween.tween_property(self, "modulate", highlight_color, 0.5)
+	_highlight_tween.tween_property(self, "modulate", Color.WHITE, 0.5)
+
+
+func _hide_clickable_highlight() -> void:
+	is_clickable_highlighted = false
+
+	if _highlight_tween:
+		_highlight_tween.kill()
+		_highlight_tween = null
+
+	modulate = Color.WHITE
+
+
+func play_activation_animation() -> void:
+	activation_started.emit()
+	clicked.emit()
+
+	# Kill any existing activation animation
+	if _activation_tween:
+		_activation_tween.kill()
+
+	# Store the original scale in case it was modified
+	var original_scale := scale
+
+	# Pop effect animation
+	_activation_tween = create_tween()
+	_activation_tween.set_ease(Tween.EASE_OUT)
+	_activation_tween.set_trans(Tween.TRANS_BACK)
+	_activation_tween.tween_property(self, "scale", Vector2(1.3, 1.3), 0.1)
+	_activation_tween.set_ease(Tween.EASE_IN)
+	_activation_tween.set_trans(Tween.TRANS_QUAD)
+	_activation_tween.tween_property(self, "scale", original_scale, 0.1)
+	_activation_tween.tween_callback(_on_activation_finished)
+
+
+func _on_activation_finished() -> void:
+	_activation_tween = null
+	activation_finished.emit()
+
+
+func is_currently_clickable() -> bool:
+	if not tile_data:
+		return false
+	return tile_data.can_be_clicked()
+
+
+# --- Hidden State Management ---
+
+## Set the hidden state of the tile (for Smoke Bomb effects)
+func set_hidden(hidden: bool) -> void:
+	if is_hidden == hidden:
+		return
+
+	is_hidden = hidden
+
+	if _hidden_tween:
+		_hidden_tween.kill()
+		_hidden_tween = null
+
+	if hidden:
+		_show_hidden_state()
+	else:
+		_show_revealed_state()
+
+
+func _show_hidden_state() -> void:
+	# Animate to a dark, obscured state
+	_hidden_tween = create_tween()
+	_hidden_tween.set_ease(Tween.EASE_OUT)
+	_hidden_tween.set_trans(Tween.TRANS_QUAD)
+
+	# Darken and add slight scale effect
+	var hidden_color := Color(0.1, 0.1, 0.15, 1.0)  # Very dark, slightly visible
+	_hidden_tween.tween_property(self, "modulate", hidden_color, 0.2)
+
+
+func _show_revealed_state() -> void:
+	# Animate back to normal state
+	_hidden_tween = create_tween()
+	_hidden_tween.set_ease(Tween.EASE_OUT)
+	_hidden_tween.set_trans(Tween.TRANS_QUAD)
+
+	# Flash briefly then return to normal
+	_hidden_tween.tween_property(self, "modulate", Color(1.5, 1.5, 1.5, 1.0), 0.1)
+	_hidden_tween.tween_property(self, "modulate", Color.WHITE, 0.15)

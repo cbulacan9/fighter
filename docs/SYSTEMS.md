@@ -308,3 +308,114 @@ INIT → COUNTDOWN → BATTLE ⇄ PAUSED
 | `end_match` | winner | void | Trigger end sequence |
 | `show_stats` | none | void | Display statistics |
 | `rematch` | none | void | Reset and restart |
+
+---
+
+## 10. Stats Tracker
+
+### Purpose
+Collects and aggregates match statistics for end-of-match display.
+
+### MatchStats Structure
+| Field | Type | Description |
+|-------|------|-------------|
+| `damage_dealt` | int | Total damage dealt to enemy |
+| `largest_match` | int | Highest tile count in a single match |
+| `tiles_broken` | int | Total tiles cleared |
+| `healing_done` | int | Total HP restored |
+| `damage_blocked` | int | Total damage absorbed by armor |
+| `match_duration` | float | Match length in seconds |
+| `stun_inflicted` | float | Total stun time applied to enemy |
+| `longest_chain` | int | Deepest cascade chain count |
+
+### Operations
+| Operation | Input | Output | Description |
+|-----------|-------|--------|-------------|
+| `reset` | none | void | Clear all stats |
+| `start_match` | none | void | Record match start time |
+| `end_match` | none | void | Calculate match duration |
+| `record_damage` | amount | void | Add to damage dealt |
+| `record_armor_used` | amount | void | Add to damage blocked |
+| `record_match` | tile_count, chain_depth | void | Update match/chain records |
+| `record_heal` | amount | void | Add to healing done |
+| `record_stun` | duration | void | Add to stun inflicted |
+| `record_cascade_result` | CascadeResult | void | Process full cascade stats |
+| `get_stats` | none | MatchStats | Return current statistics |
+
+### Integration
+- Created and owned by GameManager
+- Records events via GameManager signal handlers
+- Consumed by StatsScreen via `get_stats()`
+
+---
+
+## 11. UI Components (Distributed Pattern)
+
+UI is implemented as independent components rather than a centralized UIManager. GameManager coordinates setup and signal wiring.
+
+### HUD
+**Purpose:** Displays health bars, armor, and fighter portraits.
+
+**Setup:** `setup(player_fighter, enemy_fighter)`
+- Connects to Fighter.hp_changed and Fighter.armor_changed signals
+- Each fighter's stats displayed in separate panel
+
+**Child Components:**
+- HealthBar: Animated bar showing HP and armor segments
+
+### DamageNumberSpawner
+**Purpose:** Creates floating numbers for combat feedback.
+
+**Setup:** `setup(combat_manager, player_pos, enemy_pos)`
+- Connects to CombatManager signals: damage_dealt, healing_done, armor_gained, stun_applied
+- Spawns numbers at fighter positions based on target
+
+**Number Types (color-coded):**
+- DAMAGE (red): HP damage dealt
+- HEAL (green): HP restored
+- ARMOR (blue): Shield points gained
+- STUN (yellow): Stun duration applied
+
+### StunOverlay
+**Purpose:** Visual indicator when a board is stunned.
+
+**Operations:**
+| Operation | Input | Output | Description |
+|-----------|-------|--------|-------------|
+| `show_stun` | duration | void | Fade in overlay, start timer |
+| `hide_stun` | none | void | Fade out overlay |
+| `update_timer` | remaining | void | Update countdown display |
+
+**Behavior:**
+- Grey semi-transparent overlay covers board
+- Displays remaining stun time
+- Fades in/out with 0.15s duration
+
+### GameOverlay
+**Purpose:** Modal overlays for game flow (countdown, pause, results).
+
+**Panels:**
+- CountdownPanel: 3-2-1-GO! sequence
+- PausePanel: Resume/Quit buttons
+- ResultPanel: Victory/Defeat/Draw display
+
+**Signals Emitted:**
+| Signal | Description |
+|--------|-------------|
+| `countdown_finished` | Countdown complete, start battle |
+| `resume_pressed` | Player resumed from pause |
+| `quit_pressed` | Player quit game |
+| `continue_pressed` | Player continuing after result |
+
+### StatsScreen
+**Purpose:** End-of-match statistics display.
+
+**Setup:** `show_stats(MatchStats)`
+- Displays all tracked statistics
+- Provides Rematch and Quit options
+
+**Signals Emitted:**
+| Signal | Description |
+|--------|-------------|
+| `rematch_pressed` | Player wants to play again |
+| `quit_pressed` | Player exiting game |

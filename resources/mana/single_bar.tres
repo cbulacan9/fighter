@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ManaConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/mana_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+bar_count = 1
+max_mana = Array[int]([100])
+mana_per_match = {
+3: 10,
+4: 20,
+5: 35
+}
+mana_tile_types = Array[int]([])
+decay_rate = 0.0
+require_all_bars_full = true

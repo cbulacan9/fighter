@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/status_effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "attack_up"
+display_name = "Attack Up"
+effect_type = 3
+duration = 10.0
+tick_interval = 1.0
+max_stacks = 3
+stack_behavior = 0
+tick_behavior = 0
+base_value = 0.25
+value_per_stack = 0.0

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/effects/bleed.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "bear_bleed"
+display_name = "Bear Bleed"
+effect_type = 4
+target = 2
+base_value = 1
+duration = 0.0
+status_effect = ExtResource("2")
+custom_effect_id = ""
+status_types_to_remove = []
+description = "Applies 1 bleed stack to enemy. Damages on enemy's next match."

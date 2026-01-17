@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/status_effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "alpha_command"
+display_name = "Alpha Command"
+effect_type = 6
+duration = 8.0
+tick_interval = 0.5
+max_stacks = 1
+stack_behavior = 3
+tick_behavior = 0
+base_value = 2.0
+value_per_stack = 0.0

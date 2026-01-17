@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "basic_stun"
+display_name = "Stun"
+effect_type = 6
+target = 2
+base_value = 0
+values_by_match_size = {
+3: 1,
+4: 2,
+5: 3
+}
+duration = 1.0
+custom_effect_id = ""
+status_types_to_remove = []
+description = "Stuns enemy board temporarily."

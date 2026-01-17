@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ability_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/effects/alpha_command_buff.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+ability_id = "alpha_command"
+display_name = "Alpha Command"
+description = "Your animal companions become empowered, dealing double damage and applying stronger effects for 8 seconds. All Pet sequence abilities gain a 2x multiplier."
+requires_full_mana = true
+drains_all_mana = true
+cooldown = 0.0
+effects = [ExtResource("2")]
+duration = 8.0

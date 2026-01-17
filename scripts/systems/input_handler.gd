@@ -4,6 +4,8 @@ extends Node
 signal drag_started(axis: DragAxis, index: int, start_pos: Vector2)
 signal drag_moved(offset_pixels: float)
 signal drag_ended(final_offset: float)
+signal tile_clicked(tile: Tile)
+signal tile_click_attempted(tile: Tile, success: bool)
 
 enum DragAxis {
 	NONE,
@@ -12,6 +14,8 @@ enum DragAxis {
 }
 
 @export var drag_threshold: float = 10.0
+@export var click_threshold: float = 10.0  # Max movement for click vs drag
+@export var click_time_threshold: float = 0.3  # Max time for click
 @export var cell_size: float = 64.0
 
 var is_dragging: bool = false
@@ -20,6 +24,12 @@ var drag_start_world: Vector2
 var drag_start_grid: Vector2i
 var drag_index: int = -1
 var current_offset: float = 0.0
+
+# Click detection state
+var _press_position: Vector2 = Vector2.ZERO
+var _press_time: float = 0.0
+var _press_tile: Tile = null
+var _is_potential_click: bool = false
 
 var _enabled: bool = true
 var _grid: Grid
@@ -47,6 +57,7 @@ func reset() -> void:
 	drag_start_grid = Vector2i.ZERO
 	drag_index = -1
 	current_offset = 0.0
+	_reset_click_state()
 
 
 func _input(event: InputEvent) -> void:
@@ -102,6 +113,13 @@ func _on_press(pos: Vector2) -> void:
 	if not _is_valid_grid_pos(grid_pos):
 		return
 
+	# Track for potential click detection
+	_press_position = pos
+	_press_time = Time.get_ticks_msec() / 1000.0
+	_press_tile = _grid.get_tile(grid_pos.x, grid_pos.y)
+	_is_potential_click = true
+
+	# Start drag state tracking
 	is_dragging = true
 	drag_axis = DragAxis.NONE
 	drag_start_world = local_pos
@@ -115,6 +133,12 @@ func _on_drag(pos: Vector2) -> void:
 
 	var local_pos := _screen_to_board(pos)
 	var delta := local_pos - drag_start_world
+
+	# Invalidate potential click if movement exceeds threshold
+	if _is_potential_click:
+		var movement := pos.distance_to(_press_position)
+		if movement >= click_threshold:
+			_is_potential_click = false
 
 	if drag_axis == DragAxis.NONE:
 		if delta.length() > drag_threshold:
@@ -136,7 +160,15 @@ func _on_drag(pos: Vector2) -> void:
 
 func _on_release() -> void:
 	if not is_dragging:
+		_reset_click_state()
 		return
+
+	# Check if this was a click (short time, minimal movement, no drag initiated)
+	if _is_potential_click and drag_axis == DragAxis.NONE:
+		var release_time := Time.get_ticks_msec() / 1000.0
+		var elapsed := release_time - _press_time
+		if elapsed < click_time_threshold:
+			_handle_click()
 
 	if drag_axis != DragAxis.NONE:
 		drag_ended.emit(current_offset)
@@ -151,3 +183,22 @@ func _screen_to_board(screen_pos: Vector2) -> Vector2:
 
 func _is_valid_grid_pos(pos: Vector2i) -> bool:
 	return pos.x >= 0 and pos.x < Grid.ROWS and pos.y >= 0 and pos.y < Grid.COLS
+
+
+func _handle_click() -> void:
+	if _press_tile == null:
+		return
+
+	# Check if tile is clickable
+	if not _press_tile.tile_data or not _press_tile.tile_data.is_clickable:
+		return
+
+	# Emit signal for BoardManager to handle validation and activation
+	tile_clicked.emit(_press_tile)
+
+
+func _reset_click_state() -> void:
+	_press_position = Vector2.ZERO
+	_press_time = 0.0
+	_press_tile = null
+	_is_potential_click = false

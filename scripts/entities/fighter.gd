@@ -5,6 +5,10 @@ signal hp_changed(current: int, max_hp: int)
 signal armor_changed(current: int)
 signal stun_changed(remaining: float)
 signal defeated
+signal mana_changed(bar_index: int, current: int, max_value: int)
+signal ultimate_ready()
+signal status_effect_applied(effect: StatusEffect)
+signal status_effect_removed(effect_type: StatusTypes.StatusType)
 
 @export var fighter_data: FighterData
 
@@ -13,6 +17,9 @@ var max_hp: int = 100
 var armor: int = 0
 var stun_remaining: float = 0.0
 var is_defeated: bool = false
+var mana_system: ManaSystem  # Set by CombatManager
+var status_manager: StatusEffectManager  # Set by CombatManager
+var _mana_blocked: bool = false  # Direct mana block flag (for simple blocking without status effects)
 
 const MIN_STUN_DURATION: float = 0.25
 const STUN_DIMINISHING_FACTOR: float = 0.5
@@ -108,6 +115,7 @@ func reset() -> void:
 	armor = 0
 	stun_remaining = 0.0
 	is_defeated = false
+	_mana_blocked = false
 
 	hp_changed.emit(current_hp, max_hp)
 	armor_changed.emit(armor)
@@ -124,3 +132,92 @@ func get_armor_percent() -> float:
 	if max_hp <= 0:
 		return 0.0
 	return float(armor) / float(max_hp)
+
+
+# Mana-related methods
+
+func is_mana_blocked() -> bool:
+	# Check direct mana block flag
+	if _mana_blocked:
+		return true
+	# Check status effect-based mana block
+	if has_status(StatusTypes.StatusType.MANA_BLOCK):
+		return true
+	# Check if any mana bar is blocked
+	if mana_system and mana_system.has_fighter(self):
+		for i in range(mana_system.get_bar_count(self)):
+			if mana_system.is_bar_blocked(self, i):
+				return true
+	return false
+
+
+func set_mana_blocked(blocked: bool) -> void:
+	_mana_blocked = blocked
+
+
+func get_mana(bar_index: int = 0) -> int:
+	if mana_system:
+		return mana_system.get_mana(self, bar_index)
+	return 0
+
+
+func get_max_mana(bar_index: int = 0) -> int:
+	if mana_system:
+		return mana_system.get_max_mana(self, bar_index)
+	return 0
+
+
+func get_mana_percentage(bar_index: int = 0) -> float:
+	if mana_system:
+		return mana_system.get_percentage(self, bar_index)
+	return 0.0
+
+
+func get_mana_bar_count() -> int:
+	if mana_system:
+		return mana_system.get_bar_count(self)
+	return 0
+
+
+func can_use_ultimate() -> bool:
+	if mana_system:
+		return mana_system.can_use_ultimate(self)
+	return false
+
+
+func is_mana_full(bar_index: int = 0) -> bool:
+	if mana_system:
+		return mana_system.is_full(self, bar_index)
+	return false
+
+
+func are_all_mana_bars_full() -> bool:
+	if mana_system:
+		return mana_system.are_all_bars_full(self)
+	return false
+
+
+# Status effect-related methods
+
+func has_status(effect_type: StatusTypes.StatusType) -> bool:
+	if status_manager:
+		return status_manager.has_effect(self, effect_type)
+	return false
+
+
+func get_status_stacks(effect_type: StatusTypes.StatusType) -> int:
+	if status_manager:
+		return status_manager.get_stacks(self, effect_type)
+	return 0
+
+
+func get_status_modifier(effect_type: StatusTypes.StatusType) -> float:
+	if status_manager:
+		return status_manager.get_modifier(self, effect_type)
+	return 0.0
+
+
+func get_all_status_effects() -> Array[StatusEffect]:
+	if status_manager:
+		return status_manager.get_all_effects(self)
+	return []

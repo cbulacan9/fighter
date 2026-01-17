@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/effects/damage_effect.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -10,3 +11,7 @@ color = Color(0.8, 0.2, 0.2, 1)
 match_3_value = 10
 match_4_value = 25
 match_5_value = 50
+is_matchable = true
+match_effect = ExtResource("2")
+is_clickable = false
+click_condition = 0

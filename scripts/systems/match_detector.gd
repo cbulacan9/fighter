@@ -71,6 +71,13 @@ func _find_horizontal_matches(grid: Grid) -> Array[MatchResult]:
 				current_run = []
 				continue
 
+			# Skip non-matchable tiles (they break match runs)
+			if not _is_tile_matchable(tile):
+				_record_match_if_valid(matches, current_type, current_run)
+				current_type = TileTypes.Type.NONE
+				current_run = []
+				continue
+
 			var tile_type := tile.get_type()
 			if tile_type == current_type:
 				current_run.append(Vector2i(row, col))
@@ -94,6 +101,13 @@ func _find_vertical_matches(grid: Grid) -> Array[MatchResult]:
 		for row in range(Grid.ROWS):
 			var tile := grid.get_tile(row, col)
 			if not tile:
+				_record_match_if_valid(matches, current_type, current_run)
+				current_type = TileTypes.Type.NONE
+				current_run = []
+				continue
+
+			# Skip non-matchable tiles (they break match runs)
+			if not _is_tile_matchable(tile):
 				_record_match_if_valid(matches, current_type, current_run)
 				current_type = TileTypes.Type.NONE
 				current_run = []
@@ -214,6 +228,12 @@ func _has_horizontal_match_in_row(grid: Grid, row: int) -> bool:
 			run_length = 0
 			continue
 
+		# Skip non-matchable tiles (they break match runs)
+		if not _is_tile_matchable(tile):
+			current_type = TileTypes.Type.NONE
+			run_length = 0
+			continue
+
 		var tile_type := tile.get_type()
 		if tile_type == current_type:
 			run_length += 1
@@ -237,6 +257,12 @@ func _has_vertical_match_in_col(grid: Grid, col: int) -> bool:
 			run_length = 0
 			continue
 
+		# Skip non-matchable tiles (they break match runs)
+		if not _is_tile_matchable(tile):
+			current_type = TileTypes.Type.NONE
+			run_length = 0
+			continue
+
 		var tile_type := tile.get_type()
 		if tile_type == current_type:
 			run_length += 1
@@ -247,3 +273,12 @@ func _has_vertical_match_in_col(grid: Grid, col: int) -> bool:
 			run_length = 1
 
 	return false
+
+
+## Checks if a tile is matchable based on its tile_data
+func _is_tile_matchable(tile: Tile) -> bool:
+	if not tile:
+		return false
+	if not tile.tile_data:
+		return true  # Default to matchable if no data
+	return tile.tile_data.is_matchable

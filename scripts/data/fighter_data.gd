@@ -11,3 +11,9 @@ extends Resource
 	TileTypes.Type.LIGHTNING: 1.0,
 	TileTypes.Type.FILLER: 1.0
 }
+
+## Mana configuration for this fighter (null for fighters without mana)
+@export var mana_config: ManaConfig
+
+## Combo sequences for this fighter (empty for fighters without sequences)
+@export var sequences: Array[SequencePattern] = []

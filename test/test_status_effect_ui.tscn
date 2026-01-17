@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://test_status_effect_ui_scene"]
+
+[ext_resource type="Script" path="res://test/test_status_effect_ui.gd" id="1"]
+
+[node name="TestStatusEffectUI" type="Node"]
+script = ExtResource("1")

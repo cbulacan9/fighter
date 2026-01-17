@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/tiles/sword.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/tiles/shield.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/tiles/potion.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/tiles/lightning.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/tiles/filler.tres" id="6"]
+
+[resource]
+script = ExtResource("1")
+character_id = "basic"
+display_name = "Squire"
+archetype = "Balanced"
+description = "A balanced fighter learning the ways of combat. The Squire has no special abilities but excels at mastering the fundamentals of matching tiles and managing resources. A perfect choice for beginners."
+basic_tiles = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
+specialty_tiles = []
+spawn_weights = {
+0: 1.0,
+1: 1.0,
+2: 1.0,
+3: 1.0,
+4: 1.0
+}
+sequences = []
+passive_description = ""
+base_hp = 100
+base_armor = 0
+is_starter = true
+unlock_opponent_id = ""

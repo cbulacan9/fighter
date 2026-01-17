@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "snake_cleanse"
+display_name = "Snake Cleanse"
+effect_type = 5
+target = 1
+base_value = 0
+duration = 0.0
+custom_effect_id = ""
+status_types_to_remove = ["POISON"]
+description = "Cleanses own board of poison."

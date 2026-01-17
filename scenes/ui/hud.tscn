@@ -1,7 +1,12 @@
-[gd_scene load_steps=3 format=3 uid="uid://hud_scene"]
+[gd_scene load_steps=8 format=3 uid="uid://hud_scene"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://health_bar_scene" path="res://scenes/ui/health_bar.tscn" id="2"]
+[ext_resource type="Script" path="res://scripts/ui/mana_bar_container.gd" id="3"]
+[ext_resource type="PackedScene" uid="uid://mana_bar_scene" path="res://scenes/ui/mana_bar.tscn" id="4"]
+[ext_resource type="PackedScene" uid="uid://sequence_indicator_scene" path="res://scenes/ui/sequence_indicator.tscn" id="5"]
+[ext_resource type="Script" path="res://scripts/ui/status_effect_display.gd" id="6"]
+[ext_resource type="PackedScene" uid="uid://status_effect_icon_scene" path="res://scenes/ui/status_effect_icon.tscn" id="7"]
 
 [node name="HUD" type="Control"]
 layout_mode = 3
@@ -32,10 +37,28 @@ size_flags_horizontal = 3
 [node name="HealthBar" parent="PlayerPanel/Bars" instance=ExtResource("2")]
 layout_mode = 2
 
+[node name="ManaContainer" type="VBoxContainer" parent="PlayerPanel/Bars"]
+layout_mode = 2
+script = ExtResource("3")
+mana_bar_scene = ExtResource("4")
+bar_spacing = 2.0
+
 [node name="ComboMeter" type="ProgressBar" parent="PlayerPanel/Bars"]
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 show_percentage = false
+
+[node name="StatusEffectDisplay" type="HBoxContainer" parent="PlayerPanel/Bars"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+script = ExtResource("6")
+icon_scene = ExtResource("7")
+max_visible_effects = 6
+
+[node name="SequenceIndicator" parent="PlayerPanel" instance=ExtResource("5")]
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(150, 60)
 
 [node name="EnemyPanel" type="HBoxContainer" parent="."]
 layout_mode = 1
@@ -55,10 +78,23 @@ size_flags_horizontal = 3
 [node name="HealthBar" parent="EnemyPanel/Bars" instance=ExtResource("2")]
 layout_mode = 2
 
+[node name="ManaContainer" type="VBoxContainer" parent="EnemyPanel/Bars"]
+layout_mode = 2
+script = ExtResource("3")
+mana_bar_scene = ExtResource("4")
+bar_spacing = 2.0
+
 [node name="ComboMeter" type="ProgressBar" parent="EnemyPanel/Bars"]
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 show_percentage = false
+
+[node name="StatusEffectDisplay" type="HBoxContainer" parent="EnemyPanel/Bars"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+script = ExtResource("6")
+icon_scene = ExtResource("7")
+max_visible_effects = 6
 
 [node name="Portrait" type="TextureRect" parent="EnemyPanel"]
 custom_minimum_size = Vector2(64, 64)

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "hawk_tile_replace"
+display_name = "Hawk Tile Replace"
+effect_type = 12
+target = 5
+base_value = 10
+duration = 0.0
+custom_effect_id = "hawk_tile_replace"
+status_types_to_remove = []
+description = "Replaces 10 enemy tiles with empty boxes."

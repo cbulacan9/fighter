@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://diwadoay0lk6c"]
+
+[ext_resource type="Script" path="res://test/test_status_effects.gd" id="1_testrunner"]
+[ext_resource type="Script" path="res://test/mock_fighter.gd" id="2_mockfighter"]
+
+[node name="TestStatusEffects" type="Node"]
+
+[node name="TestRunner" type="Node" parent="."]
+script = ExtResource("1_testrunner")
+
+[node name="MockFighter1" type="Node" parent="." groups=["mock_fighters"]]
+script = ExtResource("2_mockfighter")
+
+[node name="MockFighter2" type="Node" parent="." groups=["mock_fighters"]]
+script = ExtResource("2_mockfighter")

@@ -18,6 +18,12 @@ var current_state: GameState = GameState.STATS  # Start at STATS so transition t
 var match_timer: float = 0.0
 var winner_id: int = 0
 
+# Character system
+var character_registry: CharacterRegistry
+var unlock_manager: UnlockManager
+var selected_player_character: CharacterData
+var selected_enemy_character: CharacterData
+
 # Node references (set via _ready or exported)
 var player_board: BoardManager
 var enemy_board: BoardManager
@@ -33,12 +39,25 @@ var enemy_stun_overlay: StunOverlay
 var _stats_tracker: StatsTracker
 var _player_data: FighterData
 var _enemy_data: FighterData
+var _unlock_notification: UnlockNotification
 
 
 func _ready() -> void:
 	_stats_tracker = StatsTracker.new()
+	_initialize_character_registry()
 	_load_fighter_data()
 	call_deferred("_initialize_systems")
+
+
+## Initializes the character registry and loads all available characters.
+func _initialize_character_registry() -> void:
+	character_registry = CharacterRegistry.new()
+	character_registry.load_all()
+
+	# Initialize unlock manager
+	unlock_manager = UnlockManager.new()
+	unlock_manager.setup(character_registry)
+	unlock_manager.character_unlocked.connect(_on_character_unlocked)
 
 
 func _process(delta: float) -> void:
@@ -118,6 +137,10 @@ func _connect_signals() -> void:
 		combat_manager.armor_gained.connect(_on_armor_gained)
 		combat_manager.stun_applied.connect(_on_stun_applied)
 		combat_manager.stun_ended.connect(_on_stun_ended)
+		combat_manager.damage_dodged.connect(_on_damage_dodged)
+		combat_manager.status_effect_applied.connect(_on_status_effect_applied)
+		combat_manager.status_effect_removed.connect(_on_status_effect_removed)
+		combat_manager.status_damage_dealt.connect(_on_status_damage_dealt)
 
 	# Board signals
 	if player_board:
@@ -202,15 +225,25 @@ func _setup_match() -> void:
 	winner_id = 0
 	_stats_tracker.reset()
 
+	# Prepare fighter data from selected characters or use defaults
+	_prepare_fighter_data()
+
 	# Initialize combat
 	if combat_manager:
 		combat_manager.initialize(_player_data, _enemy_data)
 
-	# Initialize boards
+	# Initialize boards with character data if available
 	if player_board:
-		player_board.initialize(_player_data, true)
+		if selected_player_character:
+			player_board.initialize_with_character(selected_player_character, true)
+		else:
+			player_board.initialize(_player_data, true)
+
 	if enemy_board:
-		enemy_board.initialize(_enemy_data, false)
+		if selected_enemy_character:
+			enemy_board.initialize_with_character(selected_enemy_character, false)
+		else:
+			enemy_board.initialize(_enemy_data, false)
 
 	# Setup AI
 	if ai_controller and enemy_board:
@@ -225,6 +258,19 @@ func _setup_match() -> void:
 		var player_pos := Vector2(360, 750)  # Center of player board area
 		var enemy_pos := Vector2(360, 300)   # Center of enemy board area
 		damage_spawner.setup(combat_manager, player_pos, enemy_pos)
+
+
+## Prepares fighter data from selected characters or loads default files.
+func _prepare_fighter_data() -> void:
+	if selected_player_character:
+		_player_data = _create_fighter_data(selected_player_character)
+	elif not _player_data:
+		_load_fighter_data()
+
+	if selected_enemy_character:
+		_enemy_data = _create_fighter_data(selected_enemy_character)
+	elif not _enemy_data:
+		_load_fighter_data()
 
 
 func _enable_gameplay() -> void:
@@ -308,6 +354,18 @@ func _on_stats_quit_pressed() -> void:
 
 func _on_match_ended(result: int) -> void:
 	winner_id = result
+
+	# Record match result for unlock system
+	if unlock_manager:
+		if result == 1:  # Player won
+			var opponent_id := ""
+			if selected_enemy_character:
+				opponent_id = selected_enemy_character.character_id
+			if opponent_id != "":
+				unlock_manager.on_match_won(opponent_id)
+		elif result == 2:  # Player lost
+			unlock_manager.on_match_lost()
+
 	change_state(GameState.END)
 
 
@@ -353,3 +411,117 @@ func _on_stun_ended(fighter: Fighter) -> void:
 		player_stun_overlay.hide_stun()
 	elif fighter == combat_manager.enemy_fighter and enemy_stun_overlay:
 		enemy_stun_overlay.hide_stun()
+
+
+func _on_damage_dodged(_target: Fighter) -> void:
+	# Forward to UI for dodge feedback (implemented in Task 031)
+	pass
+
+
+func _on_status_effect_applied(_target: Fighter, _effect: StatusEffect) -> void:
+	# Forward to UI for status effect display (implemented in Task 031)
+	pass
+
+
+func _on_status_effect_removed(_target: Fighter, _effect_type: StatusTypes.StatusType) -> void:
+	# Forward to UI for status effect removal (implemented in Task 031)
+	pass
+
+
+func _on_status_damage_dealt(_target: Fighter, _damage: float, _effect_type: StatusTypes.StatusType) -> void:
+	# Spawn damage number for DoT (implemented in Task 031)
+	pass
+
+
+# --- Character Selection ---
+
+## Selects a character for the player by ID.
+func select_player_character(character_id: String) -> void:
+	if character_registry and character_registry.has_character(character_id):
+		selected_player_character = character_registry.get_character(character_id)
+	else:
+		push_warning("GameManager: Player character not found: %s" % character_id)
+
+
+## Selects a character for the enemy by ID.
+func select_enemy_character(character_id: String) -> void:
+	if character_registry and character_registry.has_character(character_id):
+		selected_enemy_character = character_registry.get_character(character_id)
+	else:
+		push_warning("GameManager: Enemy character not found: %s" % character_id)
+
+
+## Initializes a match with specific character data for both sides.
+func initialize_with_characters(player_char: CharacterData, enemy_char: CharacterData) -> void:
+	selected_player_character = player_char
+	selected_enemy_character = enemy_char
+
+	# Regenerate fighter data from characters
+	if player_char:
+		_player_data = _create_fighter_data(player_char)
+	if enemy_char:
+		_enemy_data = _create_fighter_data(enemy_char)
+
+
+## Creates FighterData from CharacterData.
+func _create_fighter_data(char_data: CharacterData) -> FighterData:
+	var fighter := FighterData.new()
+	fighter.fighter_name = char_data.display_name
+	fighter.max_hp = char_data.base_hp
+	fighter.portrait = PlaceholderTextures.get_or_generate_portrait(char_data, false)
+
+	# Convert spawn weights from CharacterData format to FighterData format
+	fighter.tile_weights = char_data.spawn_weights.duplicate()
+
+	# Copy mana configuration
+	fighter.mana_config = char_data.mana_config
+
+	# Copy sequences
+	fighter.sequences = char_data.sequences.duplicate()
+
+	return fighter
+
+
+## Returns all available characters from the registry.
+func get_all_characters() -> Array[CharacterData]:
+	if character_registry:
+		return character_registry.get_all_characters()
+	return []
+
+
+## Returns a starter character from the registry.
+func get_starter_character() -> CharacterData:
+	if character_registry:
+		return character_registry.get_starter()
+	return null
+
+
+## Returns unlocked character IDs for character selection.
+func get_unlocked_character_ids() -> Array[String]:
+	if unlock_manager:
+		return unlock_manager.get_unlocked_ids()
+	return []
+
+
+# --- Unlock System ---
+
+## Called when a character is unlocked.
+func _on_character_unlocked(character_id: String) -> void:
+	var char_data := character_registry.get_character(character_id)
+	if char_data:
+		_show_unlock_notification(char_data)
+
+
+## Shows the unlock notification UI for a character.
+func _show_unlock_notification(char_data: CharacterData) -> void:
+	# Create notification if it doesn't exist
+	if not _unlock_notification:
+		var notification_scene := load("res://scenes/ui/unlock_notification.tscn")
+		if notification_scene:
+			_unlock_notification = notification_scene.instantiate()
+			get_tree().root.add_child(_unlock_notification)
+		else:
+			push_warning("GameManager: Could not load unlock_notification.tscn")
+			return
+
+	_unlock_notification.show_unlock(char_data)

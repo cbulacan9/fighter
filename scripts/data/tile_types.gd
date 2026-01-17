@@ -7,5 +7,16 @@ enum Type {
 	SHIELD,
 	POTION,
 	LIGHTNING,
-	FILLER
+	FILLER,
+	PET,
+	MANA,  # Generates mana on match
+}
+
+enum ClickCondition {
+	NONE,              # Not clickable
+	ALWAYS,            # Can always click
+	SEQUENCE_COMPLETE, # Requires completed sequence (Hunter's Pet)
+	MANA_FULL,         # Requires full mana bar(s)
+	COOLDOWN,          # Time-based cooldown
+	CUSTOM,            # Custom condition check
 }
