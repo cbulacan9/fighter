@@ -84,7 +84,7 @@ func reset() -> void:
 
 
 ## Returns a string representation for debugging
-func to_string() -> String:
+func _to_string() -> String:
 	var pattern_name := "None"
 	if pattern:
 		pattern_name = pattern.display_name

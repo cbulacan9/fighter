@@ -135,17 +135,17 @@ func is_currently_clickable() -> bool:
 # --- Hidden State Management ---
 
 ## Set the hidden state of the tile (for Smoke Bomb effects)
-func set_hidden(hidden: bool) -> void:
-	if is_hidden == hidden:
+func set_hidden(value: bool) -> void:
+	if is_hidden == value:
 		return
 
-	is_hidden = hidden
+	is_hidden = value
 
 	if _hidden_tween:
 		_hidden_tween.kill()
 		_hidden_tween = null
 
-	if hidden:
+	if value:
 		_show_hidden_state()
 	else:
 		_show_revealed_state()

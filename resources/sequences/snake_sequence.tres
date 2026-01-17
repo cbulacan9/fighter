@@ -14,4 +14,4 @@ on_complete_effect = ExtResource("2")
 self_buff_effect = ExtResource("3")
 max_stacks = 3
 description = "Stun -> Physical -> Shield -> Pet
-Stuns enemy board, cleanses poison."
+Stuns enemy board, heals and cleanses poison."

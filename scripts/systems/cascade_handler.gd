@@ -5,6 +5,7 @@ signal tiles_cleared(count: int)
 signal tiles_fell(moves: Array[TileMove])
 signal tiles_spawned(tiles: Array[Tile])
 signal cascade_complete(result: CascadeResult)
+signal matches_processed(matches: Array[MatchDetector.MatchResult])  # Fires immediately when matches are cleared
 
 const CLEAR_ANIMATION_TIME: float = 0.3
 const FALL_ANIMATION_TIME_PER_ROW: float = 0.1
@@ -50,6 +51,9 @@ func process_matches(initial_matches: Array[MatchDetector.MatchResult]) -> Casca
 		result.chain_count += 1
 		result.all_matches.append_array(current_matches)
 
+		# Emit immediately so UI can update before animations
+		matches_processed.emit(current_matches)
+
 		# Collect all positions to clear
 		var positions := _collect_positions(current_matches)
 		result.total_tiles_cleared += positions.size()
@@ -76,6 +80,52 @@ func process_matches(initial_matches: Array[MatchDetector.MatchResult]) -> Casca
 
 func remove_tiles(positions: Array[Vector2i]) -> void:
 	await _remove_tiles(positions)
+
+
+## Processes a single tile removal (e.g., from clicking a PET tile)
+## Applies gravity, refills the column, and checks for cascading matches
+func process_single_removal(_row: int, _col: int) -> CascadeResult:
+	var result := CascadeResult.new()
+
+	# The tile has already been removed from the grid by the caller
+	# Apply gravity to the column
+	var moves := _calculate_gravity()
+	if moves.size() > 0:
+		await _animate_falls(moves)
+
+	# Fill empty spaces (new tile spawns from top)
+	var new_tiles := _fill_empty_spaces()
+	if new_tiles.size() > 0:
+		await _animate_spawns(new_tiles)
+
+	# Check for new matches caused by the refill
+	var current_matches := match_detector.find_matches(grid)
+
+	# Continue cascade if there are matches
+	while current_matches.size() > 0:
+		result.chain_count += 1
+		result.all_matches.append_array(current_matches)
+
+		# Emit immediately so UI can update before animations
+		matches_processed.emit(current_matches)
+
+		var positions := _collect_positions(current_matches)
+		result.total_tiles_cleared += positions.size()
+
+		await _remove_tiles(positions)
+
+		moves = _calculate_gravity()
+		if moves.size() > 0:
+			await _animate_falls(moves)
+
+		new_tiles = _fill_empty_spaces()
+		if new_tiles.size() > 0:
+			await _animate_spawns(new_tiles)
+
+		current_matches = match_detector.find_matches(grid)
+
+	cascade_complete.emit(result)
+	return result
 
 
 func apply_gravity() -> Array[TileMove]:

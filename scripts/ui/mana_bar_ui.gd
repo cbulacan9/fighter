@@ -46,7 +46,7 @@ func _ready() -> void:
 	_update_display()
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	# Update glow pulse if needed
 	if glow and _glow_pulsing and not _glow_tween:
 		_start_glow_pulse()

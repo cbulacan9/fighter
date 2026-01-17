@@ -130,9 +130,9 @@ func _select_random_tile_data() -> PuzzleTileData:
 
 	# If no tiles available (all at max), fall back to any tile
 	if available_resources.is_empty() or total_available_weight <= 0:
-		var roll := randf() * _total_weight
+		var fallback_roll := randf() * _total_weight
 		for i in range(_cumulative_weights.size()):
-			if roll < _cumulative_weights[i]:
+			if fallback_roll < _cumulative_weights[i]:
 				return tile_resources[i]
 		return tile_resources[tile_resources.size() - 1]
 

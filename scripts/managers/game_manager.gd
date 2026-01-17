@@ -3,6 +3,7 @@ extends Node
 signal state_changed(new_state: GameState)
 
 enum GameState {
+	MODE_SELECT,
 	INIT,
 	COUNTDOWN,
 	BATTLE,
@@ -11,10 +12,16 @@ enum GameState {
 	STATS
 }
 
+enum GameMode {
+	PLAYER_VS_AI,
+	AI_VS_AI
+}
+
 @export var player_data_path: String = "res://resources/fighters/default_player.tres"
 @export var enemy_data_path: String = "res://resources/fighters/default_enemy.tres"
 
-var current_state: GameState = GameState.STATS  # Start at STATS so transition to INIT actually triggers
+var current_state: GameState = GameState.STATS  # Start at STATS so transition to MODE_SELECT actually triggers
+var current_mode: GameMode = GameMode.PLAYER_VS_AI
 var match_timer: float = 0.0
 var winner_id: int = 0
 
@@ -29,12 +36,15 @@ var player_board: BoardManager
 var enemy_board: BoardManager
 var combat_manager: CombatManager
 var ai_controller: AIController
+var player_ai_controller: AIController  # For AI vs AI mode
 var game_overlay: GameOverlay
 var stats_screen: StatsScreen
 var hud: HUD
 var damage_spawner: DamageNumberSpawner
 var player_stun_overlay: StunOverlay
 var enemy_stun_overlay: StunOverlay
+var mode_select_screen: ModeSelectScreen
+var ability_announcement_spawner: AbilityAnnouncementSpawner
 
 var _stats_tracker: StatsTracker
 var _player_data: FighterData
@@ -58,6 +68,11 @@ func _initialize_character_registry() -> void:
 	unlock_manager = UnlockManager.new()
 	unlock_manager.setup(character_registry)
 	unlock_manager.character_unlocked.connect(_on_character_unlocked)
+
+	# DEBUG: Force Hunter for testing (remove after testing)
+	selected_player_character = character_registry.get_character("hunter")
+	selected_enemy_character = character_registry.get_character("hunter")
+	print("DEBUG: Forced Hunter character for both player and enemy")
 
 
 func _process(delta: float) -> void:
@@ -84,8 +99,8 @@ func _initialize_systems() -> void:
 	# Connect signals
 	_connect_signals()
 
-	# Start the game
-	change_state(GameState.INIT)
+	# Start at mode selection
+	change_state(GameState.MODE_SELECT)
 
 
 func _find_node_references() -> void:
@@ -102,8 +117,9 @@ func _find_node_references() -> void:
 		player_board = boards.get_node_or_null("PlayerBoard")
 		enemy_board = boards.get_node_or_null("EnemyBoard")
 
-	# Find AI
+	# Find AI controllers
 	ai_controller = parent.get_node_or_null("AIController")
+	player_ai_controller = parent.get_node_or_null("PlayerAIController")
 
 	# Find UI nodes
 	var ui := parent.get_node_or_null("UI")
@@ -114,9 +130,15 @@ func _find_node_references() -> void:
 		damage_spawner = ui.get_node_or_null("DamageNumbers")
 		player_stun_overlay = ui.get_node_or_null("PlayerStunOverlay")
 		enemy_stun_overlay = ui.get_node_or_null("EnemyStunOverlay")
+		mode_select_screen = ui.get_node_or_null("ModeSelectScreen")
+		ability_announcement_spawner = ui.get_node_or_null("AbilityAnnouncements")
 
 
 func _connect_signals() -> void:
+	# ModeSelectScreen signals
+	if mode_select_screen:
+		mode_select_screen.mode_selected.connect(_on_mode_selected)
+
 	# GameOverlay signals
 	if game_overlay:
 		game_overlay.countdown_finished.connect(_on_countdown_finished)
@@ -145,8 +167,10 @@ func _connect_signals() -> void:
 	# Board signals
 	if player_board:
 		player_board.matches_resolved.connect(_on_player_matches_resolved)
+		player_board.pet_ability_activated.connect(_on_pet_ability_activated)
 	if enemy_board:
 		enemy_board.matches_resolved.connect(_on_enemy_matches_resolved)
+		enemy_board.pet_ability_activated.connect(_on_pet_ability_activated)
 
 
 func change_state(new_state: GameState) -> void:
@@ -161,6 +185,11 @@ func change_state(new_state: GameState) -> void:
 
 func _enter_state(state: GameState) -> void:
 	match state:
+		GameState.MODE_SELECT:
+			_disable_gameplay()
+			if mode_select_screen:
+				mode_select_screen.show_screen()
+
 		GameState.INIT:
 			_setup_match()
 			change_state(GameState.COUNTDOWN)
@@ -192,6 +221,9 @@ func _enter_state(state: GameState) -> void:
 
 func _exit_state(state: GameState) -> void:
 	match state:
+		GameState.MODE_SELECT:
+			if mode_select_screen:
+				mode_select_screen.hide_screen()
 		GameState.PAUSED:
 			if game_overlay:
 				game_overlay.hide_pause()
@@ -232,6 +264,14 @@ func _setup_match() -> void:
 	if combat_manager:
 		combat_manager.initialize(_player_data, _enemy_data)
 
+	# Link boards to their owner fighters and combat manager
+	if player_board and combat_manager:
+		player_board.set_owner_fighter(combat_manager.player_fighter)
+		player_board.set_combat_manager(combat_manager)
+	if enemy_board and combat_manager:
+		enemy_board.set_owner_fighter(combat_manager.enemy_fighter)
+		enemy_board.set_combat_manager(combat_manager)
+
 	# Initialize boards with character data if available
 	if player_board:
 		if selected_player_character:
@@ -245,9 +285,15 @@ func _setup_match() -> void:
 		else:
 			enemy_board.initialize(_enemy_data, false)
 
-	# Setup AI
+	# Setup enemy AI
 	if ai_controller and enemy_board:
 		ai_controller.setup(enemy_board, enemy_board._match_detector)
+
+	# Setup player AI for AI vs AI mode
+	if current_mode == GameMode.AI_VS_AI and player_ai_controller and player_board:
+		player_ai_controller.setup(player_board, player_board._match_detector)
+		# Disable player input since AI controls the board
+		player_board.is_player_controlled = false
 
 	# Setup HUD
 	if hud and combat_manager:
@@ -258,6 +304,12 @@ func _setup_match() -> void:
 		var player_pos := Vector2(360, 750)  # Center of player board area
 		var enemy_pos := Vector2(360, 300)   # Center of enemy board area
 		damage_spawner.setup(combat_manager, player_pos, enemy_pos)
+
+	# Setup ability announcement spawner
+	if ability_announcement_spawner:
+		var player_announce_pos := Vector2(360, 850)  # Below player board
+		var enemy_announce_pos := Vector2(360, 250)   # Center of enemy board area
+		ability_announcement_spawner.setup(player_announce_pos, enemy_announce_pos)
 
 
 ## Prepares fighter data from selected characters or loads default files.
@@ -278,8 +330,14 @@ func _enable_gameplay() -> void:
 		player_board.set_state(BoardManager.BoardState.IDLE)
 	if enemy_board:
 		enemy_board.set_state(BoardManager.BoardState.IDLE)
+
+	# Enable enemy AI
 	if ai_controller:
 		ai_controller.set_enabled(true)
+
+	# Enable player AI in AI vs AI mode
+	if current_mode == GameMode.AI_VS_AI and player_ai_controller:
+		player_ai_controller.set_enabled(true)
 
 
 func _disable_gameplay() -> void:
@@ -287,8 +345,14 @@ func _disable_gameplay() -> void:
 		player_board.lock_input()
 	if enemy_board and enemy_board.state == BoardManager.BoardState.IDLE:
 		enemy_board.lock_input()
+
+	# Disable enemy AI
 	if ai_controller:
 		ai_controller.set_enabled(false)
+
+	# Disable player AI
+	if player_ai_controller:
+		player_ai_controller.set_enabled(false)
 
 
 func _update_board_stun_states() -> void:
@@ -313,10 +377,25 @@ func reset_match() -> void:
 
 	if combat_manager:
 		combat_manager.reset()
+
+	# Reset boards fully (clears state, sequence tracker, and regenerates)
 	if player_board:
-		player_board.generate_initial_board()
+		player_board.reset()
 	if enemy_board:
-		enemy_board.generate_initial_board()
+		enemy_board.reset()
+
+	# Clear stun overlays
+	if player_stun_overlay:
+		player_stun_overlay.hide_stun()
+	if enemy_stun_overlay:
+		enemy_stun_overlay.hide_stun()
+
+	# Reset HUD sequence indicators
+	if hud:
+		if hud.player_sequence_indicator:
+			hud.player_sequence_indicator.reset()
+		if hud.enemy_sequence_indicator:
+			hud.enemy_sequence_indicator.reset()
 
 	_stats_tracker.reset()
 
@@ -324,6 +403,13 @@ func reset_match() -> void:
 
 
 # --- Signal Handlers ---
+
+func _on_mode_selected(mode: int) -> void:
+	# Convert the int to our GameMode enum
+	current_mode = mode as GameMode
+	print("Game mode selected: %s" % ("Player vs AI" if current_mode == GameMode.PLAYER_VS_AI else "AI vs AI"))
+	change_state(GameState.INIT)
+
 
 func _on_countdown_finished() -> void:
 	if current_state == GameState.COUNTDOWN:
@@ -382,7 +468,8 @@ func _on_enemy_matches_resolved(result: CascadeHandler.CascadeResult) -> void:
 
 func _on_damage_dealt(target: Fighter, result: Fighter.DamageResult) -> void:
 	if combat_manager and target == combat_manager.enemy_fighter:
-		_stats_tracker.record_damage(result.hp_damage)
+		# Track total damage dealt (before armor absorption) for accurate stats
+		_stats_tracker.record_damage(result.total_damage)
 	if result.armor_absorbed > 0:
 		_stats_tracker.record_armor_used(result.armor_absorbed)
 
@@ -413,7 +500,7 @@ func _on_stun_ended(fighter: Fighter) -> void:
 		enemy_stun_overlay.hide_stun()
 
 
-func _on_damage_dodged(_target: Fighter) -> void:
+func _on_damage_dodged(_target: Fighter, _source: Fighter) -> void:
 	# Forward to UI for dodge feedback (implemented in Task 031)
 	pass
 
@@ -428,9 +515,41 @@ func _on_status_effect_removed(_target: Fighter, _effect_type: StatusTypes.Statu
 	pass
 
 
-func _on_status_damage_dealt(_target: Fighter, _damage: float, _effect_type: StatusTypes.StatusType) -> void:
-	# Spawn damage number for DoT (implemented in Task 031)
-	pass
+func _on_status_damage_dealt(target: Fighter, damage: float, _effect_type: StatusTypes.StatusType) -> void:
+	# Record status effect damage to stats
+	if combat_manager and target == combat_manager.enemy_fighter:
+		_stats_tracker.record_damage(int(damage))
+
+
+func _on_pet_ability_activated(pattern: SequencePattern, stacks: int, is_player: bool) -> void:
+	if not ability_announcement_spawner or not pattern:
+		return
+
+	var ability_name: String = "PET Ability"
+	if pattern.display_name and pattern.display_name != "":
+		ability_name = pattern.display_name
+
+	var stack_suffix := " x%d" % stacks if stacks > 1 else ""
+
+	# Offensive effect shows on the ENEMY of whoever activated it
+	var offensive_desc := AbilityAnnouncementSpawner.get_offensive_effect_description(pattern)
+	if offensive_desc != "":
+		offensive_desc += stack_suffix
+		# Player activates -> show on enemy board (red), Enemy activates -> show on player board (red)
+		if is_player:
+			ability_announcement_spawner.spawn_enemy_announcement(ability_name, offensive_desc, Color.RED)
+		else:
+			ability_announcement_spawner.spawn_player_announcement(ability_name, offensive_desc, Color.RED)
+
+	# Self-buff shows on the SELF of whoever activated it
+	var buff_desc := AbilityAnnouncementSpawner.get_self_buff_description(pattern)
+	if buff_desc != "":
+		buff_desc += stack_suffix
+		# Player activates -> show on player board (green), Enemy activates -> show on enemy board (green)
+		if is_player:
+			ability_announcement_spawner.spawn_player_announcement(ability_name, buff_desc, Color.GREEN)
+		else:
+			ability_announcement_spawner.spawn_enemy_announcement(ability_name, buff_desc, Color.GREEN)
 
 
 # --- Character Selection ---

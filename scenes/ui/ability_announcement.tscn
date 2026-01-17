@@ -1,0 +1,48 @@
+[gd_scene load_steps=2 format=3 uid="uid://ability_announcement_scene"]
+
+[ext_resource type="Script" path="res://scripts/ui/ability_announcement.gd" id="1"]
+
+[node name="AbilityAnnouncement" type="Control"]
+custom_minimum_size = Vector2(300, 80)
+offset_right = 300.0
+offset_bottom = 80.0
+script = ExtResource("1")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 8.0
+offset_right = 150.0
+offset_bottom = 40.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 24
+text = "BEAR"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EffectLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 42.0
+offset_right = 150.0
+offset_bottom = 72.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+text = "Applied Bleed + Attack Up"
+horizontal_alignment = 1
+vertical_alignment = 1

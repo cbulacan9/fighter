@@ -109,12 +109,12 @@ static func _draw_poison_symbol(image: Image, color: Color) -> void:
 	# Draw drop shape (triangle top + circle bottom)
 	for y in range(8, 24):
 		for x in range(8, 24):
-			var dx := x - cx
-			var dy := y - cy
+			var dx: int = x - cx
+			var dy: int = y - cy
 
 			# Top triangle part (y < cy)
 			if y < cy:
-				var width := int((y - 8) * 0.8)
+				var width: int = int((y - 8) * 0.8)
 				if abs(dx) <= width:
 					image.set_pixel(x, y, color)
 			# Bottom circle part
@@ -132,12 +132,13 @@ static func _draw_bleed_symbol(image: Image, color: Color) -> void:
 	for drop in drops:
 		for y in range(-4, 6):
 			for x in range(-3, 4):
-				var px := drop.x + x
-				var py := drop.y + y
+				var px: int = drop.x + x
+				var py: int = drop.y + y
 
 				if px >= 2 and px < 30 and py >= 2 and py < 30:
 					# Simple drop shape
 					if y < 0:
+						@warning_ignore("integer_division")
 						if abs(x) <= (4 + y) / 2:
 							image.set_pixel(px, py, color)
 					else:
@@ -153,16 +154,16 @@ static func _draw_attack_up_symbol(image: Image, color: Color) -> void:
 	# Arrow shaft
 	for y in range(10, 24):
 		for x in range(-2, 3):
-			var px := cx + x
+			var px: int = cx + x
 			if px >= 2 and px < 30:
 				image.set_pixel(px, y, color)
 
 	# Arrow head
 	for row in range(6):
-		var width := 6 - row
+		var width: int = 6 - row
 		for x in range(-width, width + 1):
-			var px := cx + x
-			var py := 10 - row
+			var px: int = cx + x
+			var py: int = 10 - row
 			if px >= 2 and px < 30 and py >= 2:
 				image.set_pixel(px, py, color)
 
@@ -171,12 +172,12 @@ static func _draw_dodge_symbol(image: Image, color: Color) -> void:
 	"""Draw diagonal motion lines."""
 	# Three diagonal lines suggesting movement
 	for i in range(3):
-		var start_x := 8 + i * 6
-		var start_y := 10 + i * 4
+		var start_x: int = 8 + i * 6
+		var start_y: int = 10 + i * 4
 
 		for j in range(10):
-			var px := start_x + j
-			var py := start_y + int(j * 0.5)
+			var px: int = start_x + j
+			var py: int = start_y + int(j * 0.5)
 			if px >= 2 and px < 30 and py >= 2 and py < 30:
 				image.set_pixel(px, py, color)
 				if py + 1 < 30:
@@ -190,11 +191,11 @@ static func _draw_evasion_symbol(image: Image, color: Color) -> void:
 
 	# Draw a faded circle outline
 	for angle in range(0, 360, 10):
-		var rad := deg_to_rad(float(angle))
-		var radius := 8.0 + sin(rad * 3) * 2  # Wavy radius
+		var rad: float = deg_to_rad(float(angle))
+		var radius: float = 8.0 + sin(rad * 3) * 2  # Wavy radius
 
-		var px := int(cx + cos(rad) * radius)
-		var py := int(cy + sin(rad) * radius)
+		var px: int = int(cx + cos(rad) * radius)
+		var py: int = int(cy + sin(rad) * radius)
 
 		if px >= 2 and px < 30 and py >= 2 and py < 30:
 			image.set_pixel(px, py, color)
@@ -209,14 +210,14 @@ static func _draw_mana_block_symbol(image: Image, color: Color) -> void:
 	"""Draw an X mark for block."""
 	# Draw X shape
 	for i in range(16):
-		var offset := i + 4
+		var offset: int = i + 4
 		# Top-left to bottom-right
 		if offset >= 2 and offset < 30 and i + 8 >= 2 and i + 8 < 30:
 			image.set_pixel(offset + 4, i + 8, color)
 			image.set_pixel(offset + 5, i + 8, color)
 
 		# Top-right to bottom-left
-		var px := 27 - offset
+		var px: int = 27 - offset
 		if px >= 2 and px < 30 and i + 8 >= 2 and i + 8 < 30:
 			image.set_pixel(px, i + 8, color)
 			image.set_pixel(px + 1, i + 8, color)
@@ -231,8 +232,8 @@ static func _draw_dot_symbol(image: Image, color: Color) -> void:
 	for y in range(-radius, radius + 1):
 		for x in range(-radius, radius + 1):
 			if x * x + y * y <= radius * radius:
-				var px := cx + x
-				var py := cy + y
+				var px: int = cx + x
+				var py: int = cy + y
 				if px >= 2 and px < 30 and py >= 2 and py < 30:
 					image.set_pixel(px, py, color)
 

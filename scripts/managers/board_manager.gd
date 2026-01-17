@@ -22,6 +22,9 @@ signal tile_click_failed(tile: Tile, reason: String)
 signal tiles_hidden(positions: Array, duration: float)
 signal tiles_revealed(positions: Array)
 
+# PET ability activation signal (for UI feedback)
+signal pet_ability_activated(pattern: SequencePattern, stacks: int, is_player: bool)
+
 enum BoardState {
 	IDLE,
 	DRAGGING,
@@ -70,8 +73,8 @@ func _ready() -> void:
 	# Add to board_managers group for effect processor to find boards
 	add_to_group("board_managers")
 
-	grid = $Grid
-	_tiles_container = $Grid/Tiles
+	grid = $ClipContainer/Grid
+	_tiles_container = $ClipContainer/Grid/Tiles
 	_input_handler = $InputHandler
 	_match_detector = $MatchDetector
 	_tile_spawner = $TileSpawner
@@ -104,6 +107,7 @@ func _setup_systems() -> void:
 
 	_cascade_handler.setup(grid, _tile_spawner, _match_detector, _tiles_container)
 	_cascade_handler.cascade_complete.connect(_on_cascade_complete)
+	_cascade_handler.matches_processed.connect(_on_matches_processed)
 
 	# Set grid reference on tile spawner for spawn rules
 	_tile_spawner.set_grid(grid)
@@ -221,6 +225,29 @@ func generate_initial_board() -> void:
 			_place_tile(tile, row, col)
 
 	_remove_initial_matches()
+
+
+func reset() -> void:
+	"""Fully reset the board for a new match."""
+	# Reset board state
+	state = BoardState.IDLE
+
+	# Reset sequence tracker
+	if sequence_tracker:
+		sequence_tracker.reset()
+
+	# Clear any stun state
+	_stun_timer = 0.0
+
+	# Clear hidden tiles
+	_hidden_tiles.clear()
+
+	# Re-enable input for player boards
+	if _input_handler:
+		_input_handler.set_enabled(is_player_controlled)
+
+	# Generate fresh board
+	generate_initial_board()
 
 
 func get_state() -> BoardState:
@@ -348,13 +375,17 @@ func _on_snap_back_finished() -> void:
 	set_state(BoardState.IDLE)
 
 
-func _on_cascade_complete(result: CascadeHandler.CascadeResult) -> void:
-	# Record matches for sequence tracking
+func _on_matches_processed(matches: Array[MatchDetector.MatchResult]) -> void:
+	# Record matches immediately for responsive UI updates
 	if sequence_tracker:
-		for match_result in result.all_matches:
-			# Record the tile type for sequence tracking
+		for match_result in matches:
 			var tile_type: int = match_result.tile_type
 			sequence_tracker.record_match(tile_type)
+
+
+func _on_cascade_complete(result: CascadeHandler.CascadeResult) -> void:
+	# Note: Match recording is now handled immediately by _on_matches_processed
+	# for more responsive UI updates
 
 	# Ensure minimum tile counts are maintained after cascade
 	_ensure_minimum_tiles()
@@ -470,8 +501,15 @@ func _activate_tile(tile: Tile) -> void:
 				# Process pet ability effects with multiplier
 				_process_pet_ability(pattern, stacks, multiplier)
 
+				# Emit signal for UI feedback (announcements)
+				# Use _is_player_board() to check ownership, not is_player_controlled (which is about input)
+				pet_ability_activated.emit(pattern, stacks, _is_player_board())
+
 				# Visual feedback for sequence activation
 				tile.play_activation_animation()
+
+				# Consume the PET tile - removes it and triggers column fall
+				_consume_pet_tile(tile)
 				return
 
 	# Start cooldown if applicable
@@ -554,8 +592,50 @@ func _consume_tile(tile: Tile) -> void:
 				return
 
 
+func _consume_pet_tile(tile: Tile) -> void:
+	"""Consume a PET tile after sequence activation - removes tile and triggers column fall."""
+	# Find tile position
+	var tile_row := -1
+	var tile_col := -1
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			if grid.get_tile(row, col) == tile:
+				tile_row = row
+				tile_col = col
+				break
+		if tile_row >= 0:
+			break
+
+	if tile_row < 0:
+		return
+
+	# Remove the tile from grid
+	grid.clear_tile(tile_row, tile_col)
+	tile.queue_free()
+
+	# Trigger column fall and refill (async)
+	set_state(BoardState.RESOLVING)
+	_process_pet_tile_removal(tile_row, tile_col)
+
+
+func _process_pet_tile_removal(row: int, col: int) -> void:
+	"""Async handler for pet tile removal cascade."""
+	# Note: Match recording is handled by _on_matches_processed signal
+	var _result := await _cascade_handler.process_single_removal(row, col)
+	set_state(BoardState.IDLE)
+
+
 func _get_owner_fighter() -> Fighter:
 	return _owner_fighter
+
+
+func _is_player_board() -> bool:
+	# Check if this board belongs to the player (not the enemy)
+	# by comparing owner fighter to combat manager's player_fighter
+	if _owner_fighter and _combat_manager:
+		return _owner_fighter == _combat_manager.player_fighter
+	# Fallback to is_player_controlled if references aren't set
+	return is_player_controlled
 
 
 func set_owner_fighter(fighter: Fighter) -> void:

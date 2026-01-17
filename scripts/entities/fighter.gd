@@ -5,9 +5,13 @@ signal hp_changed(current: int, max_hp: int)
 signal armor_changed(current: int)
 signal stun_changed(remaining: float)
 signal defeated
+@warning_ignore("unused_signal")  # Emitted by ManaSystem
 signal mana_changed(bar_index: int, current: int, max_value: int)
+@warning_ignore("unused_signal")  # Emitted by ManaSystem
 signal ultimate_ready()
+@warning_ignore("unused_signal")  # Emitted by StatusEffectManager
 signal status_effect_applied(effect: StatusEffect)
+@warning_ignore("unused_signal")  # Emitted by StatusEffectManager
 signal status_effect_removed(effect_type: StatusTypes.StatusType)
 
 @export var fighter_data: FighterData

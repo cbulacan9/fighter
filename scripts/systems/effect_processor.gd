@@ -17,6 +17,7 @@ const SMOKE_BOMB_ACTIVE := "smoke_bomb_active"
 const SHADOW_STEP_PASSIVE := "shadow_step_passive"
 const SHADOW_STEP_ACTIVE := "shadow_step_active"
 const HAWK_TILE_REPLACE := "hawk_tile_replace"
+const SNAKE_CLEANSE_HEAL := "snake_cleanse_heal"
 
 
 func setup(combat_manager: CombatManager) -> void:
@@ -194,6 +195,10 @@ func _process_custom_effect(effect: EffectData, source: Fighter) -> void:
 			var count := _hawk_tile_replace(source, effect.base_value)
 			effect_processed.emit(effect, source, null, count)
 
+		SNAKE_CLEANSE_HEAL:
+			_snake_cleanse_heal(source, effect)
+			effect_processed.emit(effect, source, source, effect.base_value)
+
 		_:
 			effect_failed.emit(effect, "unknown_custom_effect: " + effect.custom_effect_id)
 
@@ -217,14 +222,14 @@ func _apply_damage(target: Fighter, source: Fighter, value: int) -> void:
 		# Check target's EVASION (auto-miss, consumes one stack)
 		if _status_manager.has_effect(target, StatusTypes.StatusType.EVASION):
 			_status_manager.consume_evasion_stack(target)
-			_combat_manager.damage_dodged.emit(target)
+			_combat_manager.damage_dodged.emit(target, source)
 			return
 
 		# Check target's DODGE (chance to avoid)
 		if _status_manager.has_effect(target, StatusTypes.StatusType.DODGE):
 			var dodge_chance := _status_manager.get_modifier(target, StatusTypes.StatusType.DODGE)
 			if randf() < dodge_chance:
-				_combat_manager.damage_dodged.emit(target)
+				_combat_manager.damage_dodged.emit(target, source)
 				return
 
 	var result := target.take_damage(final_damage)
@@ -346,6 +351,16 @@ func _hawk_tile_replace(source: Fighter, value: int) -> int:
 			replaced_count += 1
 
 	return replaced_count
+
+
+func _snake_cleanse_heal(source: Fighter, effect: EffectData) -> void:
+	# Cleanse poison from self
+	if _status_manager:
+		_status_manager.remove(source, StatusTypes.StatusType.POISON)
+
+	# Apply minor heal using base_value
+	if effect.base_value > 0:
+		_apply_heal(source, effect.base_value)
 
 
 # --- Helper Methods ---

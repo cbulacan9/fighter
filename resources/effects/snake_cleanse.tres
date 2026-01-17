@@ -4,12 +4,12 @@
 
 [resource]
 script = ExtResource("1")
-effect_id = "snake_cleanse"
-display_name = "Snake Cleanse"
-effect_type = 5
+effect_id = "snake_cleanse_heal"
+display_name = "Snake Heal"
+effect_type = 12
 target = 1
-base_value = 0
+base_value = 5
 duration = 0.0
-custom_effect_id = ""
+custom_effect_id = "snake_cleanse_heal"
 status_types_to_remove = ["POISON"]
-description = "Cleanses own board of poison."
+description = "Cleanses poison and heals for 5 HP."

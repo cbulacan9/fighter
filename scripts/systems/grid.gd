@@ -102,6 +102,8 @@ func shift_column(col_index: int, offset: int) -> void:
 
 func get_all_tiles() -> Array[Tile]:
 	var result: Array[Tile] = []
+	if _tiles.is_empty():
+		return result
 	for row in range(ROWS):
 		for col in range(COLS):
 			if _tiles[row][col]:

@@ -18,6 +18,8 @@ func setup(combat_manager: CombatManager, player_pos: Vector2, enemy_pos: Vector
 		combat_manager.healing_done.connect(_on_healing_done)
 		combat_manager.armor_gained.connect(_on_armor_gained)
 		combat_manager.stun_applied.connect(_on_stun_applied)
+		combat_manager.damage_dodged.connect(_on_damage_dodged)
+		combat_manager.status_damage_dealt.connect(_on_status_damage_dealt)
 
 
 func spawn(value: float, type: DamageNumber.EffectType, world_pos: Vector2) -> void:
@@ -61,3 +63,15 @@ func _on_stun_applied(target: Fighter, duration: float) -> void:
 	if duration > 0:
 		var pos := _get_fighter_position(target)
 		spawn(duration, DamageNumber.EffectType.STUN, pos)
+
+
+func _on_damage_dodged(_target: Fighter, source: Fighter) -> void:
+	# Show MISS on the attacker's side (whose attack missed)
+	var pos := _get_fighter_position(source) if source else Vector2.ZERO
+	spawn(0, DamageNumber.EffectType.MISS, pos)
+
+
+func _on_status_damage_dealt(target: Fighter, damage: float, _effect_type: StatusTypes.StatusType) -> void:
+	if damage > 0:
+		var pos := _get_fighter_position(target)
+		spawn(damage, DamageNumber.EffectType.DAMAGE, pos)

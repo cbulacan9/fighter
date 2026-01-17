@@ -68,7 +68,7 @@ func drain(fighter: Fighter, amount: int, bar_index: int = 0) -> int:
 	if bar_index < 0 or bar_index >= bars.size():
 		return 0
 
-	var drained := bars[bar_index].drain(amount)
+	var drained: int = bars[bar_index].drain(amount)
 	if drained > 0:
 		mana_drained.emit(fighter, bar_index, drained)
 	return drained

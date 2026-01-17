@@ -12,10 +12,16 @@
 script = ExtResource("1")
 tile_scene = ExtResource("3")
 
-[node name="Grid" type="Node2D" parent="."]
+[node name="ClipContainer" type="Control" parent="."]
+clip_children = 2
+custom_minimum_size = Vector2(512, 384)
+offset_right = 512.0
+offset_bottom = 384.0
+
+[node name="Grid" type="Node2D" parent="ClipContainer"]
 script = ExtResource("2")
 
-[node name="Tiles" type="Node2D" parent="Grid"]
+[node name="Tiles" type="Node2D" parent="ClipContainer/Grid"]
 
 [node name="InputHandler" type="Node" parent="."]
 script = ExtResource("4")

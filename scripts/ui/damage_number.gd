@@ -5,21 +5,24 @@ enum EffectType {
 	DAMAGE,
 	HEAL,
 	ARMOR,
-	STUN
+	STUN,
+	MISS
 }
 
 const COLORS := {
 	EffectType.DAMAGE: Color(1.0, 0.27, 0.27),   # Red
 	EffectType.HEAL: Color(0.27, 1.0, 0.27),     # Green
 	EffectType.ARMOR: Color(0.27, 0.27, 1.0),    # Blue
-	EffectType.STUN: Color(1.0, 1.0, 0.27)       # Yellow
+	EffectType.STUN: Color(1.0, 1.0, 0.27),      # Yellow
+	EffectType.MISS: Color(0.7, 0.7, 0.7)        # Gray
 }
 
 const PREFIXES := {
 	EffectType.DAMAGE: "-",
 	EffectType.HEAL: "+",
 	EffectType.ARMOR: "+",
-	EffectType.STUN: ""
+	EffectType.STUN: "",
+	EffectType.MISS: ""
 }
 
 const ANIMATION_DURATION: float = 1.0
@@ -36,7 +39,9 @@ func setup(value: float, type: EffectType, pos: Vector2) -> void:
 	var prefix: String = PREFIXES.get(type, "")
 	var color: Color = COLORS.get(type, Color.WHITE)
 
-	if type == EffectType.STUN:
+	if type == EffectType.MISS:
+		label.text = "MISS"
+	elif type == EffectType.STUN:
 		label.text = "%.1fs" % value
 	elif type == EffectType.ARMOR:
 		label.text = "%s%d" % [prefix, int(value)]

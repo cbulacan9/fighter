@@ -5,6 +5,7 @@ signal drag_started(axis: DragAxis, index: int, start_pos: Vector2)
 signal drag_moved(offset_pixels: float)
 signal drag_ended(final_offset: float)
 signal tile_clicked(tile: Tile)
+@warning_ignore("unused_signal")  # Emitted by BoardManager
 signal tile_click_attempted(tile: Tile, success: bool)
 
 enum DragAxis {

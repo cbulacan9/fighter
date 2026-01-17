@@ -37,7 +37,9 @@ static func generate_portrait(character_id: String, size: int = 128) -> ImageTex
 		image.set_pixel(size - 1, i, border_color)
 
 	# Draw a simple circle in the center representing the character
+	@warning_ignore("integer_division")
 	var center := size / 2
+	@warning_ignore("integer_division")
 	var radius := size / 3
 	var circle_color := Color(1.0, 1.0, 1.0, 0.3)
 

@@ -63,7 +63,7 @@ func _on_animation_finished() -> void:
 
 	# Check for pending unlocks
 	if _pending_unlocks.size() > 0:
-		var next_unlock := _pending_unlocks.pop_front()
+		var next_unlock: CharacterData = _pending_unlocks.pop_front()
 		# Small delay between notifications
 		await get_tree().create_timer(0.3).timeout
 		_display_unlock(next_unlock)

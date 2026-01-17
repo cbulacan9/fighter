@@ -5,6 +5,7 @@ extends HBoxContainer
 ## Automatically updates when effects are applied, removed, or changed.
 
 @export var icon_scene: PackedScene
+@export var icon_size: int = 32  # Size of status icons (default 32x32)
 @export var max_visible_effects: int = 6
 
 var _fighter: Fighter
@@ -115,6 +116,10 @@ func _create_icon(effect: StatusEffect) -> void:
 	var icon: StatusEffectIcon = icon_scene.instantiate() as StatusEffectIcon
 	if icon == null:
 		return
+
+	# Apply custom icon size
+	icon.custom_minimum_size = Vector2(icon_size, icon_size)
+	icon.size = Vector2(icon_size, icon_size)
 
 	# Add to container and setup
 	add_child(icon)

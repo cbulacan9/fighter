@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=15 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://scripts/managers/game_manager.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/managers/combat_manager.gd" id="2"]
@@ -10,6 +10,9 @@
 [ext_resource type="Script" path="res://scripts/ui/damage_number_spawner.gd" id="8"]
 [ext_resource type="PackedScene" uid="uid://damage_number_scene" path="res://scenes/ui/damage_number.tscn" id="9"]
 [ext_resource type="PackedScene" uid="uid://stun_overlay_scene" path="res://scenes/ui/stun_overlay.tscn" id="10"]
+[ext_resource type="PackedScene" uid="uid://mode_select_screen_scene" path="res://scenes/ui/mode_select_screen.tscn" id="11"]
+[ext_resource type="Script" path="res://scripts/ui/ability_announcement_spawner.gd" id="12"]
+[ext_resource type="PackedScene" uid="uid://ability_announcement_scene" path="res://scenes/ui/ability_announcement.tscn" id="13"]
 
 [node name="Main" type="Node"]
 
@@ -22,12 +25,15 @@ script = ExtResource("2")
 [node name="Boards" type="Node2D" parent="."]
 
 [node name="EnemyBoard" parent="Boards" instance=ExtResource("3")]
-position = Vector2(104, 100)
+position = Vector2(104, 105)
 
 [node name="PlayerBoard" parent="Boards" instance=ExtResource("3")]
-position = Vector2(104, 550)
+position = Vector2(104, 680)
 
 [node name="AIController" type="Node" parent="."]
+script = ExtResource("4")
+
+[node name="PlayerAIController" type="Node" parent="."]
 script = ExtResource("4")
 
 [node name="UI" type="CanvasLayer" parent="."]
@@ -36,15 +42,15 @@ script = ExtResource("4")
 
 [node name="PlayerStunOverlay" parent="UI" instance=ExtResource("10")]
 offset_left = 104.0
-offset_top = 550.0
+offset_top = 680.0
 offset_right = 616.0
-offset_bottom = 934.0
+offset_bottom = 1064.0
 
 [node name="EnemyStunOverlay" parent="UI" instance=ExtResource("10")]
 offset_left = 104.0
-offset_top = 100.0
+offset_top = 105.0
 offset_right = 616.0
-offset_bottom = 484.0
+offset_bottom = 489.0
 
 [node name="DamageNumbers" type="Node2D" parent="UI"]
 script = ExtResource("8")
@@ -53,3 +59,9 @@ number_scene = ExtResource("9")
 [node name="GameOverlay" parent="UI" instance=ExtResource("6")]
 
 [node name="StatsScreen" parent="UI" instance=ExtResource("7")]
+
+[node name="ModeSelectScreen" parent="UI" instance=ExtResource("11")]
+
+[node name="AbilityAnnouncements" type="Node2D" parent="UI"]
+script = ExtResource("12")
+announcement_scene = ExtResource("13")

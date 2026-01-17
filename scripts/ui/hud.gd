@@ -9,12 +9,15 @@ signal enemy_mana_bar_clicked(bar_index: int)
 @onready var player_health_bar: HealthBar = $PlayerPanel/Bars/HealthBar
 @onready var player_portrait: TextureRect = $PlayerPanel/Portrait
 @onready var player_mana_container: ManaBarContainer = $PlayerPanel/Bars/ManaContainer
-@onready var player_sequence_indicator: SequenceIndicator = $PlayerPanel/SequenceIndicator
+@onready var player_sequence_indicator: SequenceIndicator = $SequenceIndicator
 @onready var player_status_display: StatusEffectDisplay = $PlayerPanel/Bars/StatusEffectDisplay
 @onready var enemy_health_bar: HealthBar = $EnemyPanel/Bars/HealthBar
 @onready var enemy_portrait: TextureRect = $EnemyPanel/Portrait
 @onready var enemy_mana_container: ManaBarContainer = $EnemyPanel/Bars/ManaContainer
+@onready var enemy_sequence_indicator: SequenceIndicator = $EnemySequenceIndicator
 @onready var enemy_status_display: StatusEffectDisplay = $EnemyPanel/Bars/StatusEffectDisplay
+
+# Note: PlayerPanel is now at bottom (y=600), EnemyPanel at top (y=5)
 
 var _player_fighter: Fighter
 var _enemy_fighter: Fighter
@@ -91,6 +94,15 @@ func _setup_sequence_indicator() -> void:
 		else:
 			player_sequence_indicator.visible = false
 
+	# Setup sequence indicator for enemy if they use sequences
+	if enemy_sequence_indicator:
+		var enemy_board := _get_enemy_board()
+		if enemy_board and enemy_board.sequence_tracker:
+			enemy_sequence_indicator.setup(enemy_board.sequence_tracker)
+			enemy_sequence_indicator.visible = true
+		else:
+			enemy_sequence_indicator.visible = false
+
 
 func _setup_status_displays() -> void:
 	# Get status manager reference
@@ -153,6 +165,31 @@ func _get_player_board() -> BoardManager:
 	if main:
 		for child in main.get_children():
 			if child is BoardManager and child.is_player_controlled:
+				return child
+
+	return null
+
+
+func _get_enemy_board() -> BoardManager:
+	# Try to find the enemy's board manager
+	var board := get_node_or_null("/root/Main/Boards/EnemyBoard")
+	if board:
+		return board as BoardManager
+
+	# Try alternate paths
+	var game_manager := get_node_or_null("/root/Main/GameManager")
+	if game_manager:
+		var boards := game_manager.get_node_or_null("Boards")
+		if boards:
+			var enemy_board := boards.get_node_or_null("EnemyBoard")
+			if enemy_board:
+				return enemy_board as BoardManager
+
+	# Try from parent scene
+	var main := get_node_or_null("/root/Main")
+	if main:
+		for child in main.get_children():
+			if child is BoardManager and not child.is_player_controlled:
 				return child
 
 	return null
@@ -252,6 +289,10 @@ func get_player_sequence_indicator() -> SequenceIndicator:
 	return player_sequence_indicator
 
 
+func get_enemy_sequence_indicator() -> SequenceIndicator:
+	return enemy_sequence_indicator
+
+
 ## Sets up the sequence indicator with a specific board manager
 ## Useful when board manager is created after HUD setup
 func setup_sequence_indicator_for_board(board: BoardManager) -> void:
@@ -263,6 +304,18 @@ func setup_sequence_indicator_for_board(board: BoardManager) -> void:
 		player_sequence_indicator.visible = true
 	else:
 		player_sequence_indicator.visible = false
+
+
+## Sets up the enemy sequence indicator with a specific board manager
+func setup_enemy_sequence_indicator_for_board(board: BoardManager) -> void:
+	if not enemy_sequence_indicator:
+		return
+
+	if board and board.sequence_tracker:
+		enemy_sequence_indicator.setup(board.sequence_tracker)
+		enemy_sequence_indicator.visible = true
+	else:
+		enemy_sequence_indicator.visible = false
 
 
 func get_player_status_display() -> StatusEffectDisplay:

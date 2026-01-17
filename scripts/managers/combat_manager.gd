@@ -11,7 +11,7 @@ signal match_ended(winner_id: int)
 signal mana_changed(fighter: Fighter, bar_index: int, current: int, max_value: int)
 signal ultimate_ready(fighter: Fighter)
 signal ultimate_activated(fighter: Fighter, ability: AbilityData)
-signal damage_dodged(target: Fighter)
+signal damage_dodged(target: Fighter, source: Fighter)
 signal status_effect_applied(target: Fighter, effect: StatusEffect)
 signal status_effect_removed(target: Fighter, effect_type: StatusTypes.StatusType)
 signal status_damage_dealt(target: Fighter, damage: float, effect_type: StatusTypes.StatusType)
@@ -176,14 +176,14 @@ func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 		# Check target's EVASION (auto-miss, consumes one stack)
 		if status_effect_manager.has_effect(target, StatusTypes.StatusType.EVASION):
 			status_effect_manager.consume_evasion_stack(target)
-			damage_dodged.emit(target)
+			damage_dodged.emit(target, source)
 			return
 
 		# Check target's DODGE (chance to avoid)
 		if status_effect_manager.has_effect(target, StatusTypes.StatusType.DODGE):
 			var dodge_chance := status_effect_manager.get_modifier(target, StatusTypes.StatusType.DODGE)
 			if randf() < dodge_chance:
-				damage_dodged.emit(target)
+				damage_dodged.emit(target, source)
 				return
 
 	# Apply damage normally
@@ -337,7 +337,7 @@ func activate_ultimate(fighter: Fighter) -> bool:
 
 
 ## Shows visual feedback when ultimate is activated
-func _show_ultimate_activation(fighter: Fighter, ability: AbilityData) -> void:
+func _show_ultimate_activation(_fighter: Fighter, ability: AbilityData) -> void:
 	# Emit signal for UI to display
 	# Could add screen flash, sound, etc.
 	print("Ultimate activated: %s" % ability.display_name)
