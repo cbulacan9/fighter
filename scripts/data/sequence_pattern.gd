@@ -13,7 +13,13 @@ extends Resource
 
 ## The tile type that terminates/activates the sequence (usually clicked)
 ## Uses TileTypes.Type enum value
+## @deprecated: Use pet_type instead for Hunter combo system
 @export var terminator: int = -1
+
+## Pet tile type spawned when this sequence completes (Hunter combo system)
+## Uses TileTypes.Type enum value: BEAR_PET, HAWK_PET, or SNAKE_PET
+## Set to -1 for patterns that don't spawn pets (legacy behavior)
+@export var pet_type: int = -1
 
 ## Effect triggered when sequence is activated (offensive/enemy effect)
 @export var on_complete_effect: EffectData
@@ -114,5 +120,11 @@ func _tile_type_name(tile_type: int) -> String:
 			return "Pet"
 		TileTypes.Type.MANA:
 			return "Mana"
+		TileTypes.Type.BEAR_PET:
+			return "Bear"
+		TileTypes.Type.HAWK_PET:
+			return "Hawk"
+		TileTypes.Type.SNAKE_PET:
+			return "Snake"
 		_:
 			return "Unknown(%d)" % tile_type

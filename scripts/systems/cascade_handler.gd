@@ -46,9 +46,16 @@ func setup(g: Grid, spawner: TileSpawner, detector: MatchDetector, container: No
 func process_matches(initial_matches: Array[MatchDetector.MatchResult]) -> CascadeResult:
 	var result := CascadeResult.new()
 	var current_matches := initial_matches
+	var is_first_round := true
 
 	while current_matches.size() > 0:
 		result.chain_count += 1
+
+		# Tag cascade matches (non-first rounds) with CASCADE origin
+		if not is_first_round:
+			for match_result in current_matches:
+				match_result.origin = TileTypes.MatchOrigin.CASCADE
+
 		result.all_matches.append_array(current_matches)
 
 		# Emit immediately so UI can update before animations
@@ -71,8 +78,9 @@ func process_matches(initial_matches: Array[MatchDetector.MatchResult]) -> Casca
 		if new_tiles.size() > 0:
 			await _animate_spawns(new_tiles)
 
-		# Check for new matches
+		# Check for new matches - these are CASCADE matches
 		current_matches = match_detector.find_matches(grid)
+		is_first_round = false
 
 	cascade_complete.emit(result)
 	return result
@@ -84,6 +92,7 @@ func remove_tiles(positions: Array[Vector2i]) -> void:
 
 ## Processes a single tile removal (e.g., from clicking a PET tile)
 ## Applies gravity, refills the column, and checks for cascading matches
+## All matches from this are tagged as CASCADE since they result from gravity
 func process_single_removal(_row: int, _col: int) -> CascadeResult:
 	var result := CascadeResult.new()
 
@@ -102,8 +111,14 @@ func process_single_removal(_row: int, _col: int) -> CascadeResult:
 	var current_matches := match_detector.find_matches(grid)
 
 	# Continue cascade if there are matches
+	# Note: All matches here are CASCADE since they result from gravity/removal
 	while current_matches.size() > 0:
 		result.chain_count += 1
+
+		# Tag all matches as CASCADE (not player-initiated)
+		for match_result in current_matches:
+			match_result.origin = TileTypes.MatchOrigin.CASCADE
+
 		result.all_matches.append_array(current_matches)
 
 		# Emit immediately so UI can update before animations

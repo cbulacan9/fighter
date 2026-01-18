@@ -51,6 +51,10 @@ var _stun_timer: float = 0.0
 # Sequence tracking
 var sequence_tracker: SequenceTracker
 
+# Pet spawning (Hunter combo system)
+var pet_spawner: PetSpawner
+var _pending_pet_spawns: Array[Dictionary] = []  # Queue of {pet_type, column} to spawn after cascade
+
 # Click handling
 var _click_condition_checker: ClickConditionChecker
 var _owner_fighter: Fighter  # Reference to the fighter who owns this board
@@ -129,6 +133,7 @@ func _setup_click_handling() -> void:
 func _setup_sequence_tracker(patterns: Array[SequencePattern]) -> void:
 	if patterns.is_empty():
 		sequence_tracker = null
+		pet_spawner = null
 		return
 
 	sequence_tracker = SequenceTracker.new()
@@ -136,7 +141,6 @@ func _setup_sequence_tracker(patterns: Array[SequencePattern]) -> void:
 
 	# Connect sequence tracker signals
 	sequence_tracker.sequence_progressed.connect(_on_sequence_progressed)
-	sequence_tracker.sequence_completed.connect(_on_sequence_completed)
 	sequence_tracker.sequence_broken.connect(_on_sequence_broken)
 	sequence_tracker.sequence_banked.connect(_on_sequence_banked)
 	sequence_tracker.sequence_activated.connect(_on_sequence_activated)
@@ -144,6 +148,42 @@ func _setup_sequence_tracker(patterns: Array[SequencePattern]) -> void:
 	# Connect to click condition checker
 	if _click_condition_checker:
 		_click_condition_checker.set_sequence_tracker(sequence_tracker)
+
+	# Setup PetSpawner for Hunter combo system
+	_setup_pet_spawner(patterns)
+
+
+func _setup_pet_spawner(patterns: Array[SequencePattern]) -> void:
+	# Check if any pattern has a pet_type (Hunter-style combos)
+	var has_pet_patterns := false
+	for pattern in patterns:
+		print("BoardManager: Checking pattern '%s' pet_type=%d" % [pattern.display_name, pattern.pet_type])
+		if pattern.pet_type >= 0:
+			has_pet_patterns = true
+			break
+
+	if not has_pet_patterns:
+		print("BoardManager: No pet patterns found, using legacy mode")
+		pet_spawner = null
+		# Connect legacy sequence_completed signal for non-pet patterns
+		if sequence_tracker and not sequence_tracker.sequence_completed.is_connected(_on_sequence_completed):
+			sequence_tracker.sequence_completed.connect(_on_sequence_completed)
+		return
+
+	# Create PetSpawner
+	print("BoardManager: Creating PetSpawner for Hunter combo system")
+	pet_spawner = PetSpawner.new()
+	pet_spawner.name = "PetSpawner"
+	add_child(pet_spawner)
+
+	# Connect SequenceTracker.sequence_completed -> PetSpawner.on_sequence_completed
+	if sequence_tracker:
+		print("BoardManager: Connecting sequence_tracker.sequence_completed -> pet_spawner.on_sequence_completed")
+		sequence_tracker.sequence_completed.connect(pet_spawner.on_sequence_completed)
+
+	# Connect PetSpawner.pet_spawned -> BoardManager to spawn the tile
+	print("BoardManager: Connecting pet_spawner.pet_spawned -> _on_pet_spawned")
+	pet_spawner.pet_spawned.connect(_on_pet_spawned)
 
 
 ## Sets up spawn rules from character data
@@ -235,6 +275,10 @@ func reset() -> void:
 	# Reset sequence tracker
 	if sequence_tracker:
 		sequence_tracker.reset()
+
+	# Reset pet spawner
+	if pet_spawner:
+		pet_spawner.reset()
 
 	# Clear any stun state
 	_stun_timer = 0.0
@@ -376,16 +420,35 @@ func _on_snap_back_finished() -> void:
 
 
 func _on_matches_processed(matches: Array[MatchDetector.MatchResult]) -> void:
-	# Record matches immediately for responsive UI updates
+	# Process only PLAYER_INITIATED matches for sequence tracking
+	# CASCADE matches should not advance combo trees
+	print("BoardManager: _on_matches_processed called with %d matches" % matches.size())
+	for m in matches:
+		print("  - Match type=%d origin=%d" % [m.tile_type, m.origin])
+
 	if sequence_tracker:
+		var initiating_types: Array[int] = []
 		for match_result in matches:
-			var tile_type: int = match_result.tile_type
-			sequence_tracker.record_match(tile_type)
+			if match_result.origin == TileTypes.MatchOrigin.PLAYER_INITIATED:
+				var tile_type: int = match_result.tile_type
+				if tile_type not in initiating_types:
+					initiating_types.append(tile_type)
+
+		print("BoardManager: Initiating types for sequence tracker: %s" % str(initiating_types))
+		if initiating_types.size() > 0:
+			sequence_tracker.process_initiating_matches(initiating_types)
+	else:
+		print("BoardManager: No sequence_tracker available")
 
 
 func _on_cascade_complete(result: CascadeHandler.CascadeResult) -> void:
 	# Note: Match recording is now handled immediately by _on_matches_processed
 	# for more responsive UI updates
+
+	# Process any pending pet spawns (Hunter combo system)
+	# This must happen after cascade when there's space on the board,
+	# but BEFORE _ensure_minimum_tiles fills empty spaces
+	_process_pending_pet_spawns()
 
 	# Ensure minimum tile counts are maintained after cascade
 	_ensure_minimum_tiles()
@@ -416,6 +479,95 @@ func _on_sequence_broken() -> void:
 
 func _on_sequence_activated(pattern: SequencePattern, stacks: int) -> void:
 	sequence_activated.emit(pattern, stacks)
+
+
+# --- Pet Spawner Signal Handlers ---
+
+func _on_pet_spawned(pet_type: int, column: int) -> void:
+	## Queues a pet tile spawn. The actual spawn happens after the cascade completes
+	## to ensure there's space on the board.
+	print("BoardManager: Queueing pet spawn for pet_type=%d, column=%d" % [pet_type, column])
+	_pending_pet_spawns.append({"pet_type": pet_type, "column": column})
+
+
+## Actually spawns queued pet tiles after cascade is complete
+func _process_pending_pet_spawns() -> void:
+	if _pending_pet_spawns.is_empty():
+		return
+
+	print("BoardManager: Processing %d pending pet spawns" % _pending_pet_spawns.size())
+
+	for spawn_data in _pending_pet_spawns:
+		var pet_type: int = spawn_data["pet_type"]
+		var column: int = spawn_data["column"]
+		_spawn_pet_tile(pet_type, column)
+
+	_pending_pet_spawns.clear()
+
+
+## Spawns a pet tile by replacing the top tile in a column
+## Since the cascade fills the board, we need to replace rather than add
+func _spawn_pet_tile(pet_type: int, preferred_column: int) -> void:
+	var tile_data := _get_pet_tile_data(pet_type)
+	if not tile_data:
+		push_warning("BoardManager: Could not find tile data for pet type %d" % pet_type)
+		return
+
+	# Find the top-most tile in the preferred column to replace
+	var target_column := preferred_column
+	var target_row := _find_top_tile_row(preferred_column)
+
+	# If preferred column is somehow empty, try other columns
+	if target_row < 0:
+		for col in range(Grid.COLS):
+			if col == preferred_column:
+				continue
+			target_row = _find_top_tile_row(col)
+			if target_row >= 0:
+				target_column = col
+				break
+
+	# If no columns have tiles (shouldn't happen), try finding empty space
+	if target_row < 0:
+		target_row = _find_empty_row_in_column(preferred_column)
+		target_column = preferred_column
+		if target_row < 0:
+			push_error("BoardManager: Cannot spawn pet tile - no valid position found!")
+			if pet_spawner:
+				pet_spawner.on_pet_activated(pet_type)
+			return
+
+	# Remove the existing tile at this position (if any)
+	var existing_tile := grid.get_tile(target_row, target_column)
+	if existing_tile:
+		grid.set_tile(target_row, target_column, null)
+		existing_tile.queue_free()
+
+	# Create the pet tile
+	var tile: Tile = _tile_spawner.tile_scene.instantiate()
+	tile.setup(tile_data, Vector2i(target_row, target_column))
+
+	# Place the tile
+	_place_tile(tile, target_row, target_column)
+	print("PET SPAWNED: %s at row %d, column %d (replaced existing tile)" % [tile_data.display_name, target_row, target_column])
+
+
+## Helper to find the first empty row in a column (from top to bottom)
+## Returns -1 if the column is full
+func _find_empty_row_in_column(col: int) -> int:
+	for row in range(Grid.ROWS):
+		if grid.get_tile(row, col) == null:
+			return row
+	return -1
+
+
+## Helper to find the top-most tile in a column (row 0 is top)
+## Returns -1 if the column is empty
+func _find_top_tile_row(col: int) -> int:
+	for row in range(Grid.ROWS):
+		if grid.get_tile(row, col) != null:
+			return row
+	return -1
 
 
 # --- Input Signal Handlers ---
@@ -488,7 +640,12 @@ func _activate_tile(tile: Tile) -> void:
 	if not data:
 		return
 
-	# Check if this is a sequence terminator (Pet tile) with banked sequences
+	# Check if this is a Hunter-style pet tile (BEAR_PET, HAWK_PET, SNAKE_PET)
+	if _is_hunter_pet_type(data.tile_type):
+		_activate_hunter_pet(tile, data)
+		return
+
+	# Check if this is a sequence terminator (legacy Pet tile) with banked sequences
 	if sequence_tracker and data.tile_type == TileTypes.Type.PET:
 		var banked := sequence_tracker.get_banked_sequences()
 		if banked.size() > 0:
@@ -527,6 +684,85 @@ func _activate_tile(tile: Tile) -> void:
 	# Some tiles are consumed on activation
 	if _should_consume_tile(tile):
 		_consume_tile(tile)
+
+
+func _is_hunter_pet_type(tile_type: TileTypes.Type) -> bool:
+	return tile_type in [TileTypes.Type.BEAR_PET, TileTypes.Type.HAWK_PET, TileTypes.Type.SNAKE_PET]
+
+
+func _activate_hunter_pet(tile: Tile, data: PuzzleTileData) -> void:
+	## Activates a Hunter-style pet tile (BEAR_PET, HAWK_PET, SNAKE_PET).
+	## These tiles have their effects defined in click_effect and are consumed on use.
+
+	# Notify PetSpawner to decrement count
+	if pet_spawner:
+		pet_spawner.on_pet_activated(data.tile_type)
+
+	# Get the pattern for this pet type to find its effects
+	var pattern := _get_pattern_for_pet_type(data.tile_type)
+	if pattern:
+		var multiplier := _get_alpha_command_multiplier()
+		# Hunter pets don't have stacks in the new system
+		_process_pet_ability(pattern, 1, multiplier)
+
+		# Emit signal for UI feedback
+		pet_ability_activated.emit(pattern, 1, _is_player_board())
+
+	# Visual feedback
+	tile.play_activation_animation()
+
+	# Consume the pet tile
+	_consume_pet_tile(tile)
+
+
+func _get_pattern_for_pet_type(pet_type: TileTypes.Type) -> SequencePattern:
+	## Finds the sequence pattern associated with a pet type.
+	if not sequence_tracker:
+		return null
+
+	for pattern in sequence_tracker.get_valid_patterns():
+		if pattern.pet_type == pet_type:
+			return pattern
+
+	return null
+
+
+## Cache for pet tile data resources
+var _pet_tile_data_cache: Dictionary = {}
+
+func _get_pet_tile_data(pet_type: int) -> PuzzleTileData:
+	## Gets the PuzzleTileData for a Hunter pet type.
+	## Loads from resources and caches for future use.
+
+	# Check cache first
+	if _pet_tile_data_cache.has(pet_type):
+		return _pet_tile_data_cache[pet_type]
+
+	# Try to get from tile spawner first
+	var tile_data := _tile_spawner.get_tile_data(pet_type)
+	if tile_data:
+		_pet_tile_data_cache[pet_type] = tile_data
+		return tile_data
+
+	# Load the pet tile resource directly
+	var resource_path := ""
+	match pet_type:
+		TileTypes.Type.BEAR_PET:
+			resource_path = "res://resources/tiles/bear_pet.tres"
+		TileTypes.Type.HAWK_PET:
+			resource_path = "res://resources/tiles/hawk_pet.tres"
+		TileTypes.Type.SNAKE_PET:
+			resource_path = "res://resources/tiles/snake_pet.tres"
+		_:
+			return null
+
+	if ResourceLoader.exists(resource_path):
+		tile_data = load(resource_path) as PuzzleTileData
+		if tile_data:
+			_pet_tile_data_cache[pet_type] = tile_data
+			return tile_data
+
+	return null
 
 
 ## Returns the Alpha Command multiplier for pet abilities with decay.
@@ -947,6 +1183,67 @@ func reveal_all_hidden_tiles() -> void:
 
 	if not revealed_positions.is_empty():
 		tiles_revealed.emit(revealed_positions)
+
+
+# --- Pet Tile Query Methods (for AI) ---
+
+## Gets all clickable pet tiles on the board.
+## Returns tiles of type BEAR_PET, HAWK_PET, SNAKE_PET, or legacy PET that are clickable.
+## Used by AI to evaluate when to activate pet abilities.
+func get_clickable_pet_tiles() -> Array[Tile]:
+	var pet_tiles: Array[Tile] = []
+
+	if not grid:
+		return pet_tiles
+
+	var pet_types := [
+		TileTypes.Type.PET,        # Legacy pet tile
+		TileTypes.Type.BEAR_PET,   # Hunter combo pet
+		TileTypes.Type.HAWK_PET,   # Hunter combo pet
+		TileTypes.Type.SNAKE_PET   # Hunter combo pet
+	]
+
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile := grid.get_tile(row, col)
+			if tile and tile.tile_data:
+				if tile.tile_data.tile_type in pet_types:
+					# Check if the tile is clickable
+					if tile.tile_data.is_clickable:
+						# For legacy PET tiles, also check if there's a banked sequence
+						if tile.tile_data.tile_type == TileTypes.Type.PET:
+							if _click_condition_checker and _click_condition_checker.can_click(tile, _owner_fighter):
+								pet_tiles.append(tile)
+						else:
+							# Hunter pet tiles are always clickable when present
+							pet_tiles.append(tile)
+
+	return pet_tiles
+
+
+## Gets clickable Hunter-style pet tiles only (BEAR_PET, HAWK_PET, SNAKE_PET).
+## Excludes legacy PET tiles.
+func get_hunter_pet_tiles() -> Array[Tile]:
+	var pet_tiles: Array[Tile] = []
+
+	if not grid:
+		return pet_tiles
+
+	var hunter_pet_types := [
+		TileTypes.Type.BEAR_PET,
+		TileTypes.Type.HAWK_PET,
+		TileTypes.Type.SNAKE_PET
+	]
+
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile := grid.get_tile(row, col)
+			if tile and tile.tile_data:
+				if tile.tile_data.tile_type in hunter_pet_types:
+					if tile.tile_data.is_clickable:
+						pet_tiles.append(tile)
+
+	return pet_tiles
 
 
 # --- Tile Replacement Methods (for Hawk ability) ---

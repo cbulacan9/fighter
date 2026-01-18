@@ -17,6 +17,16 @@ signal enemy_mana_bar_clicked(bar_index: int)
 @onready var enemy_sequence_indicator: SequenceIndicator = $EnemySequenceIndicator
 @onready var enemy_status_display: StatusEffectDisplay = $EnemyPanel/Bars/StatusEffectDisplay
 
+# Hunter-specific UI components (created dynamically)
+var _player_combo_tree_display: ComboTreeDisplay
+var _player_pet_population_display: PetPopulationDisplay
+var _enemy_combo_tree_display: ComboTreeDisplay
+var _enemy_pet_population_display: PetPopulationDisplay
+
+# Scene references for dynamic instantiation
+const COMBO_TREE_DISPLAY_SCENE := preload("res://scenes/ui/combo_tree_display.tscn")
+const PET_POPULATION_DISPLAY_SCENE := preload("res://scenes/ui/pet_population_display.tscn")
+
 # Note: PlayerPanel is now at bottom (y=600), EnemyPanel at top (y=5)
 
 var _player_fighter: Fighter
@@ -86,22 +96,96 @@ func _setup_mana_bars() -> void:
 
 func _setup_sequence_indicator() -> void:
 	# Setup sequence indicator for player if they use sequences
-	if player_sequence_indicator:
-		var player_board := _get_player_board()
-		if player_board and player_board.sequence_tracker:
-			player_sequence_indicator.setup(player_board.sequence_tracker)
-			player_sequence_indicator.visible = true
-		else:
-			player_sequence_indicator.visible = false
+	var player_board := _get_player_board()
+	_setup_sequence_ui_for_board(player_board, true)
 
 	# Setup sequence indicator for enemy if they use sequences
-	if enemy_sequence_indicator:
-		var enemy_board := _get_enemy_board()
-		if enemy_board and enemy_board.sequence_tracker:
-			enemy_sequence_indicator.setup(enemy_board.sequence_tracker)
-			enemy_sequence_indicator.visible = true
-		else:
-			enemy_sequence_indicator.visible = false
+	var enemy_board := _get_enemy_board()
+	_setup_sequence_ui_for_board(enemy_board, false)
+
+
+## Sets up the appropriate sequence UI for a board based on whether it uses Hunter-style pets
+func _setup_sequence_ui_for_board(board: BoardManager, is_player: bool) -> void:
+	var sequence_indicator: SequenceIndicator = player_sequence_indicator if is_player else enemy_sequence_indicator
+	var use_hunter_ui := _board_uses_hunter_pets(board)
+
+	if use_hunter_ui:
+		# Hide the standard SequenceIndicator
+		if sequence_indicator:
+			sequence_indicator.visible = false
+
+		# Create and setup Hunter UI components
+		_create_hunter_ui(board, is_player)
+	else:
+		# Clean up any existing Hunter UI
+		_cleanup_hunter_ui(is_player)
+
+		# Use standard SequenceIndicator
+		if sequence_indicator:
+			if board and board.sequence_tracker:
+				sequence_indicator.setup(board.sequence_tracker)
+				sequence_indicator.visible = true
+			else:
+				sequence_indicator.visible = false
+
+
+## Checks if a board uses Hunter-style pet sequences (patterns with pet_type set)
+func _board_uses_hunter_pets(board: BoardManager) -> bool:
+	if not board or not board.sequence_tracker:
+		return false
+
+	var patterns := board.sequence_tracker.get_valid_patterns()
+	for pattern in patterns:
+		if pattern.pet_type >= 0:
+			return true
+
+	return false
+
+
+## Creates the Hunter-specific UI components for a board
+func _create_hunter_ui(board: BoardManager, is_player: bool) -> void:
+	if not board:
+		return
+
+	# Determine positions based on player/enemy
+	# Player UI is at bottom, Enemy UI is at top
+	var combo_tree_pos := Vector2(290, 540) if is_player else Vector2(290, 5)
+
+	# Create ComboTreeDisplay (now includes pet population counts)
+	var combo_tree: ComboTreeDisplay = COMBO_TREE_DISPLAY_SCENE.instantiate()
+	combo_tree.position = combo_tree_pos
+	add_child(combo_tree)
+
+	if board.sequence_tracker:
+		combo_tree.setup(board.sequence_tracker)
+
+	# Connect pet spawner to combo tree display for population counts
+	if board.pet_spawner:
+		combo_tree.setup_pet_spawner(board.pet_spawner)
+
+	# Store references
+	if is_player:
+		_player_combo_tree_display = combo_tree
+		_player_pet_population_display = null  # No longer using separate display
+	else:
+		_enemy_combo_tree_display = combo_tree
+		_enemy_pet_population_display = null  # No longer using separate display
+
+
+## Cleans up Hunter-specific UI components
+func _cleanup_hunter_ui(is_player: bool) -> void:
+	if is_player:
+		if _player_combo_tree_display:
+			_player_combo_tree_display.clear()
+			_player_combo_tree_display.queue_free()
+			_player_combo_tree_display = null
+		_player_pet_population_display = null  # No longer using separate display
+	else:
+		if _enemy_combo_tree_display:
+			_enemy_combo_tree_display.clear()
+			_enemy_combo_tree_display.queue_free()
+			_enemy_combo_tree_display = null
+		_enemy_pet_population_display = null  # No longer using separate display
 
 
 func _setup_status_displays() -> void:
@@ -296,26 +380,42 @@ func get_enemy_sequence_indicator() -> SequenceIndicator:
 ## Sets up the sequence indicator with a specific board manager
 ## Useful when board manager is created after HUD setup
 func setup_sequence_indicator_for_board(board: BoardManager) -> void:
-	if not player_sequence_indicator:
-		return
-
-	if board and board.sequence_tracker:
-		player_sequence_indicator.setup(board.sequence_tracker)
-		player_sequence_indicator.visible = true
-	else:
-		player_sequence_indicator.visible = false
+	_setup_sequence_ui_for_board(board, true)
 
 
 ## Sets up the enemy sequence indicator with a specific board manager
 func setup_enemy_sequence_indicator_for_board(board: BoardManager) -> void:
-	if not enemy_sequence_indicator:
-		return
+	_setup_sequence_ui_for_board(board, false)
 
-	if board and board.sequence_tracker:
-		enemy_sequence_indicator.setup(board.sequence_tracker)
-		enemy_sequence_indicator.visible = true
-	else:
-		enemy_sequence_indicator.visible = false
+
+## Returns the player's ComboTreeDisplay if Hunter UI is active
+func get_player_combo_tree_display() -> ComboTreeDisplay:
+	return _player_combo_tree_display
+
+
+## Returns the player's PetPopulationDisplay if Hunter UI is active
+func get_player_pet_population_display() -> PetPopulationDisplay:
+	return _player_pet_population_display
+
+
+## Returns the enemy's ComboTreeDisplay if Hunter UI is active
+func get_enemy_combo_tree_display() -> ComboTreeDisplay:
+	return _enemy_combo_tree_display
+
+
+## Returns the enemy's PetPopulationDisplay if Hunter UI is active
+func get_enemy_pet_population_display() -> PetPopulationDisplay:
+	return _enemy_pet_population_display
+
+
+## Returns true if the player is using Hunter-style UI
+func is_player_using_hunter_ui() -> bool:
+	return _player_combo_tree_display != null
+
+
+## Returns true if the enemy is using Hunter-style UI
+func is_enemy_using_hunter_ui() -> bool:
+	return _enemy_combo_tree_display != null
 
 
 func get_player_status_display() -> StatusEffectDisplay:

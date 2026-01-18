@@ -56,11 +56,13 @@
 ### UI Components (Distributed Pattern)
 | Component | Responsibility |
 |-----------|----------------|
-| **HUD** | Health bars, armor display, fighter portraits |
-| **DamageNumberSpawner** | Spawns floating damage/heal/armor/stun numbers |
+| **HUD** | Health bars, armor display, fighter portraits, mana bars, status effects |
+| **DamageNumberSpawner** | Spawns floating damage/heal/armor/stun/miss numbers |
 | **StunOverlay** | Grey overlay on stunned board with timer display |
 | **GameOverlay** | Countdown, pause menu, victory/defeat splash |
 | **StatsScreen** | End-of-match statistics display |
+| **StatusEffectDisplay** | Shows active status effects with icons and duration |
+| **AbilityAnnouncementSpawner** | Spawns floating announcements for PET ability activations |
 
 ## Data Flow
 
@@ -161,6 +163,8 @@ Key signals for decoupled communication:
 | `armor_gained(target, amount)` | CombatManager | DamageNumberSpawner |
 | `stun_applied(target, duration)` | CombatManager | GameManager |
 | `stun_ended(fighter)` | CombatManager | GameManager |
+| `damage_dodged(target, source)` | CombatManager | DamageNumberSpawner |
+| `status_damage_dealt(target, damage, effect_type)` | CombatManager | DamageNumberSpawner |
 
 ### Fighter Signals
 | Signal | Emitter | Listeners |
@@ -254,7 +258,11 @@ project/
 │   │   ├── damage_number_spawner.gd
 │   │   ├── game_overlay.gd
 │   │   ├── stats_screen.gd
-│   │   └── stun_overlay.gd
+│   │   ├── stun_overlay.gd
+│   │   ├── status_effect_display.gd
+│   │   ├── status_effect_icon.gd
+│   │   ├── ability_announcement.gd
+│   │   └── ability_announcement_spawner.gd
 │   └── data/
 │       ├── tile_data.gd
 │       ├── tile_types.gd

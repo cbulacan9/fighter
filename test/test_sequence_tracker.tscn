@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://sequence_tracker_test"]
+
+[ext_resource type="Script" path="res://test/test_sequence_tracker.gd" id="1_test"]
+
+[node name="TestSequenceTracker" type="Node"]
+script = ExtResource("1_test")

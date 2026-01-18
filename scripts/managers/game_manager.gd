@@ -396,6 +396,20 @@ func reset_match() -> void:
 			hud.player_sequence_indicator.reset()
 		if hud.enemy_sequence_indicator:
 			hud.enemy_sequence_indicator.reset()
+		# Reset Hunter combo tree displays
+		var player_combo_tree := hud.get_player_combo_tree_display()
+		if player_combo_tree:
+			player_combo_tree.reset()
+		var enemy_combo_tree := hud.get_enemy_combo_tree_display()
+		if enemy_combo_tree:
+			enemy_combo_tree.reset()
+		# Reset Hunter pet population displays
+		var player_pet_pop := hud.get_player_pet_population_display()
+		if player_pet_pop:
+			player_pet_pop.reset()
+		var enemy_pet_pop := hud.get_enemy_pet_population_display()
+		if enemy_pet_pop:
+			enemy_pet_pop.reset()
 
 	_stats_tracker.reset()
 

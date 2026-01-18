@@ -47,16 +47,23 @@ During Predator's Trance, all new tiles that drop are swords. When swords are ma
 ## The Hunter
 *Archetype: Stun Heavy*
 
-A combo-sequence specialist who commands animal companions. Rewards precise board management and punishes mistakes with lost progress.
+A combo-sequence specialist who commands animal companions. Rewards precise board management with intentional combo building using parallel combo trees.
 
-### Combo System
+### Combo System (Multi-Tree)
 
-The Hunter triggers abilities by matching tiles in specific sequences, then clicking a Pet tile:
+The Hunter builds combos by matching tiles in specific sequences. Only **player-initiated matches** count — cascade matches are ignored for combo purposes (but still apply normal effects).
 
-- Sequence persists until broken by an invalid match or Pet activation
-- Invalid match resets sequence entirely (whiff)
-- Completed sequences can be "banked" until optimal activation moment
+**Key Mechanics:**
+- Multiple combo trees can be active simultaneously
+- Each tree tracks progress toward one sequence (Bear, Hawk, or Snake)
+- Trees are pruned individually — if a move doesn't advance a specific tree, only that tree dies
+- When a sequence completes, the corresponding Pet tile drops from the top of the board
 - Self-buffs stack up to 3 times
+
+**Example:**
+1. Player matches Physical + Stun simultaneously → Bear tree starts (Physical), Snake tree starts (Stun)
+2. Player matches Shield → Bear tree advances (Physical → Shield), Snake tree dies (needed Physical)
+3. Player matches Shield → Bear tree completes (Physical → Shield → Shield) → Bear Pet drops!
 
 ### Basic Tiles
 
@@ -67,22 +74,43 @@ The Hunter triggers abilities by matching tiles in specific sequences, then clic
 | Stun | Stuns opponent, interrupting their actions |
 | Empty Box | Filler tile (low spawn rate); match to clear |
 
-### Specialty Tile: Pet
+### Specialty Tiles: Pets
 
-Clickable activation tile that triggers completed sequences.
+Three distinct Pet tile types that spawn when their combo sequence completes.
 
 **Spawn Rules:**
-- Minimum 1 Pet tile on board at all times
-- Maximum 2 Pet tiles on board
-- When Pet count drops to 0 after activation, a new Pet immediately drops
+- Pets are NOT in the random tile spawn pool
+- Pets drop from a random column at the top when their sequence completes
+- Maximum 3 of each Pet type on board (if cap reached, combo completes but no Pet spawns)
+- Pets fall with normal gravity and settle into the grid
+- Pets are click-only (cannot be matched)
+
+**Pet Types:**
+| Pet | Spawns When |
+|-----|-------------|
+| 🐻 Bear Pet | Bear sequence completed |
+| 🦅 Hawk Pet | Hawk sequence completed |
+| 🐍 Snake Pet | Snake sequence completed |
 
 ### Pet Abilities
 
+Click a Pet tile to activate its ability.
+
 | Ability | Sequence | Offensive Effect | Self Buff (3x stack) |
 |---------|----------|------------------|----------------------|
-| **Bear** | Physical → Shield → Shield → Pet | 1 bleed stack (damages on enemy's next match) | Attack strength increase |
-| **Hawk** | Shield → Stun → Pet | Replaces 10 enemy tiles with empty boxes | Evasion (next attack auto-misses) |
-| **Snake** | Stun → Physical → Shield → Pet | 3-second enemy board stun | Cleanses own board of poison |
+| **Bear** | Physical → Shield → Shield | 1 bleed stack (damages on enemy's next match) | Attack strength increase |
+| **Hawk** | Shield → Stun | Replaces 10 enemy tiles with empty boxes | Evasion (next attack auto-misses) |
+| **Snake** | Stun → Physical → Shield | 3-second enemy board stun | Cleanses poison and heals 5 HP |
+
+*Note: All sequences have unique starting tiles, so a single match can only start one tree (unless multiple tile types are matched simultaneously).*
+
+### Hunter UI
+
+*Replaces the match history bar (last 10 tiles) with combo-specific displays.*
+
+**Combo Tree Display:** Shows all three sequences (Bear, Hawk, Snake) with tiles that brighten as combos progress and dim when completed or broken. Each sequence is a row showing the required tile order.
+
+**Pet Population Display:** Shows current Pet counts: `🐻 0/3  🦅 0/3  🐍 0/3`. Flashes "MAX POP" when attempting to spawn a Pet at cap.
 
 ### Ultimate Ability
 

@@ -163,29 +163,27 @@ func _evaluate_standard_moves() -> Array[Move]:
 	return valid_moves
 
 
-## Sequence-aware move evaluation for Hunter character
+## Multi-tree combo-aware move evaluation for Hunter character.
+## Uses the new SequenceTracker multi-tree system where multiple combo trees
+## can be active simultaneously and advance/die independently.
 func _evaluate_sequence_moves() -> Array[Move]:
 	var valid_moves: Array[Move] = []
 
 	if not _sequence_tracker:
 		return _evaluate_standard_moves()
 
-	# Get current sequence state
-	var current: Array[int] = _sequence_tracker.get_current_sequence()
-	var possible: Array[SequencePattern] = _sequence_tracker._get_possible_completions()
-
 	# Evaluate row moves
 	for row in range(Grid.ROWS):
 		for offset in range(1, Grid.COLS):
 			# Positive offset
 			var move_pos := Move.new(InputHandler.DragAxis.HORIZONTAL, row, offset)
-			move_pos.score = _score_sequence_move(move_pos, current, possible)
+			move_pos.score = _score_hunter_combo_move(move_pos)
 			if move_pos.score > 0:
 				valid_moves.append(move_pos)
 
 			# Negative offset
 			var move_neg := Move.new(InputHandler.DragAxis.HORIZONTAL, row, -offset)
-			move_neg.score = _score_sequence_move(move_neg, current, possible)
+			move_neg.score = _score_hunter_combo_move(move_neg)
 			if move_neg.score > 0:
 				valid_moves.append(move_neg)
 
@@ -194,21 +192,22 @@ func _evaluate_sequence_moves() -> Array[Move]:
 		for offset in range(1, Grid.ROWS):
 			# Positive offset
 			var move_pos := Move.new(InputHandler.DragAxis.VERTICAL, col, offset)
-			move_pos.score = _score_sequence_move(move_pos, current, possible)
+			move_pos.score = _score_hunter_combo_move(move_pos)
 			if move_pos.score > 0:
 				valid_moves.append(move_pos)
 
 			# Negative offset
 			var move_neg := Move.new(InputHandler.DragAxis.VERTICAL, col, -offset)
-			move_neg.score = _score_sequence_move(move_neg, current, possible)
+			move_neg.score = _score_hunter_combo_move(move_neg)
 			if move_neg.score > 0:
 				valid_moves.append(move_neg)
 
 	return valid_moves
 
 
-## Scores a move considering sequence building for Hunter
-func _score_sequence_move(move: Move, current: Array[int], possible: Array[SequencePattern]) -> float:
+## Scores a move using the multi-tree combo system for Hunter.
+## Evaluates both base match value and combo tree advancement potential.
+func _score_hunter_combo_move(move: Move) -> float:
 	# Get base score from standard evaluation
 	var base_score := evaluate_move(move)
 
@@ -219,7 +218,82 @@ func _score_sequence_move(move: Move, current: Array[int], possible: Array[Seque
 	if base_score <= 0:
 		return 0.0
 
-	var grid := board.grid
+	# Add Hunter combo value based on multi-tree system
+	var combo_value := _evaluate_hunter_combo_value(move, board)
+
+	return base_score + combo_value
+
+
+## Evaluates a move's value for Hunter combo building using the multi-tree system.
+## Considers both advancing existing trees and starting new ones.
+func _evaluate_hunter_combo_value(move: Move, board_mgr: BoardManager) -> float:
+	var score := 0.0
+
+	if not _sequence_tracker:
+		return score
+
+	# Simulate which tile types would be matched by this move
+	var simulated_types := _simulate_move_match_types(move, board_mgr)
+
+	if simulated_types.is_empty():
+		return score
+
+	# Score tree advancement - advancing existing trees is valuable
+	var active_trees := _sequence_tracker.get_active_trees()
+	var advancing_tree_patterns: Array[SequencePattern] = []
+
+	for tree in active_trees:
+		var next_required := tree.next_required()
+		if next_required >= 0 and next_required in simulated_types:
+			# Reward advancing trees - more for trees closer to completion
+			var pattern_length: int = tree.pattern.pattern.size()
+			var completion_ratio := float(tree.progress) / float(pattern_length)
+			# Base 10 points + up to 20 more based on how close to completion
+			score += 10.0 + (completion_ratio * 20.0)
+			advancing_tree_patterns.append(tree.pattern)
+
+			# Bonus for completing a tree (last tile needed)
+			if tree.progress + 1 >= pattern_length:
+				score += 25.0  # Completion bonus
+		else:
+			# Penalty for killing an active tree (move doesn't have required tile)
+			# Only penalize if there are matches that would trigger tree evaluation
+			if not simulated_types.is_empty():
+				var tree_progress_ratio := float(tree.progress) / float(tree.pattern.pattern.size())
+				# More penalty for killing trees that have more progress
+				score -= 5.0 + (tree_progress_ratio * 15.0)
+
+	# Score starting new trees (only for patterns not already advancing)
+	var valid_patterns := _sequence_tracker.get_valid_patterns()
+	for pattern in valid_patterns:
+		if pattern.pattern.is_empty():
+			continue
+
+		var first_tile: int = pattern.pattern[0]
+		if first_tile in simulated_types:
+			# Check if we're already advancing this pattern
+			var already_advancing := false
+			for advancing_pattern in advancing_tree_patterns:
+				if advancing_pattern.sequence_id == pattern.sequence_id:
+					already_advancing = true
+					break
+
+			if not already_advancing:
+				# Starting a new tree is worth some points
+				score += 5.0
+
+	return score
+
+
+## Simulates what tile types would be in the initiating matches for a move.
+## Only considers the direct matches from the move, not cascades.
+func _simulate_move_match_types(move: Move, board_mgr: BoardManager) -> Array[int]:
+	var types: Array[int] = []
+
+	if not board_mgr or not board_mgr.grid:
+		return types
+
+	var grid := board_mgr.grid
 
 	# Temporarily apply the move
 	if move.axis == InputHandler.DragAxis.HORIZONTAL:
@@ -236,41 +310,13 @@ func _score_sequence_move(move: Move, current: Array[int], possible: Array[Seque
 	else:
 		grid.shift_column(move.index, -move.offset)
 
-	var sequence_bonus: float = 0.0
-	var breaks_sequence: bool = false
-	var next_index := current.size()
-
+	# Extract unique tile types from matches
 	for match_result in matches:
 		var tile_type: int = match_result.tile_type
+		if tile_type not in types:
+			types.append(tile_type)
 
-		# Check if this advances any sequence
-		var advances_sequence := false
-		for pattern in possible:
-			if next_index < pattern.pattern.size():
-				if tile_type == pattern.pattern[next_index]:
-					sequence_bonus += 50.0  # Bonus for advancing sequence
-					advances_sequence = true
-					break
-
-		# Check if this would break the sequence (wrong tile type when building)
-		if not advances_sequence and not current.is_empty() and not possible.is_empty():
-			# Only penalize if we're currently building and this isn't the expected type
-			var expected_types: Array[int] = []
-			for pattern in possible:
-				if next_index < pattern.pattern.size():
-					expected_types.append(pattern.pattern[next_index])
-
-			if not expected_types.is_empty() and not (tile_type in expected_types):
-				breaks_sequence = true
-
-	# Apply bonuses and penalties
-	var final_score := base_score + sequence_bonus
-
-	# Penalty for breaking sequence
-	if breaks_sequence:
-		final_score -= 100.0
-
-	return maxf(0.0, final_score)
+	return types
 
 
 func evaluate_move(move: Move) -> float:
@@ -440,8 +486,15 @@ func _get_effect_value(tile_type: TileTypes.Type, count: int) -> int:
 
 # --- Pet Click Decision Logic ---
 
-## Determines if the AI should click the Pet tile to activate a banked sequence
+## Determines if the AI should click a Pet tile (legacy or Hunter-style).
+## For Hunter with multi-tree system, this checks for clickable Hunter pet tiles.
+## For legacy characters, this checks for banked sequences with the old Pet tile.
 func _should_click_pet() -> bool:
+	# First, check for Hunter-style pet tiles (BEAR_PET, HAWK_PET, SNAKE_PET)
+	if _consider_hunter_pet_clicks():
+		return true
+
+	# Legacy path: check for banked sequences with classic Pet tile
 	if not _sequence_tracker:
 		return false
 
@@ -472,12 +525,142 @@ func _should_click_pet() -> bool:
 	return true
 
 
-## Clicks the Pet tile to activate a banked sequence
+## Clicks the Pet tile to activate a banked sequence (legacy or Hunter-style)
 func _click_pet() -> void:
+	# First, try to click Hunter-style pet tiles
+	var hunter_pets := _get_clickable_hunter_pet_tiles()
+	if not hunter_pets.is_empty():
+		# Find the best pet to click based on difficulty
+		for pet_tile in hunter_pets:
+			var pet_type: int = pet_tile.tile_data.tile_type
+			if _should_click_hunter_pet(pet_type):
+				board._on_tile_clicked(pet_tile)
+				return
+
+	# Legacy path: click classic Pet tile
 	var pet_tiles := _get_tiles_of_type(TileTypes.Type.PET)
 	if pet_tiles.size() > 0:
 		# Simulate a click on the Pet tile through BoardManager
 		board._on_tile_clicked(pet_tiles[0])
+
+
+## Checks if any Hunter pet tiles should be clicked this turn.
+## Returns true if there's a pet tile that should be activated based on difficulty.
+func _consider_hunter_pet_clicks() -> bool:
+	var hunter_pets := _get_clickable_hunter_pet_tiles()
+	if hunter_pets.is_empty():
+		return false
+
+	# Check each pet tile to see if we should click it
+	for pet_tile in hunter_pets:
+		var pet_type: int = pet_tile.tile_data.tile_type
+		if _should_click_hunter_pet(pet_type):
+			return true
+
+	return false
+
+
+## Decides whether AI should click a Hunter Pet tile based on difficulty.
+## Uses strategic timing for harder difficulties.
+func _should_click_hunter_pet(pet_type: int) -> bool:
+	var fighter := _get_owner_fighter()
+	var enemy := _get_enemy_fighter()
+
+	match _difficulty:
+		Difficulty.EASY:
+			# Click immediately when available - no strategy
+			return true
+
+		Difficulty.MEDIUM:
+			# Click based on basic situation analysis
+			match pet_type:
+				TileTypes.Type.BEAR_PET:
+					# Damage is usually good
+					return true
+				TileTypes.Type.HAWK_PET:
+					# Board disruption - use when available
+					return true
+				TileTypes.Type.SNAKE_PET:
+					# Use for healing when HP below 50% or to cleanse poison
+					if fighter:
+						if fighter.has_status(StatusTypes.StatusType.POISON):
+							return true
+						return fighter.current_hp < fighter.max_hp * 0.5
+					return true
+
+		Difficulty.HARD:
+			# Strategic timing based on game state
+			match pet_type:
+				TileTypes.Type.BEAR_PET:
+					# Save for when enemy has low armor for maximum damage
+					if enemy:
+						return enemy.armor < 10
+					return true
+				TileTypes.Type.HAWK_PET:
+					# Use for board disruption - could analyze enemy board state
+					# For now, use when enemy is doing well
+					if enemy and fighter:
+						# Use when enemy has more HP percentage than us
+						var our_hp_pct := fighter.get_hp_percent()
+						var enemy_hp_pct := enemy.get_hp_percent()
+						return enemy_hp_pct >= our_hp_pct
+					return true
+				TileTypes.Type.SNAKE_PET:
+					# Use when HP below 40% or poisoned
+					if fighter:
+						if fighter.has_status(StatusTypes.StatusType.POISON):
+							return true
+						return fighter.current_hp < fighter.max_hp * 0.4
+					return true
+
+	# Default: click when available
+	return true
+
+
+## Gets all clickable Hunter pet tiles (BEAR_PET, HAWK_PET, SNAKE_PET) on the board.
+## Uses BoardManager's helper method for consistency.
+func _get_clickable_hunter_pet_tiles() -> Array[Tile]:
+	if not board:
+		return []
+
+	# Use BoardManager's helper method if available
+	if board.has_method("get_hunter_pet_tiles"):
+		return board.get_hunter_pet_tiles()
+
+	# Fallback implementation
+	var pet_tiles: Array[Tile] = []
+
+	if not board.grid:
+		return pet_tiles
+
+	var hunter_pet_types := [
+		TileTypes.Type.BEAR_PET,
+		TileTypes.Type.HAWK_PET,
+		TileTypes.Type.SNAKE_PET
+	]
+
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile: Tile = board.grid.get_tile(row, col)
+			if tile and tile.tile_data:
+				if tile.tile_data.tile_type in hunter_pet_types:
+					# Check if the tile is actually clickable
+					if tile.tile_data.is_clickable:
+						pet_tiles.append(tile)
+
+	return pet_tiles
+
+
+## Gets the enemy fighter from combat manager
+func _get_enemy_fighter() -> Fighter:
+	if not _combat_manager:
+		return null
+
+	# The AI controls the enemy board, so its enemy is the player
+	if _owner_fighter == _combat_manager.enemy_fighter:
+		return _combat_manager.player_fighter
+	else:
+		return _combat_manager.enemy_fighter
 
 
 # --- Ultimate Activation Decision Logic ---

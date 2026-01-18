@@ -7,6 +7,7 @@ const MAX_MATCH_COUNT: int = 5
 class MatchResult:
 	var tile_type: TileTypes.Type
 	var positions: Array[Vector2i]
+	var origin: int = TileTypes.MatchOrigin.PLAYER_INITIATED
 	var count: int:
 		get:
 			return mini(positions.size(), MAX_MATCH_COUNT)

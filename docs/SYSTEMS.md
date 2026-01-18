@@ -102,15 +102,15 @@ Manages tile removal, gravity fill, and chain reaction processing.
 ### Cascade Sequence
 ```
 Remove Matched Tiles
-        ↓
+		↓
 Apply Gravity (tiles fall down)
-        ↓
+		↓
 Spawn New Tiles (from top)
-        ↓
+		↓
 Wait for animations
-        ↓
+		↓
 Check for new matches
-        ↓
+		↓
 If matches exist → Loop
 If no matches → Complete
 ```
@@ -249,7 +249,7 @@ Controls all visual feedback and UI elements.
 ### Damage Number Behavior
 - Spawn at tile match position
 - Float upward with fade
-- Color coded: Red (damage), Green (heal), Blue (armor), Yellow (stun)
+- Color coded: Red (damage), Green (heal), Blue (armor), Yellow (stun), Gray (miss)
 
 ### Health Bar Display
 - Shows HP as filled portion
@@ -367,7 +367,7 @@ UI is implemented as independent components rather than a centralized UIManager.
 **Purpose:** Creates floating numbers for combat feedback.
 
 **Setup:** `setup(combat_manager, player_pos, enemy_pos)`
-- Connects to CombatManager signals: damage_dealt, healing_done, armor_gained, stun_applied
+- Connects to CombatManager signals: damage_dealt, healing_done, armor_gained, stun_applied, damage_dodged, status_damage_dealt
 - Spawns numbers at fighter positions based on target
 
 **Number Types (color-coded):**
@@ -375,6 +375,7 @@ UI is implemented as independent components rather than a centralized UIManager.
 - HEAL (green): HP restored
 - ARMOR (blue): Shield points gained
 - STUN (yellow): Stun duration applied
+- MISS (gray): Attack dodged/evaded
 
 ### StunOverlay
 **Purpose:** Visual indicator when a board is stunned.

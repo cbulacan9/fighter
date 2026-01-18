@@ -29,34 +29,34 @@ This proposal outlines the architectural changes required to implement the chara
 
 ```
 TileTypes (enum) ──→ TileData (resource) ──→ Tile (entity)
-                           │
-                    CombatManager
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-           Damage       Healing       Stun
+						   │
+					CombatManager
+						   │
+			  ┌────────────┼────────────┐
+			  ▼            ▼            ▼
+		   Damage       Healing       Stun
 ```
 
 ### Proposed State
 
 ```
 CharacterData ──→ TileConfig[] ──→ TileData (resource) ──→ Tile (entity)
-     │                                    │
-     │                             ┌──────┴──────┐
-     │                             ▼             ▼
-     │                        Matchable     Clickable
-     │                             │             │
-     └──→ AbilityConfig[]         ▼             ▼
-              │              MatchEffect    ClickEffect
-              │                   │             │
-              ▼                   └──────┬──────┘
-         ManaConfig                      ▼
-              │                   EffectProcessor
-              ▼                          │
-         ManaSystem              ┌───────┼───────┐
-                                 ▼       ▼       ▼
-                            Damage   Status   Board
-                                     Effect   Manip
+	 │                                    │
+	 │                             ┌──────┴──────┐
+	 │                             ▼             ▼
+	 │                        Matchable     Clickable
+	 │                             │             │
+	 └──→ AbilityConfig[]         ▼             ▼
+			  │              MatchEffect    ClickEffect
+			  │                   │             │
+			  ▼                   └──────┬──────┘
+		 ManaConfig                      ▼
+			  │                   EffectProcessor
+			  ▼                          │
+		 ManaSystem              ┌───────┼───────┐
+								 ▼       ▼       ▼
+							Damage   Status   Board
+									 Effect   Manip
 ```
 
 ---
@@ -132,8 +132,8 @@ class_name TileData extends Resource
 @export var click_condition: ClickCondition  # Optional
 
 enum ClickCondition {
-    ALWAYS,           # Can always click
-    SEQUENCE_COMPLETE, # Hunter's Pet
+	ALWAYS,           # Can always click
+	SEQUENCE_COMPLETE, # Hunter's Pet
     MANA_FULL,        # Requires full mana
     COOLDOWN          # Time-based
 }
@@ -193,8 +193,8 @@ class_name StatusEffectData extends Resource
 @export var stack_behavior: StackBehavior
 
 enum StatusType {
-    POISON,      # DoT, ticks over time
-    BLEED,       # Damage on enemy's next match
+	POISON,      # DoT, ticks over time
+	BLEED,       # Damage on enemy's next match
     DODGE,       # Chance to avoid next attack
     ATTACK_UP,   # Damage multiplier
     EVASION,     # Next attack auto-misses
@@ -238,62 +238,227 @@ func has_effect(type: StatusType) -> bool
 
 ---
 
-### 4. Combo Sequences
+### 4. Combo Sequences (Hunter v2 — Multi-Tree System)
 
-**Purpose:** Track tile match order, reward specific patterns (Hunter's core mechanic).
+**Purpose:** Track tile match order with parallel combo trees, reward specific patterns (Hunter's core mechanic).
 
-**Requirements:**
-- Track sequence of tile types matched
-- Pattern matching against defined sequences
-- Whiff detection (invalid match breaks sequence)
-- Sequence banking (complete sequence persists until used)
-- Visual indicator of current sequence progress
-- Multiple valid sequences per character
+**Key Design Principles:**
+- Only **player-initiated matches** count (pre-cascade); cascade matches are ignored for combo tracking
+- Multiple combo trees can be active simultaneously
+- Trees are pruned individually when contradicted (not all-or-nothing)
+- Sequences auto-complete immediately when pattern is fulfilled
+- Pet tiles spawn on completion (not always on board)
+
+---
+
+#### 4.1 Match Origin Tracking
+
+BoardManager must distinguish player-initiated matches from cascade matches.
+
+```gdscript
+enum MatchOrigin {
+	PLAYER_INITIATED,  # Direct result of player's move (pre-cascade)
+    CASCADE            # Result of gravity fill
+}
+
+# Extension to MatchResult
+class_name MatchResult extends RefCounted
+var tile_type: TileType
+var count: int
+var positions: Array[Vector2i]
+var effect_value: int
+var origin: MatchOrigin  # NEW — tags where this match came from
+```
+
+**Data Flow:**
+```
+InputHandler.drag_released
+        ↓
+MatchDetector.find_matches() → tagged as PLAYER_INITIATED
+        ↓
+CascadeHandler.process_cascade()
+        ↓
+    ┌───┴───┐
+    ↓       ↓
+ Remove   Fill + Detect → tagged as CASCADE
+        ↓
+CascadeResult.all_matches (each tagged with origin)
+        ↓
+SequenceTracker receives ONLY PLAYER_INITIATED matches
+CombatManager receives ALL matches (effects apply regardless of origin)
+```
+
+---
+
+#### 4.2 Multi-Tree SequenceTracker
 
 **Data Structures:**
 
 ```gdscript
 class_name SequencePattern extends Resource
-@export var name: String
-@export var pattern: Array[TileType]  # e.g., [PHYSICAL, SHIELD, SHIELD]
-@export var terminator: TileType      # e.g., PET (must be clicked, not matched)
-@export var on_complete: AbilityData
+@export var name: String                    # "Bear", "Hawk", "Snake"
+@export var pattern: Array[TileType]        # e.g., [PHYSICAL, SHIELD, SHIELD]
+@export var pet_type: PetType               # Which Pet spawns on completion
+@export var on_complete: AbilityData        # Ability triggered when Pet clicked
 
-class_name SequenceTracker extends RefCounted
-var _current_sequence: Array[TileType] = []
-var _banked_sequences: Array[SequencePattern] = []
-var _valid_patterns: Array[SequencePattern] = []
+enum PetType {
+    BEAR_PET,
+    HAWK_PET,
+    SNAKE_PET
+}
 
-signal sequence_progressed(current: Array, possible_completions: Array)
-signal sequence_completed(pattern: SequencePattern)
-signal sequence_broken()
+class_name ComboTree extends RefCounted
+var pattern: SequencePattern        # Which sequence this tree is tracking
+var progress: int = 0               # Index into pattern.pattern array
+var matched_tiles: Array[TileType]  # History for UI/debugging
+
+func next_required() -> TileType:
+    return pattern.pattern[progress]
+
+func is_complete() -> bool:
+    return progress >= pattern.pattern.size()
+
+class_name SequenceTracker extends Node
+var _active_trees: Array[ComboTree] = []
+var _all_patterns: Array[SequencePattern] = []
+
+signal tree_started(pattern_name: String)
+signal tree_progressed(pattern_name: String, progress: int, total: int)
+signal tree_died(pattern_name: String)
+signal sequence_completed(pet_type: PetType)
+```
+
+**Core Algorithm:**
+
+```gdscript
+func process_initiating_matches(tile_types: Array[TileType]) -> void:
+    # Step 1: Advance or kill existing trees
+    for tree in _active_trees.duplicate():  # Duplicate to allow removal during iteration
+        if tree.next_required() in tile_types:
+            tree.progress += 1
+            tree.matched_tiles.append(tree.next_required())
+            emit_signal("tree_progressed", tree.pattern.name, tree.progress, tree.pattern.pattern.size())
+
+            # Check for immediate completion (auto-complete)
+            if tree.is_complete():
+                emit_signal("sequence_completed", tree.pattern.pet_type)
+                _active_trees.erase(tree)
+        else:
+            # Tree contradicted — kill it individually
+            emit_signal("tree_died", tree.pattern.name)
+            _active_trees.erase(tree)
+
+    # Step 2: Start new trees for any tile that begins a pattern
+    for tile_type in tile_types:
+        for pattern in _all_patterns:
+            if pattern.pattern[0] == tile_type:
+				# Don't duplicate if tree for this pattern already at position 1
+				if not _has_tree_at_start(pattern):
+					var new_tree = ComboTree.new()
+					new_tree.pattern = pattern
+					new_tree.progress = 1
+					new_tree.matched_tiles = [tile_type]
+					_active_trees.append(new_tree)
+					emit_signal("tree_started", pattern.name)
+
+					# Check immediate completion (single-tile pattern edge case)
+					if new_tree.is_complete():
+						emit_signal("sequence_completed", new_tree.pattern.pet_type)
+						_active_trees.erase(new_tree)
 ```
 
 **Operations:**
 | Operation | Description |
 |-----------|-------------|
-| `record_match(tile_type)` | Add to current sequence, check validity |
-| `check_completion()` | See if current sequence matches any pattern |
-| `bank_sequence(pattern)` | Store completed sequence for later activation |
-| `activate_banked(pattern)` | Use a banked sequence (triggers ability) |
-| `break_sequence()` | Reset current sequence (whiff) |
-| `get_possible_patterns()` | Return patterns that could still complete |
+| `process_initiating_matches(types)` | Core algorithm — advance/kill trees, start new trees |
+| `get_active_trees()` | Returns current tree states for UI |
+| `get_possible_next_tiles()` | Returns tile types that would advance any active tree |
+| `reset()` | Clears all active trees |
 
-**Whiff Logic:**
-```
-On match:
-  1. Append tile_type to current_sequence
-  2. Check if current_sequence is prefix of ANY valid pattern
-  3. If no valid prefix exists → break_sequence()
-  4. If exact match of pattern (minus terminator) → mark as completable
-  5. On terminator click → bank or activate
+---
+
+#### 4.3 Pet Tile System (Spawn on Completion)
+
+Pet tiles are **not** in the random spawn pool. They spawn only when combos complete.
+
+**TileTypes Extension:**
+```gdscript
+enum TileType {
+	# ... existing types ...
+	BEAR_PET,    # Spawns on Bear combo completion
+	HAWK_PET,    # Spawns on Hawk combo completion
+	SNAKE_PET    # Spawns on Snake combo completion
+}
 ```
 
-**Integration Points:**
-- BoardManager → SequenceTracker (on match resolved)
-- SequenceTracker → UI (sequence progress display)
-- SequenceTracker → Tile (enable terminator clickability)
-- SequenceTracker → AbilitySystem (on activation)
+**Pet Tile Properties (all three types):**
+```gdscript
+is_matchable = false   # Cannot be matched — click only
+is_clickable = true    # Always clickable when on board
+click_condition = ALWAYS
+```
+
+**PetSpawner Component:**
+
+```gdscript
+class_name PetSpawner extends Node
+
+const MAX_PET_PER_TYPE: int = 3
+
+var _pet_counts: Dictionary = {
+	PetType.BEAR_PET: 0,
+	PetType.HAWK_PET: 0,
+	PetType.SNAKE_PET: 0
+}
+
+signal pet_spawned(pet_type: PetType, column: int)
+signal pet_spawn_blocked(pet_type: PetType)  # Cap reached
+
+func _on_sequence_completed(pet_type: PetType) -> void:
+	if _pet_counts[pet_type] >= MAX_PET_PER_TYPE:
+		emit_signal("pet_spawn_blocked", pet_type)
+		return
+
+	var column = randi() % Grid.COLS
+	emit_signal("pet_spawned", pet_type, column)
+	_pet_counts[pet_type] += 1
+
+func _on_pet_activated(pet_type: PetType) -> void:
+	_pet_counts[pet_type] -= 1
+```
+
+**Spawn Rules:**
+| Rule | Value |
+|------|-------|
+| **Trigger** | `sequence_completed` signal |
+| **Position** | Random column, row 0 (top) |
+| **Physics** | Normal gravity — falls and settles into grid |
+| **Cap per type** | 3 maximum on board |
+| **Cap behavior** | Combo completes but no Pet spawns; UI shows "MAX POP" feedback |
+
+---
+
+#### 4.4 Hunter Sequences
+
+| Ability | Sequence | Pet Type | Notes |
+|---------|----------|----------|-------|
+| **Bear** | Physical → Shield → Shield | BEAR_PET | Starts with Physical (unique) |
+| **Hawk** | Shield → Stun | HAWK_PET | Starts with Shield (unique) |
+| **Snake** | Stun → Physical → Shield | SNAKE_PET | Starts with Stun (unique) |
+
+**Design Note:** All sequences have unique starting tiles, preventing ambiguous tree creation from a single match. However, if a player matches multiple tile types simultaneously (e.g., Physical + Shield), multiple trees will start in parallel.
+
+---
+
+#### 4.5 Integration Points
+
+- **BoardManager → SequenceTracker:** Pass only PLAYER_INITIATED match types
+- **SequenceTracker → PetSpawner:** On `sequence_completed`, spawn Pet
+- **PetSpawner → BoardManager:** Add Pet tile at spawn position
+- **Tile (Pet click) → AbilitySystem:** Trigger ability
+- **Tile (Pet click) → PetSpawner:** Decrement count
+- **SequenceTracker → UI (ComboTreeDisplay):** Tree state changes
+- **PetSpawner → UI (PetPopulationDisplay):** Count changes, cap feedback
 
 ---
 
@@ -348,24 +513,31 @@ scripts/
 ├── systems/
 │   ├── mana_system.gd           # NEW
 │   ├── status_effect_manager.gd # NEW
-│   ├── sequence_tracker.gd      # NEW
+│   ├── sequence_tracker.gd      # NEW (multi-tree design)
+│   ├── pet_spawner.gd           # NEW (spawns Pets on combo completion)
 │   └── effect_processor.gd      # NEW (unified effect handling)
 ├── data/
 │   ├── character_data.gd        # NEW
 │   ├── mana_config.gd           # NEW
 │   ├── status_effect_data.gd    # NEW
-│   ├── sequence_pattern.gd      # NEW
+│   ├── sequence_pattern.gd      # NEW (includes pet_type field)
+│   ├── combo_tree.gd            # NEW (tracks individual tree progress)
 │   ├── ability_data.gd          # NEW
-│   └── tile_data.gd             # MODIFIED (add click support)
+│   └── tile_data.gd             # MODIFIED (add click support, MatchOrigin)
 ├── entities/
 │   ├── tile.gd                  # MODIFIED (click handling)
 │   └── fighter.gd               # MODIFIED (status effects integration)
 ├── ui/
 │   ├── mana_bar.gd              # NEW
-│   ├── sequence_indicator.gd    # NEW
-│   └── status_effect_display.gd # NEW
+│   ├── combo_tree_display.gd    # NEW (replaces sequence_indicator for Hunter)
+│   ├── pet_population_display.gd # NEW (0/3 counters + MAX POP)
+│   ├── status_effect_display.gd # NEW
+│   └── sequence_indicator.gd    # REMOVE (replaced by combo_tree_display for Hunter)
+├── controllers/
+│   └── ai_controller.gd         # MODIFIED (Hunter combo/Pet logic)
 └── managers/
-    └── combat_manager.gd        # MODIFIED (effect processor integration)
+	├── board_manager.gd         # MODIFIED (MatchOrigin tagging)
+	└── combat_manager.gd        # MODIFIED (effect processor integration)
 
 resources/
 ├── characters/
@@ -373,19 +545,29 @@ resources/
 │   ├── assassin.tres            # FUTURE
 │   ├── mirror_warden.tres       # FUTURE
 │   └── apothecary.tres          # FUTURE
+├── tiles/
+│   ├── bear_pet.tres            # NEW (click-only Pet tile)
+│   ├── hawk_pet.tres            # NEW (click-only Pet tile)
+│   └── snake_pet.tres           # NEW (click-only Pet tile)
 ├── effects/
 │   ├── poison.tres
 │   ├── bleed.tres
 │   └── ...
 └── sequences/
-    ├── bear_sequence.tres
-    ├── hawk_sequence.tres
-    └── snake_sequence.tres
+	├── bear_sequence.tres       # MODIFIED (pet_type: BEAR_PET)
+	├── hawk_sequence.tres       # MODIFIED (pet_type: HAWK_PET)
+	└── snake_sequence.tres      # MODIFIED (pet_type: SNAKE_PET)
+
+scenes/
+└── ui/
+	├── combo_tree_display.tscn  # NEW
+	└── pet_population_display.tscn # NEW
 
 test/
 ├── test_mana_system.gd          # NEW
 ├── test_status_effects.gd       # NEW
-├── test_sequence_tracker.gd     # NEW
+├── test_sequence_tracker.gd     # NEW (multi-tree tests)
+├── test_pet_spawner.gd          # NEW
 └── test_clickable_tiles.gd      # NEW
 ```
 
@@ -493,10 +675,60 @@ test/
 | Component | Description |
 |-----------|-------------|
 | **ManaBar(s)** | 1-2 bars below health, fill animation, threshold indicator |
-| **SequenceIndicator** | Shows current sequence progress, highlights next valid tiles |
+| **ComboTreeDisplay** | Shows all three sequences with dim/bright states (Hunter only) |
+| **PetPopulationDisplay** | Shows `0/3 BEAR  0/3 HAWK  0/3 SNAKE` counters (Hunter only) |
 | **StatusEffectBar** | Row of icons for active effects, stack count, duration |
 | **ClickableHighlight** | Visual cue when tile is clickable (glow, pulse) |
 | **AbilityButton** | For manual ability activation (if needed beyond tile clicks) |
+
+### ComboTreeDisplay (Hunter-Specific) — Replaces SequenceIndicator
+
+**Replaces:** The existing `SequenceIndicator` (match history bar showing last 10 tiles as colored blocks) is **removed** for Hunter. The multi-tree system requires showing combo progress per-sequence, not a linear history.
+
+Displays all three combo sequences with visual feedback for tree states.
+
+**Layout:**
+```
+┌─────────────────────────────────────┐
+│  BEAR:  [⚔️] → [🛡️] → [🛡️]          │
+│  HAWK:  [🛡️] → [⚡]                  │
+│  SNAKE: [⚡] → [⚔️] → [🛡️]          │
+└─────────────────────────────────────┘
+```
+
+**Visual States:**
+| State | Appearance |
+|-------|------------|
+| **Inactive** | All tiles dimmed (default) |
+| **Tree started** | First matched tile brightens |
+| **Tree progressed** | Additional tiles brighten left-to-right |
+| **Tree completed** | Brief glow → all tiles dim → Pet spawns |
+| **Tree killed** | Red flash/shake → tiles dim |
+
+**Signals Consumed:**
+- `tree_started` → Brighten first tile
+- `tree_progressed` → Brighten tile at progress index
+- `tree_died` → Red flash, dim all
+- `sequence_completed` → Glow effect, dim
+
+### PetPopulationDisplay (Hunter-Specific)
+
+Shows current Pet counts with cap feedback.
+
+**Layout:**
+```
+┌─────────────────────────┐
+│  🐻 0/3  🦅 0/3  🐍 0/3  │
+└─────────────────────────┘
+```
+
+**States:**
+| State | Display |
+|-------|---------|
+| **Normal** | `{icon} {count}/3` for each type |
+| **Pet spawned** | Increment counter, brief highlight |
+| **Pet activated** | Decrement counter |
+| **Cap reached** | Flash `MAX POP` overlay on blocked type |
 
 ### HUD Layout Update
 
@@ -505,7 +737,8 @@ test/
 │  [Player HP Bar]         [Enemy HP Bar]     │
 │  [Player Mana Bar(s)]    [Enemy Mana Bar(s)]│
 │  [Status Effects]        [Status Effects]   │
-│  [Sequence Indicator]                       │
+│  [Combo Tree Display]    (Hunter only)      │
+│  [Pet Population]        (Hunter only)      │
 │  [Player Portrait]       [Enemy Portrait]   │
 ├─────────────────────────────────────────────┤
 │                                             │
@@ -526,7 +759,32 @@ The AI will need updates to handle:
 4. **Ability timing** - Know when to activate abilities vs save mana
 5. **Character-specific strategies** - Different AI profiles per character
 
-**Recommendation:** Defer AI updates until Phase 6. For testing, AI can use simple random behavior.
+### Hunter AI (Multi-Tree System)
+
+**Constraint:** AI Hunter uses the identical SequenceTracker and combo mechanics as the player. No simplified logic.
+
+**Move Evaluation Factors:**
+| Factor | Description |
+|--------|-------------|
+| `tree_advancement_score` | Points for moves that progress active trees |
+| `tree_start_score` | Points for moves that start new trees |
+| `completion_proximity` | Higher score for trees close to completion |
+| `pet_activation_priority` | When to click available Pets |
+
+**Decision Flow:**
+1. Get all possible moves (row/column shifts)
+2. For each move, simulate which tile types would be in initiating matches
+3. Score based on combat value + tree advancement value
+4. Select move (with difficulty-based randomness)
+
+**Difficulty Scaling:**
+| Difficulty | Combo Behavior | Pet Timing |
+|------------|----------------|------------|
+| **Easy** | Random moves, ignores tree state | Clicks Pets immediately |
+| **Medium** | Prefers tree-advancing moves | Reasonable Pet timing |
+| **Hard** | Optimal combo pursuit | Strategic Pet banking |
+
+**Recommendation:** AI Hunter implementation required in Phase 6. No deferral — same system as player.
 
 ---
 
@@ -546,18 +804,37 @@ The AI will need updates to handle:
 
 | Question | Answer |
 |----------|--------|
-| Can Pet tiles be matched? | **No.** Pet tiles can only be clicked, not matched. They serve purely as sequence terminators/activators. |
+| Can Pet tiles be matched? | **No.** Pet tiles can only be clicked, not matched. They are skipped during match detection. |
+| When do Pet tiles appear? | **On combo completion.** Pets spawn from a random column at the top when their sequence completes. They are NOT in the random spawn pool. |
+| How many Pets can exist? | **3 per type maximum.** If cap reached, combo completes but no Pet spawns (UI shows MAX POP). |
+| Are there distinct Pet types? | **Yes.** Three separate tile types: BEAR_PET, HAWK_PET, SNAKE_PET — each with unique sprite. |
+| What counts for combos? | **Only player-initiated matches (pre-cascade).** Cascade matches apply combat effects but do NOT advance combo trees. |
 | Multi-bar mana drain | **Instant full drain.** Assassin's ultimate drains both bars instantly on activation. No partial activation. |
 | Poison interactions | **Two distinct mechanics:** (1) Transmute poison = instant damage that scales if poison status is active; (2) Poison status = DoT that ticks over time. They synergize but are separate. |
 | Character unlock criteria | **Beat to unlock.** Defeating a character as an AI opponent unlocks them for player use. |
 
 ### Implications for Implementation
 
-**Pet Tiles (Click-Only):**
+**Pet Tiles (Click-Only, Spawn on Completion):**
 - `is_matchable = false`, `is_clickable = true`
 - Grid logic must skip Pet tiles during match detection
-- **Normal physics** — Pet tiles fall during cascades like other tiles
-- Spawn rules: min 1, max 2 on board at all times
+- **Normal physics** — Pet tiles fall with gravity and settle into grid
+- **NOT in spawn pool** — Only created by PetSpawner on `sequence_completed`
+- **Three distinct types:** BEAR_PET, HAWK_PET, SNAKE_PET
+- **Cap:** Maximum 3 of each type on board; combo still completes if cap reached but no Pet spawns
+
+**Match Origin Tagging:**
+- BoardManager must tag MatchResult with `origin: MatchOrigin`
+- PLAYER_INITIATED = direct result of player's move (first match detection)
+- CASCADE = result of gravity fill (subsequent match detections)
+- SequenceTracker receives ONLY PLAYER_INITIATED matches
+- CombatManager receives ALL matches (both origins apply effects)
+
+**Multi-Tree Combo Tracking:**
+- Multiple trees can be active simultaneously
+- Trees are pruned individually (not all-or-nothing)
+- Same tile type can exist at different positions in different trees
+- Sequences auto-complete immediately when pattern fulfilled
 
 **Instant Mana Drain:**
 - `drain_all()` is atomic operation

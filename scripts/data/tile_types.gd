@@ -10,6 +10,9 @@ enum Type {
 	FILLER,
 	PET,
 	MANA,  # Generates mana on match
+	BEAR_PET,   # Hunter combo pet - click to deal damage
+	HAWK_PET,   # Hunter combo pet - click for defense
+	SNAKE_PET,  # Hunter combo pet - click for healing
 }
 
 enum ClickCondition {
@@ -19,4 +22,9 @@ enum ClickCondition {
 	MANA_FULL,         # Requires full mana bar(s)
 	COOLDOWN,          # Time-based cooldown
 	CUSTOM,            # Custom condition check
+}
+
+enum MatchOrigin {
+	PLAYER_INITIATED,  # Direct result of player's move
+	CASCADE            # Result of gravity fill
 }

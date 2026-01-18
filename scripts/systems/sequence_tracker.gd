@@ -1,11 +1,28 @@
 class_name SequenceTracker
 extends RefCounted
 
+## Multi-tree combo tracker for the Hunter character.
+## Multiple combo trees can be active simultaneously, each tracking progress
+## toward a specific sequence pattern. Trees advance or die independently.
+
+# === New Multi-Tree Signals ===
+
+## Emitted when a new combo tree starts tracking a pattern
+signal tree_started(pattern_name: String)
+
+## Emitted when a tree advances (matched a tile in its sequence)
+signal tree_progressed(pattern_name: String, progress: int, total: int)
+
+## Emitted when a tree dies (didn't match required tile)
+signal tree_died(pattern_name: String)
+
+## Emitted when a sequence is fully completed - triggers pet spawn
+signal sequence_completed(pet_type: int)
+
+# === Legacy Signals (kept for backward compatibility) ===
+
 ## Emitted when a match is recorded and the sequence is still valid
 signal sequence_progressed(current: Array, possible_completions: Array)
-
-## Emitted when a sequence pattern is fully matched (before banking)
-signal sequence_completed(pattern: SequencePattern)
 
 ## Emitted when a completed sequence is banked (with current stack count)
 signal sequence_banked(pattern: SequencePattern, stacks: int)
@@ -17,28 +34,29 @@ signal sequence_broken()
 ## Emitted when a banked sequence is activated (consumed)
 signal sequence_activated(pattern: SequencePattern, stacks: int)
 
-## Match history - last N tile types matched
-var _match_history: Array[int] = []
-const MAX_HISTORY_SIZE: int = 10
+## Signal for history updates (for UI) - now reports active tree info
+signal history_updated(history: Array, highlighted_indices: Array)
+
+# === Multi-Tree State ===
+
+## Active combo trees - multiple can track different patterns simultaneously
+var _active_trees: Array[ComboTree] = []
 
 ## Patterns this tracker is watching for
 var _valid_patterns: Array[SequencePattern] = []
 
-## Completed sequences waiting for activation
-var _banked_sequences: Dictionary = {}  # {sequence_id: SequenceState}
-
-## Reference for all sequence states
+## Reference for all sequence states (legacy support)
 var _sequence_states: Dictionary = {}  # {sequence_id: SequenceState}
 
-## Signal for history updates (for UI)
-signal history_updated(history: Array, highlighted_indices: Array)
+## Completed sequences waiting for activation (legacy support for non-pet patterns)
+var _banked_sequences: Dictionary = {}  # {sequence_id: SequenceState}
 
 
-## Initializes the tracker with the patterns to watch for
-## Call this when setting up a character that uses sequences
+## Initializes the tracker with the patterns to watch for.
+## Call this when setting up a character that uses sequences.
 func setup(patterns: Array[SequencePattern]) -> void:
 	_valid_patterns = patterns.duplicate()
-	_match_history.clear()
+	_active_trees.clear()
 	_banked_sequences.clear()
 	_sequence_states.clear()
 
@@ -46,172 +64,175 @@ func setup(patterns: Array[SequencePattern]) -> void:
 		_sequence_states[pattern.sequence_id] = SequenceState.new(pattern)
 
 
-## Records a match of the given tile type and updates sequence state
-## Uses history-based approach - patterns are detected in recent match history
-func record_match(tile_type: int) -> void:
-	var type_name := _get_type_name(tile_type)
-	print("SEQUENCE: Recording match - %s (type %d)" % [type_name, tile_type])
+## Core algorithm: Process tile types from initiating (player-caused) matches.
+## This is the main entry point for the multi-tree combo system.
+##
+## Algorithm:
+## 1. For each active tree: advance if next tile matches, otherwise kill it
+## 2. For each tile type: start new trees for patterns that begin with that type
+func process_initiating_matches(tile_types: Array[int]) -> void:
+	if tile_types.is_empty():
+		return
 
-	# Add to history
-	_match_history.append(tile_type)
+	print("SEQUENCE: Processing initiating matches: %s" % _types_to_string(tile_types))
 
-	# Trim history to max size
-	while _match_history.size() > MAX_HISTORY_SIZE:
-		_match_history.pop_front()
+	# Step 1: Process existing trees (iterate over copy to allow removal)
+	var trees_to_remove: Array[ComboTree] = []
+	var completed_patterns: Array[SequencePattern] = []
 
-	print("SEQUENCE: History now: %s" % _history_to_string())
+	for tree: ComboTree in _active_trees.duplicate():
+		var next_required: int = tree.next_required()
 
-	# Check for pattern completions in the history
-	var completed_pattern := _check_pattern_in_history()
-	var highlighted_indices: Array[int] = []
+		if next_required in tile_types:
+			# Tree advances
+			tree.advance(next_required)
+			print("SEQUENCE: Tree '%s' advanced to %d/%d" % [
+				tree.pattern.display_name,
+				tree.progress,
+				tree.pattern.pattern.size()
+			])
+			tree_progressed.emit(
+				tree.pattern.display_name,
+				tree.progress,
+				tree.pattern.pattern.size()
+			)
 
-	if completed_pattern:
-		print("SEQUENCE: === PATTERN FOUND: %s ===" % completed_pattern.display_name)
-		highlighted_indices = _get_pattern_indices(completed_pattern)
-		_complete_sequence(completed_pattern)
+			# Check for completion
+			if tree.is_complete():
+				print("SEQUENCE: === TREE COMPLETED: %s ===" % tree.pattern.display_name)
+				completed_patterns.append(tree.pattern)
+				trees_to_remove.append(tree)
+		else:
+			# Tree dies - required tile not in matches
+			print("SEQUENCE: Tree '%s' died (needed %s, got %s)" % [
+				tree.pattern.display_name,
+				_get_type_name(next_required),
+				_types_to_string(tile_types)
+			])
+			tree_died.emit(tree.pattern.display_name)
+			trees_to_remove.append(tree)
 
-	# Emit history update for UI
-	var history_copy: Array = []
-	history_copy.assign(_match_history)
-	var indices_copy: Array = []
-	indices_copy.assign(highlighted_indices)
-	history_updated.emit(history_copy, indices_copy)
+	# Remove completed and dead trees
+	for tree: ComboTree in trees_to_remove:
+		var idx := _active_trees.find(tree)
+		if idx >= 0:
+			_active_trees.remove_at(idx)
 
-	# Also emit progress for backwards compatibility
-	var possible := _get_possible_completions_from_history()
-	sequence_progressed.emit(history_copy, possible)
+	# Emit completion signals for completed patterns
+	for pattern in completed_patterns:
+		_emit_sequence_completed(pattern)
 
+	# Step 2: Start new trees for patterns that begin with any tile in tile_types
+	for tile_type in tile_types:
+		for pattern in _valid_patterns:
+			if pattern.pattern.is_empty():
+				continue
 
-## Helper to get tile type name for debug
-func _get_type_name(tile_type: int) -> String:
-	match tile_type:
-		TileTypes.Type.SWORD: return "SWORD"
-		TileTypes.Type.SHIELD: return "SHIELD"
-		TileTypes.Type.LIGHTNING: return "LIGHTNING"
-		TileTypes.Type.FILLER: return "FILLER"
-		TileTypes.Type.PET: return "PET"
-		TileTypes.Type.POTION: return "POTION"
-		TileTypes.Type.MANA: return "MANA"
-		_: return "UNKNOWN(%d)" % tile_type
+			# Check if pattern starts with this tile type
+			if pattern.pattern[0] == tile_type:
+				# Check if we already have a tree for this pattern at progress=1
+				var already_exists := false
+				for existing_tree in _active_trees:
+					if existing_tree.pattern.sequence_id == pattern.sequence_id and existing_tree.progress == 1:
+						already_exists = true
+						break
 
+				if not already_exists:
+					# Create new tree
+					var new_tree := ComboTree.new(pattern)
+					new_tree.advance(tile_type)
+					_active_trees.append(new_tree)
 
-## Helper to convert history to readable string
-func _history_to_string() -> String:
-	var parts: Array[String] = []
-	for t in _match_history:
-		parts.append(_get_type_name(t))
-	return "[%s]" % ", ".join(parts)
+					print("SEQUENCE: Started new tree '%s' (progress 1/%d)" % [
+						pattern.display_name,
+						pattern.pattern.size()
+					])
+					tree_started.emit(pattern.display_name)
+					tree_progressed.emit(pattern.display_name, 1, pattern.pattern.size())
 
+					# Check for immediate completion (single-tile patterns)
+					if new_tree.is_complete():
+						print("SEQUENCE: === IMMEDIATE COMPLETION: %s ===" % pattern.display_name)
+						_emit_sequence_completed(pattern)
+						var idx := _active_trees.find(new_tree)
+						if idx >= 0:
+							_active_trees.remove_at(idx)
 
-## Checks if any pattern is completed at the END of the match history
-## Returns the completed pattern or null
-func _check_pattern_in_history() -> SequencePattern:
-	if _match_history.is_empty():
-		return null
-
-	# Check each pattern - look for it at the end of history
-	for pattern in _valid_patterns:
-		var pattern_tiles := pattern.pattern
-		var pattern_len := pattern_tiles.size()
-
-		if _match_history.size() >= pattern_len:
-			# Check if last N tiles match the pattern
-			var matches := true
-			for i in range(pattern_len):
-				var history_idx := _match_history.size() - pattern_len + i
-				if _match_history[history_idx] != pattern_tiles[i]:
-					matches = false
-					break
-
-			if matches:
-				return pattern
-
-	return null
-
-
-## Returns the indices in history that match the given pattern (at the end)
-func _get_pattern_indices(pattern: SequencePattern) -> Array[int]:
-	var indices: Array[int] = []
-	var pattern_len := pattern.pattern.size()
-	var start_idx := _match_history.size() - pattern_len
-
-	for i in range(pattern_len):
-		indices.append(start_idx + i)
-
-	return indices
+	# Emit legacy signals for compatibility
+	_emit_legacy_signals()
 
 
-## Returns patterns that could be completed with more matches
-func _get_possible_completions_from_history() -> Array[SequencePattern]:
+## Emits sequence_completed signal with pet_type from pattern
+func _emit_sequence_completed(pattern: SequencePattern) -> void:
+	var pet_type := pattern.pet_type if pattern.pet_type >= 0 else -1
+
+	if pet_type >= 0:
+		# New multi-tree path: emit pet type for spawning
+		sequence_completed.emit(pet_type)
+	else:
+		# Legacy path: bank the sequence
+		var state := _sequence_states.get(pattern.sequence_id) as SequenceState
+		if state:
+			state.mark_complete()
+			state.add_stack()
+			_banked_sequences[pattern.sequence_id] = state
+			sequence_banked.emit(pattern, state.stacks)
+
+
+## Emits legacy signals for backward compatibility with existing UI
+func _emit_legacy_signals() -> void:
+	# Build a representation of current state for legacy signals
+	var current_tiles: Array = []
 	var possible: Array[SequencePattern] = []
 
-	# For each pattern, check if the end of history is a prefix
-	for pattern in _valid_patterns:
-		var pattern_tiles := pattern.pattern
+	# Get tiles from the most advanced tree (or all trees)
+	for tree: ComboTree in _active_trees:
+		for tile in tree.matched_tiles:
+			if tile not in current_tiles:
+				current_tiles.append(tile)
 
-		# Check various suffix lengths of history against pattern prefix
-		for suffix_len in range(1, mini(pattern_tiles.size(), _match_history.size() + 1)):
-			var history_suffix: Array[int] = []
-			for i in range(suffix_len):
-				history_suffix.append(_match_history[_match_history.size() - suffix_len + i])
+		# Any non-complete tree is a possible completion
+		if not tree.is_complete():
+			if tree.pattern not in possible:
+				possible.append(tree.pattern)
 
-			# Check if this suffix matches the start of the pattern
-			var matches := true
-			for i in range(suffix_len):
-				if history_suffix[i] != pattern_tiles[i]:
-					matches = false
-					break
-
-			if matches and suffix_len < pattern_tiles.size():
-				if not possible.has(pattern):
-					possible.append(pattern)
-				break
-
-	return possible
+	sequence_progressed.emit(current_tiles, possible)
 
 
-## Called when a sequence pattern is fully matched
-## Banks the sequence for later activation
-func _complete_sequence(pattern: SequencePattern) -> void:
-	print("SEQUENCE: === COMPLETED %s ===" % pattern.display_name)
-
-	# Get or create the state for this pattern
-	var state := _sequence_states.get(pattern.sequence_id) as SequenceState
-	if not state:
-		state = SequenceState.new(pattern)
-		_sequence_states[pattern.sequence_id] = state
-
-	# Mark as complete and add a stack
-	state.mark_complete()
-	state.add_stack()
-
-	# Bank the sequence
-	_banked_sequences[pattern.sequence_id] = state
-	print("SEQUENCE: Banked! Total stacks: %d" % state.stacks)
-
-	# Emit signals
-	sequence_completed.emit(pattern)
-	sequence_banked.emit(pattern, state.stacks)
-
-	# Note: We DON'T clear the history - it persists and shows what was matched
+## Returns all currently active combo trees (for UI display)
+func get_active_trees() -> Array[ComboTree]:
+	return _active_trees.duplicate()
 
 
-## Returns all patterns that could still be completed from the current state
-## (For backwards compatibility - uses history-based detection now)
-func _get_possible_completions() -> Array[SequencePattern]:
-	return _get_possible_completions_from_history()
+## Returns tile types that would advance at least one active tree
+func get_possible_next_tiles() -> Array[int]:
+	var result: Array[int] = []
+
+	for tree: ComboTree in _active_trees:
+		var next: int = tree.next_required()
+		if next >= 0 and next not in result:
+			result.append(next)
+
+	return result
 
 
-## Returns true if there is at least one banked sequence ready for activation
+## Returns true if any active tree is close to completion (legacy support)
 func has_completable_sequence() -> bool:
+	# Check active trees - if any is 1 tile away from completion
+	for tree: ComboTree in _active_trees:
+		if tree.pattern.pattern.size() - tree.progress <= 1:
+			return true
+
+	# Also check legacy banked sequences
 	for seq_id in _banked_sequences.keys():
 		var state := _banked_sequences[seq_id] as SequenceState
 		if state and state.has_stacks():
 			return true
+
 	return false
 
 
-## Returns all patterns that have banked stacks available
+## Returns all patterns that have banked stacks available (legacy support)
 func get_banked_sequences() -> Array[SequencePattern]:
 	var result: Array[SequencePattern] = []
 
@@ -223,7 +244,7 @@ func get_banked_sequences() -> Array[SequencePattern]:
 	return result
 
 
-## Returns the number of banked stacks for a specific pattern
+## Returns the number of banked stacks for a specific pattern (legacy support)
 func get_banked_stacks(pattern: SequencePattern) -> int:
 	if not pattern:
 		return 0
@@ -234,8 +255,7 @@ func get_banked_stacks(pattern: SequencePattern) -> int:
 	return 0
 
 
-## Activates (consumes) one stack of a banked sequence
-## Returns true if activation was successful
+## Activates (consumes) one stack of a banked sequence (legacy support)
 func activate_sequence(pattern: SequencePattern) -> bool:
 	if not pattern:
 		return false
@@ -244,55 +264,34 @@ func activate_sequence(pattern: SequencePattern) -> bool:
 	if not state or not state.has_stacks():
 		return false
 
-	# Store the stack count before consumption for the signal
 	var stacks_before := state.stacks
-
-	# Consume one stack
 	state.consume_stack()
 
-	# Remove from banked if no stacks left
 	if state.stacks <= 0:
 		_banked_sequences.erase(pattern.sequence_id)
 		state.reset_completion()
 
-	# Emit the activated signal with stacks before consumption
 	sequence_activated.emit(pattern, stacks_before)
 	return true
 
 
-## Returns a copy of the match history (last N tiles matched)
-func get_current_sequence() -> Array[int]:
-	var result: Array[int] = []
-	result.assign(_match_history)
-	return result
+## Legacy method: Records a match of the given tile type
+## Now wraps process_initiating_matches for backward compatibility
+func record_match(tile_type: int) -> void:
+	var types: Array[int] = [tile_type]
+	process_initiating_matches(types)
 
 
-## Returns the match history
-func get_match_history() -> Array[int]:
-	var result: Array[int] = []
-	result.assign(_match_history)
-	return result
-
-
-## Returns the length of the match history
-func get_sequence_length() -> int:
-	return _match_history.size()
-
-
-## Clears the match history
-func clear_current() -> void:
-	_match_history.clear()
-
-
-## Fully resets the tracker to initial state
-## Clears match history, banked sequences, and all state
+## Clears all active trees and resets to initial state
 func reset() -> void:
-	_match_history.clear()
+	_active_trees.clear()
 	_banked_sequences.clear()
 
 	for state in _sequence_states.values():
 		if state is SequenceState:
 			state.reset()
+
+	print("SEQUENCE: Reset - all trees cleared")
 
 
 ## Returns all valid patterns this tracker is watching
@@ -300,53 +299,104 @@ func get_valid_patterns() -> Array[SequencePattern]:
 	return _valid_patterns.duplicate()
 
 
-## Returns the SequenceState for a specific pattern
+## Returns the SequenceState for a specific pattern (legacy support)
 func get_sequence_state(pattern: SequencePattern) -> SequenceState:
 	if not pattern:
 		return null
 	return _sequence_states.get(pattern.sequence_id) as SequenceState
 
 
-## Returns true if there are matches in the history
+## Returns true if there are active trees (legacy: was "building sequence")
 func is_building_sequence() -> bool:
-	return not _match_history.is_empty()
+	return not _active_trees.is_empty()
 
 
-## Returns the progress (0.0 to 1.0) toward the nearest completable pattern
+## Returns the progress (0.0 to 1.0) of the most advanced active tree
 func get_completion_progress() -> float:
-	if _match_history.is_empty():
+	if _active_trees.is_empty():
 		return 0.0
 
 	var max_progress := 0.0
 
-	for pattern in _valid_patterns:
-		var pattern_tiles := pattern.pattern
-		# Check how much of the pattern is matched at the end of history
-		for match_len in range(1, mini(pattern_tiles.size(), _match_history.size()) + 1):
-			var matches := true
-			for i in range(match_len):
-				var history_idx := _match_history.size() - match_len + i
-				if _match_history[history_idx] != pattern_tiles[i]:
-					matches = false
-					break
-			if matches:
-				var progress := float(match_len) / float(pattern.get_pattern_length())
-				max_progress = maxf(max_progress, progress)
+	for tree: ComboTree in _active_trees:
+		if tree.pattern.pattern.size() > 0:
+			var tree_progress: float = float(tree.progress) / float(tree.pattern.pattern.size())
+			max_progress = maxf(max_progress, tree_progress)
 
 	return minf(max_progress, 1.0)
 
 
+## Returns a copy of matched tiles from all active trees (legacy support)
+func get_current_sequence() -> Array[int]:
+	var result: Array[int] = []
+	for tree: ComboTree in _active_trees:
+		for tile in tree.matched_tiles:
+			if tile not in result:
+				result.append(tile)
+	return result
+
+
+## Returns match history equivalent (from active trees)
+func get_match_history() -> Array[int]:
+	return get_current_sequence()
+
+
+## Returns the total matched tiles across all trees
+func get_sequence_length() -> int:
+	var count := 0
+	for tree: ComboTree in _active_trees:
+		count += tree.progress
+	return count
+
+
+## Clears all active trees (legacy: was "clear current")
+func clear_current() -> void:
+	_active_trees.clear()
+
+
+# === Helper Methods ===
+
+## Helper to get tile type name for debug
+func _get_type_name(tile_type: int) -> String:
+	match tile_type:
+		TileTypes.Type.SWORD: return "SWORD"
+		TileTypes.Type.SHIELD: return "SHIELD"
+		TileTypes.Type.LIGHTNING: return "LIGHTNING"
+		TileTypes.Type.FILLER: return "FILLER"
+		TileTypes.Type.PET: return "PET"
+		TileTypes.Type.POTION: return "POTION"
+		TileTypes.Type.MANA: return "MANA"
+		TileTypes.Type.BEAR_PET: return "BEAR_PET"
+		TileTypes.Type.HAWK_PET: return "HAWK_PET"
+		TileTypes.Type.SNAKE_PET: return "SNAKE_PET"
+		_: return "UNKNOWN(%d)" % tile_type
+
+
+## Helper to convert array of types to readable string
+func _types_to_string(types: Array[int]) -> String:
+	var parts: Array[String] = []
+	for t in types:
+		parts.append(_get_type_name(t))
+	return "[%s]" % ", ".join(parts)
+
+
 ## Returns a string representation for debugging
 func _to_string() -> String:
-	var history_str := _history_to_string()
+	var tree_info: Array[String] = []
+	for tree: ComboTree in _active_trees:
+		tree_info.append("%s(%d/%d)" % [
+			tree.pattern.display_name,
+			tree.progress,
+			tree.pattern.pattern.size()
+		])
 
 	var banked_count := 0
 	for state in _banked_sequences.values():
 		if state is SequenceState:
 			banked_count += state.stacks
 
-	return "SequenceTracker[history=%s, patterns=%d, banked=%d]" % [
-		history_str,
+	return "SequenceTracker[trees=[%s], patterns=%d, banked=%d]" % [
+		", ".join(tree_info),
 		_valid_patterns.size(),
 		banked_count
 	]
