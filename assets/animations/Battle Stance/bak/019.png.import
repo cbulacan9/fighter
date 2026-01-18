@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://523k5k5oj87q"
-path="res://.godot/imported/019.png-3371d6cf60450ff69766cfeca70daecd.ctex"
+path="res://.godot/imported/019.png-3f5f92a7a59581271d7719ebee64b2a9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Battle Stance/bak/019.png"
-dest_files=["res://.godot/imported/019.png-3371d6cf60450ff69766cfeca70daecd.ctex"]
+source_file="res://assets/animations/Battle Stance/bak/019.png"
+dest_files=["res://.godot/imported/019.png-3f5f92a7a59581271d7719ebee64b2a9.ctex"]
 
 [params]
 

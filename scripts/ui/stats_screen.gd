@@ -44,9 +44,9 @@ func _create_combat_log_panel() -> void:
 	_combat_log_panel.name = "CombatLogPanel"
 	_combat_log_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_combat_log_panel.offset_left = -300
-	_combat_log_panel.offset_top = -220
+	_combat_log_panel.offset_top = -500
 	_combat_log_panel.offset_right = 300
-	_combat_log_panel.offset_bottom = -90
+	_combat_log_panel.offset_bottom = -150
 	panel.add_child(_combat_log_panel)
 
 	# Style the panel

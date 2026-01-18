@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cxasw0l5irhwy"
-path="res://.godot/imported/025-Picsart-BackgroundRemover - Copy.png-d09275a496307497b93b6baffd4ce2a2.ctex"
+path="res://.godot/imported/025-Picsart-BackgroundRemover - Copy.png-b11ada102bc27de54a20feee093adeec.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Battle Stance/025-Picsart-BackgroundRemover - Copy.png"
-dest_files=["res://.godot/imported/025-Picsart-BackgroundRemover - Copy.png-d09275a496307497b93b6baffd4ce2a2.ctex"]
+source_file="res://assets/animations/Battle Stance/025-Picsart-BackgroundRemover - Copy.png"
+dest_files=["res://.godot/imported/025-Picsart-BackgroundRemover - Copy.png-b11ada102bc27de54a20feee093adeec.ctex"]
 
 [params]
 

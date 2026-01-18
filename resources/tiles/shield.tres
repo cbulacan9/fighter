@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=3 format=3 uid="uid://fv70s103catj"]
 
-[ext_resource type="Script" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/effects/armor_effect.tres" id="2"]
 
 [resource]
@@ -11,7 +11,4 @@ color = Color(0.2, 0.4, 0.8, 1)
 match_3_value = 10
 match_4_value = 20
 match_5_value = 35
-is_matchable = true
 match_effect = ExtResource("2")
-is_clickable = false
-click_condition = 0

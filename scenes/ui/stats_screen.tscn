@@ -1,12 +1,13 @@
-[gd_scene load_steps=2 format=3 uid="uid://stats_screen_scene"]
+[gd_scene load_steps=2 format=3 uid="uid://dqtwqr5jaitj8"]
 
-[ext_resource type="Script" path="res://scripts/ui/stats_screen.gd" id="1"]
+[ext_resource type="Script" uid="uid://bugqr6co5npu0" path="res://scripts/ui/stats_screen.gd" id="1"]
 
 [node name="StatsScreen" type="CanvasLayer"]
 layer = 10
 script = ExtResource("1")
 
 [node name="Panel" type="Control" parent="."]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
