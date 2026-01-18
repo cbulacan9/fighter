@@ -56,8 +56,9 @@ func setup_pet_spawner(pet_spawner: PetSpawner) -> void:
 	_pet_spawner = pet_spawner
 
 	if pet_spawner:
-		if not pet_spawner.pet_spawned.is_connected(_on_pet_spawned):
-			pet_spawner.pet_spawned.connect(_on_pet_spawned)
+		# Listen to confirmed spawns (after tile is actually placed)
+		if not pet_spawner.pet_spawn_confirmed.is_connected(_on_pet_spawn_confirmed):
+			pet_spawner.pet_spawn_confirmed.connect(_on_pet_spawn_confirmed)
 		if not pet_spawner.pet_activated.is_connected(_on_pet_activated):
 			pet_spawner.pet_activated.connect(_on_pet_activated)
 		if not pet_spawner.pet_spawn_blocked.is_connected(_on_pet_spawn_blocked):
@@ -326,8 +327,8 @@ func clear() -> void:
 			_sequence_tracker.sequence_completed.disconnect(_on_sequence_completed)
 
 	if _pet_spawner:
-		if _pet_spawner.pet_spawned.is_connected(_on_pet_spawned):
-			_pet_spawner.pet_spawned.disconnect(_on_pet_spawned)
+		if _pet_spawner.pet_spawn_confirmed.is_connected(_on_pet_spawn_confirmed):
+			_pet_spawner.pet_spawn_confirmed.disconnect(_on_pet_spawn_confirmed)
 		if _pet_spawner.pet_activated.is_connected(_on_pet_activated):
 			_pet_spawner.pet_activated.disconnect(_on_pet_activated)
 		if _pet_spawner.pet_spawn_blocked.is_connected(_on_pet_spawn_blocked):
@@ -339,8 +340,8 @@ func clear() -> void:
 
 # --- Pet Spawner Signal Handlers ---
 
-## Called when a pet is spawned - update the count display
-func _on_pet_spawned(pet_type: int, _column: int) -> void:
+## Called when a pet spawn is confirmed - update the count display
+func _on_pet_spawn_confirmed(pet_type: int) -> void:
 	_update_count_for_pet(pet_type)
 
 

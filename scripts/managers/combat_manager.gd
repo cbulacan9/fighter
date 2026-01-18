@@ -144,7 +144,9 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 	match match_result.tile_type:
 		TileTypes.Type.SWORD:
 			target = get_opponent(source)
-			_apply_damage(target, source, effect_value)
+			# Scale sword damage by strength (10 = baseline, 15 = +50% damage)
+			var strength_scaled := int(float(effect_value) * (float(source.strength) / 10.0))
+			_apply_damage(target, source, strength_scaled)
 
 		TileTypes.Type.SHIELD:
 			var actual := source.add_armor(effect_value)

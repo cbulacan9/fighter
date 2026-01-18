@@ -56,9 +56,9 @@ max_visible_effects = 6
 layout_mode = 1
 anchors_preset = 0
 offset_left = 10.0
-offset_top = 580.0
+offset_top = 420.0
 offset_right = 280.0
-offset_bottom = 660.0
+offset_bottom = 500.0
 
 [node name="Portrait" type="TextureRect" parent="PlayerPanel"]
 custom_minimum_size = Vector2(40, 40)
@@ -92,9 +92,9 @@ visible = false
 layout_mode = 1
 anchors_preset = 0
 offset_left = 290.0
-offset_top = 590.0
+offset_top = 430.0
 offset_right = 610.0
-offset_bottom = 660.0
+offset_bottom = 500.0
 
 [node name="EnemySequenceIndicator" parent="." instance=ExtResource("5")]
 visible = false

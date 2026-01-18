@@ -3,6 +3,7 @@ extends Resource
 
 @export var fighter_name: String
 @export var max_hp: int = 100
+@export var strength: int = 10  ## Scales sword damage (10 = baseline)
 @export var portrait: Texture2D
 @export var tile_weights: Dictionary = {
 	TileTypes.Type.SWORD: 1.0,

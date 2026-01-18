@@ -216,7 +216,12 @@ func _enter_state(state: GameState) -> void:
 
 		GameState.STATS:
 			if stats_screen:
-				stats_screen.show_stats(_stats_tracker.get_stats())
+				var combat_log_entries: Array[Dictionary] = []
+				if hud:
+					var combat_log := hud.get_combat_log_debugger()
+					if combat_log:
+						combat_log_entries = combat_log.get_log_entries()
+				stats_screen.show_stats(_stats_tracker.get_stats(), combat_log_entries)
 
 
 func _exit_state(state: GameState) -> void:
@@ -410,6 +415,14 @@ func reset_match() -> void:
 		var enemy_pet_pop := hud.get_enemy_pet_population_display()
 		if enemy_pet_pop:
 			enemy_pet_pop.reset()
+		# Reset combo log debugger
+		var combo_log := hud.get_combo_log_debugger()
+		if combo_log:
+			combo_log.reset()
+		# Reset combat log debugger
+		var combat_log := hud.get_combat_log_debugger()
+		if combat_log:
+			combat_log.reset()
 
 	_stats_tracker.reset()
 
@@ -601,6 +614,7 @@ func _create_fighter_data(char_data: CharacterData) -> FighterData:
 	var fighter := FighterData.new()
 	fighter.fighter_name = char_data.display_name
 	fighter.max_hp = char_data.base_hp
+	fighter.strength = char_data.base_strength
 	fighter.portrait = PlaceholderTextures.get_or_generate_portrait(char_data, false)
 
 	# Convert spawn weights from CharacterData format to FighterData format

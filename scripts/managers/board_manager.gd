@@ -497,44 +497,74 @@ func _process_pending_pet_spawns() -> void:
 
 	print("BoardManager: Processing %d pending pet spawns" % _pending_pet_spawns.size())
 
+	# Track columns that have already been used for pet spawns this cycle
+	# to avoid one pet replacing another
+	var used_columns: Array[int] = []
+
 	for spawn_data in _pending_pet_spawns:
 		var pet_type: int = spawn_data["pet_type"]
-		var column: int = spawn_data["column"]
-		_spawn_pet_tile(pet_type, column)
+		var preferred_column: int = spawn_data["column"]
+
+		# If preferred column was already used, find an alternative
+		if preferred_column in used_columns:
+			var found_alt := false
+			for col in range(Grid.COLS):
+				if col not in used_columns:
+					preferred_column = col
+					found_alt = true
+					break
+			if not found_alt:
+				# All columns used - shouldn't happen with max 3 pets per type
+				push_warning("BoardManager: All columns used for pet spawns, skipping")
+				continue
+
+		_spawn_pet_tile(pet_type, preferred_column)
+		used_columns.append(preferred_column)
 
 	_pending_pet_spawns.clear()
 
 
 ## Spawns a pet tile by replacing the top tile in a column
 ## Since the cascade fills the board, we need to replace rather than add
+## Avoids replacing existing pet tiles to prevent count desync
 func _spawn_pet_tile(pet_type: int, preferred_column: int) -> void:
 	var tile_data := _get_pet_tile_data(pet_type)
 	if not tile_data:
 		push_warning("BoardManager: Could not find tile data for pet type %d" % pet_type)
 		return
 
-	# Find the top-most tile in the preferred column to replace
-	var target_column := preferred_column
-	var target_row := _find_top_tile_row(preferred_column)
+	# Find a valid position - top tile in a column that is NOT a pet tile
+	var target_column := -1
+	var target_row := -1
 
-	# If preferred column is somehow empty, try other columns
-	if target_row < 0:
+	# Try preferred column first
+	var row := _find_top_tile_row(preferred_column)
+	if row >= 0:
+		var existing := grid.get_tile(row, preferred_column)
+		if existing and existing.tile_data and not _is_hunter_pet_type(existing.tile_data.tile_type):
+			target_column = preferred_column
+			target_row = row
+
+	# If preferred column has a pet tile or is empty, try other columns
+	if target_column < 0:
 		for col in range(Grid.COLS):
 			if col == preferred_column:
 				continue
-			target_row = _find_top_tile_row(col)
-			if target_row >= 0:
-				target_column = col
-				break
+			row = _find_top_tile_row(col)
+			if row >= 0:
+				var existing := grid.get_tile(row, col)
+				if existing and existing.tile_data and not _is_hunter_pet_type(existing.tile_data.tile_type):
+					target_column = col
+					target_row = row
+					break
 
-	# If no columns have tiles (shouldn't happen), try finding empty space
-	if target_row < 0:
+	# If all top tiles are pets, try finding empty space (fallback)
+	if target_column < 0:
 		target_row = _find_empty_row_in_column(preferred_column)
 		target_column = preferred_column
 		if target_row < 0:
 			push_error("BoardManager: Cannot spawn pet tile - no valid position found!")
-			if pet_spawner:
-				pet_spawner.on_pet_activated(pet_type)
+			# Don't confirm spawn since we couldn't place it
 			return
 
 	# Remove the existing tile at this position (if any)
@@ -550,6 +580,10 @@ func _spawn_pet_tile(pet_type: int, preferred_column: int) -> void:
 	# Place the tile
 	_place_tile(tile, target_row, target_column)
 	print("PET SPAWNED: %s at row %d, column %d (replaced existing tile)" % [tile_data.display_name, target_row, target_column])
+
+	# Confirm the spawn so PetSpawner updates its count
+	if pet_spawner:
+		pet_spawner.confirm_spawn(pet_type)
 
 
 ## Helper to find the first empty row in a column (from top to bottom)

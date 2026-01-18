@@ -9,7 +9,8 @@ const GRID_COLS: int = 8  # Match Grid.COLS
 
 var _pet_counts: Dictionary = {}  # {pet_type: count}
 
-signal pet_spawned(pet_type: int, column: int)
+signal pet_spawned(pet_type: int, column: int)  # Request to spawn (before confirmation)
+signal pet_spawn_confirmed(pet_type: int)  # After successful placement
 signal pet_spawn_blocked(pet_type: int)
 signal pet_activated(pet_type: int)
 
@@ -26,7 +27,8 @@ func _reset_counts() -> void:
 	}
 
 
-## Called when a combo sequence completes. Spawns the corresponding Pet tile.
+## Called when a combo sequence completes. Requests a pet tile spawn.
+## The count is NOT incremented here - it's incremented when spawn is confirmed.
 func on_sequence_completed(pet_type: int) -> void:
 	print("PetSpawner: on_sequence_completed called with pet_type=%d" % pet_type)
 
@@ -40,9 +42,19 @@ func on_sequence_completed(pet_type: int) -> void:
 		return
 
 	var column := randi() % GRID_COLS
-	_pet_counts[pet_type] = _pet_counts.get(pet_type, 0) + 1
-	print("PetSpawner: Emitting pet_spawned for pet_type=%d at column=%d" % [pet_type, column])
+	print("PetSpawner: Requesting pet spawn for pet_type=%d at column=%d" % [pet_type, column])
+	# Don't increment count here - wait for confirm_spawn to be called
 	pet_spawned.emit(pet_type, column)
+
+
+## Called by BoardManager after successfully placing a pet tile.
+## This is when the count is actually incremented and UI should update.
+func confirm_spawn(pet_type: int) -> void:
+	if not _is_valid_pet_type(pet_type):
+		return
+	_pet_counts[pet_type] = _pet_counts.get(pet_type, 0) + 1
+	print("PetSpawner: Confirmed spawn, count for pet_type=%d is now %d" % [pet_type, _pet_counts[pet_type]])
+	pet_spawn_confirmed.emit(pet_type)
 
 
 ## Called when a Pet tile is clicked/activated

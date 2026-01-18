@@ -18,6 +18,7 @@ signal status_effect_removed(effect_type: StatusTypes.StatusType)
 
 var current_hp: int = 0
 var max_hp: int = 100
+var strength: int = 10  ## Scales sword damage (10 = baseline, 15 = +50%)
 var armor: int = 0
 var stun_remaining: float = 0.0
 var is_defeated: bool = false
@@ -39,6 +40,7 @@ class DamageResult:
 func initialize(data: FighterData) -> void:
 	fighter_data = data
 	max_hp = data.max_hp if data else 100
+	strength = data.strength if data else 10
 	current_hp = max_hp
 	armor = 0
 	stun_remaining = 0.0

@@ -52,6 +52,9 @@ extends Resource
 ## Starting armor value
 @export var base_armor: int = 0
 
+## Strength stat - scales sword damage (10 = baseline, 15 = +50% damage)
+@export var base_strength: int = 10
+
 # Unlock
 ## Whether this character is available from the start
 @export var is_starter: bool = false

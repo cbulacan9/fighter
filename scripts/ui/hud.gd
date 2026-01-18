@@ -22,6 +22,8 @@ var _player_combo_tree_display: ComboTreeDisplay
 var _player_pet_population_display: PetPopulationDisplay
 var _enemy_combo_tree_display: ComboTreeDisplay
 var _enemy_pet_population_display: PetPopulationDisplay
+var _combo_log_debugger: ComboLogDebugger
+var _combat_log_debugger: CombatLogDebugger
 
 # Scene references for dynamic instantiation
 const COMBO_TREE_DISPLAY_SCENE := preload("res://scenes/ui/combo_tree_display.tscn")
@@ -66,6 +68,9 @@ func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:
 
 	# Setup status effect displays
 	_setup_status_displays()
+
+	# Setup combat log debugger
+	_setup_combat_log_debugger()
 
 
 func _setup_mana_bars() -> void:
@@ -148,8 +153,8 @@ func _create_hunter_ui(board: BoardManager, is_player: bool) -> void:
 		return
 
 	# Determine positions based on player/enemy
-	# Player UI is at bottom, Enemy UI is at top
-	var combo_tree_pos := Vector2(290, 540) if is_player else Vector2(290, 5)
+	# Player UI is in the gap between boards, Enemy UI is at top
+	var combo_tree_pos := Vector2(290, 390) if is_player else Vector2(290, 5)
 
 	# Create ComboTreeDisplay (now includes pet population counts)
 	var combo_tree: ComboTreeDisplay = COMBO_TREE_DISPLAY_SCENE.instantiate()
@@ -167,6 +172,13 @@ func _create_hunter_ui(board: BoardManager, is_player: bool) -> void:
 	if is_player:
 		_player_combo_tree_display = combo_tree
 		_player_pet_population_display = null  # No longer using separate display
+
+		# Create combo log debugger (only for player, toggle with F3)
+		if not _combo_log_debugger and board.sequence_tracker:
+			_combo_log_debugger = ComboLogDebugger.new()
+			_combo_log_debugger.position = Vector2(10, 100)
+			add_child(_combo_log_debugger)
+			_combo_log_debugger.setup(board.sequence_tracker)
 	else:
 		_enemy_combo_tree_display = combo_tree
 		_enemy_pet_population_display = null  # No longer using separate display
@@ -180,6 +192,16 @@ func _cleanup_hunter_ui(is_player: bool) -> void:
 			_player_combo_tree_display.queue_free()
 			_player_combo_tree_display = null
 		_player_pet_population_display = null  # No longer using separate display
+		# Cleanup combo log debugger
+		if _combo_log_debugger:
+			_combo_log_debugger.clear()
+			_combo_log_debugger.queue_free()
+			_combo_log_debugger = null
+		# Cleanup combat log debugger
+		if _combat_log_debugger:
+			_combat_log_debugger.clear()
+			_combat_log_debugger.queue_free()
+			_combat_log_debugger = null
 	else:
 		if _enemy_combo_tree_display:
 			_enemy_combo_tree_display.clear()
@@ -227,6 +249,46 @@ func _get_status_manager() -> StatusEffectManager:
 		return _enemy_fighter.status_manager
 
 	return null
+
+
+func _get_combat_manager() -> CombatManager:
+	# Try direct path
+	var combat_manager := get_node_or_null("/root/Main/CombatManager")
+	if combat_manager:
+		return combat_manager as CombatManager
+
+	# Try alternate paths
+	var game_manager := get_node_or_null("/root/Main/GameManager")
+	if game_manager:
+		var cm := game_manager.get_node_or_null("CombatManager")
+		if cm:
+			return cm as CombatManager
+
+	# Try from parent
+	var parent := get_parent()
+	if parent:
+		var main := parent.get_parent()
+		if main:
+			var cm := main.get_node_or_null("CombatManager")
+			if cm:
+				return cm as CombatManager
+
+	return null
+
+
+func _setup_combat_log_debugger() -> void:
+	# Don't create if already exists
+	if _combat_log_debugger:
+		return
+
+	var combat_manager := _get_combat_manager()
+	if not combat_manager:
+		return
+
+	_combat_log_debugger = CombatLogDebugger.new()
+	_combat_log_debugger.position = Vector2(320, 100)  # Position to the right of combo log debugger
+	add_child(_combat_log_debugger)
+	_combat_log_debugger.setup(combat_manager)
 
 
 func _get_player_board() -> BoardManager:
@@ -416,6 +478,16 @@ func is_player_using_hunter_ui() -> bool:
 ## Returns true if the enemy is using Hunter-style UI
 func is_enemy_using_hunter_ui() -> bool:
 	return _enemy_combo_tree_display != null
+
+
+## Returns the combo log debugger if active
+func get_combo_log_debugger() -> ComboLogDebugger:
+	return _combo_log_debugger
+
+
+## Returns the combat log debugger if active
+func get_combat_log_debugger() -> CombatLogDebugger:
+	return _combat_log_debugger
 
 
 func get_player_status_display() -> StatusEffectDisplay:
