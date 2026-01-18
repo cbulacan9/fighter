@@ -15,7 +15,7 @@ extends Control
 
 const DIM_MODULATE := Color(0.4, 0.4, 0.4, 1.0)
 const BRIGHT_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
-const COMPLETE_COLOR := Color(1.0, 1.0, 0.5, 1.0)  # Yellow glow
+const COMPLETE_COLOR := Color(1.0, 1.0, 1.0, 1.0)  # White glow (avoids color blending issues)
 const DEATH_COLOR := Color(1.0, 0.3, 0.3, 1.0)  # Red flash
 const MAX_POP_COLOR := Color(1.0, 0.5, 0.2, 1.0)  # Orange for max population
 
