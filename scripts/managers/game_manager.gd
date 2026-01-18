@@ -133,6 +133,42 @@ func _find_node_references() -> void:
 		mode_select_screen = ui.get_node_or_null("ModeSelectScreen")
 		ability_announcement_spawner = ui.get_node_or_null("AbilityAnnouncements")
 
+	# Position boards and stun overlays using HUD layout constants
+	# (must be after UI nodes are found so stun overlays can be positioned)
+	_position_boards()
+
+
+## Position boards based on HUD layout constants
+## This ensures board positions stay in sync with UI positioning
+func _position_boards() -> void:
+	const BOARD_X := 104.0  # X position for both boards
+	const BOARD_WIDTH := 512.0
+	const BOARD_HEIGHT := 384.0
+
+	# Enemy board Y is calculated from HUD.ENEMY_UI_Y + offset
+	var enemy_board_y := HUD.get_enemy_board_y()
+	if enemy_board:
+		enemy_board.position = Vector2(BOARD_X, enemy_board_y)
+
+		# Also update enemy stun overlay to match board position
+		if enemy_stun_overlay:
+			enemy_stun_overlay.offset_left = BOARD_X
+			enemy_stun_overlay.offset_top = enemy_board_y
+			enemy_stun_overlay.offset_right = BOARD_X + BOARD_WIDTH
+			enemy_stun_overlay.offset_bottom = enemy_board_y + BOARD_HEIGHT
+
+	# Player board Y is calculated from HUD.PLAYER_UI_Y + offset
+	var player_board_y := HUD.get_player_board_y()
+	if player_board:
+		player_board.position = Vector2(BOARD_X, player_board_y)
+
+		# Also update player stun overlay to match board position
+		if player_stun_overlay:
+			player_stun_overlay.offset_left = BOARD_X
+			player_stun_overlay.offset_top = player_board_y
+			player_stun_overlay.offset_right = BOARD_X + BOARD_WIDTH
+			player_stun_overlay.offset_bottom = player_board_y + BOARD_HEIGHT
+
 
 func _connect_signals() -> void:
 	# ModeSelectScreen signals
@@ -166,9 +202,11 @@ func _connect_signals() -> void:
 
 	# Board signals
 	if player_board:
+		player_board.immediate_matches.connect(_on_player_immediate_matches)
 		player_board.matches_resolved.connect(_on_player_matches_resolved)
 		player_board.pet_ability_activated.connect(_on_pet_ability_activated)
 	if enemy_board:
+		enemy_board.immediate_matches.connect(_on_enemy_immediate_matches)
 		enemy_board.matches_resolved.connect(_on_enemy_matches_resolved)
 		enemy_board.pet_ability_activated.connect(_on_pet_ability_activated)
 
@@ -482,15 +520,28 @@ func _on_match_ended(result: int) -> void:
 	change_state(GameState.END)
 
 
-func _on_player_matches_resolved(result: CascadeHandler.CascadeResult) -> void:
+## Called immediately when matches are detected (before animations)
+## This applies combat effects right away for responsive gameplay
+func _on_player_immediate_matches(matches: Array) -> void:
 	if combat_manager:
-		combat_manager.process_cascade_result(true, result)
+		combat_manager.process_immediate_matches(true, matches)
+
+
+## Called immediately when matches are detected (before animations)
+func _on_enemy_immediate_matches(matches: Array) -> void:
+	if combat_manager:
+		combat_manager.process_immediate_matches(false, matches)
+
+
+func _on_player_matches_resolved(result: CascadeHandler.CascadeResult) -> void:
+	# Combat effects are now applied immediately via _on_player_immediate_matches
+	# This handler is kept for stats tracking and other post-cascade processing
 	_stats_tracker.record_cascade_result(result)
 
 
-func _on_enemy_matches_resolved(result: CascadeHandler.CascadeResult) -> void:
-	if combat_manager:
-		combat_manager.process_cascade_result(false, result)
+func _on_enemy_matches_resolved(_result: CascadeHandler.CascadeResult) -> void:
+	# Combat effects are now applied immediately via _on_enemy_immediate_matches
+	pass
 
 
 func _on_damage_dealt(target: Fighter, result: Fighter.DamageResult) -> void:

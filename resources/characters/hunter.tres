@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/character_data.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/portraits/hunter_portrait.png" id="1_portrait"]
 [ext_resource type="Resource" path="res://resources/tiles/sword.tres" id="2"]
 [ext_resource type="Resource" path="res://resources/tiles/shield.tres" id="3"]
 [ext_resource type="Resource" path="res://resources/tiles/lightning.tres" id="4"]
@@ -15,6 +16,7 @@
 script = ExtResource("1")
 character_id = "hunter"
 display_name = "The Hunter"
+portrait = ExtResource("1_portrait")
 archetype = "Combo Specialist"
 description = "A combo-sequence specialist who commands animal companions to devastate foes. The Hunter builds sequences by matching specific tile patterns. When a combo completes, the corresponding Pet tile (Bear, Hawk, or Snake) drops from above. Click a Pet tile to activate its ability."
 basic_tiles = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")]

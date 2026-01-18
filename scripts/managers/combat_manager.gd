@@ -101,21 +101,47 @@ func _setup_fighter_mana(fighter: Fighter, data: FighterData) -> void:
 
 
 func process_cascade_result(source_is_player: bool, result: CascadeHandler.CascadeResult) -> void:
+	# NOTE: Combat effects are now applied immediately via process_immediate_matches
+	# This function is kept for backwards compatibility but no longer processes combat
+	pass
+
+
+## Process matches immediately when detected (before animations complete)
+## This provides responsive gameplay - damage/healing happens right away
+func process_immediate_matches(source_is_player: bool, matches: Array) -> void:
 	var source := get_fighter(source_is_player)
 
 	# Notify status manager that this fighter made matches (triggers ON_MATCH effects like Bleed)
-	if status_effect_manager and not result.all_matches.is_empty():
+	if status_effect_manager and not matches.is_empty():
 		status_effect_manager._on_target_matched(source)
 
-	for match_result in result.all_matches:
+	for match_result in matches:
 		apply_match_effect(source, match_result)
 
 	# Process mana gain from matches
-	_process_mana_from_matches(source, result)
+	_process_mana_from_immediate_matches(source, matches)
 
 	var victory := check_victory()
 	if victory != MatchResult.ONGOING:
 		match_ended.emit(victory)
+
+
+## Process mana from immediate matches array
+func _process_mana_from_immediate_matches(fighter: Fighter, matches: Array) -> void:
+	if not mana_system:
+		return
+
+	# Check if fighter is mana blocked
+	if fighter.is_mana_blocked():
+		return
+
+	# Check if fighter has mana configured
+	if not mana_system.has_fighter(fighter):
+		return
+
+	for match_result in matches:
+		var match_count: int = match_result.positions.size()
+		mana_system.add_mana_from_match(fighter, match_count)
 
 
 func _process_mana_from_matches(fighter: Fighter, result: CascadeHandler.CascadeResult) -> void:

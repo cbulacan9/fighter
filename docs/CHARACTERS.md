@@ -99,7 +99,7 @@ Click a Pet tile to activate its ability.
 | Ability | Sequence | Offensive Effect | Self Buff (3x stack) |
 |---------|----------|------------------|----------------------|
 | **Bear** | Physical → Shield → Shield | 1 bleed stack (damages on enemy's next match) | Attack strength increase |
-| **Hawk** | Shield → Stun | Replaces 10 enemy tiles with empty boxes | Evasion (next attack auto-misses) |
+| **Hawk** | Shield → Stun | Replaces 5 enemy tiles with empty boxes | Evasion (next attack auto-misses) |
 | **Snake** | Stun → Physical → Shield | 3-second enemy board stun | Cleanses poison and heals 5 HP |
 
 *Note: All sequences have unique starting tiles, so a single match can only start one tree (unless multiple tile types are matched simultaneously).*

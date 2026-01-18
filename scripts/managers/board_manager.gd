@@ -3,6 +3,7 @@ extends Node2D
 
 signal state_changed(new_state: BoardState)
 signal matches_resolved(result: CascadeHandler.CascadeResult)
+signal immediate_matches(matches: Array)  # Fires immediately when matches detected, before animations
 signal ready_for_input
 signal snap_back_started
 signal snap_back_finished
@@ -420,6 +421,9 @@ func _on_snap_back_finished() -> void:
 
 
 func _on_matches_processed(matches: Array[MatchDetector.MatchResult]) -> void:
+	# Emit immediately for combat effects (damage applied before animations)
+	immediate_matches.emit(matches)
+
 	# Process only PLAYER_INITIATED matches for sequence tracking
 	# CASCADE matches should not advance combo trees
 	print("BoardManager: _on_matches_processed called with %d matches" % matches.size())

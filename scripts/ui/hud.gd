@@ -8,11 +8,13 @@ signal enemy_mana_bar_clicked(bar_index: int)
 
 @onready var player_health_bar: HealthBar = $PlayerPanel/Bars/HealthBar
 @onready var player_portrait: TextureRect = $PlayerPanel/Portrait
+@onready var player_name_label: Label = $PlayerPanel/Bars/NameLabel
 @onready var player_mana_container: ManaBarContainer = $PlayerPanel/Bars/ManaContainer
 @onready var player_sequence_indicator: SequenceIndicator = $SequenceIndicator
 @onready var player_status_display: StatusEffectDisplay = $PlayerPanel/Bars/StatusEffectDisplay
 @onready var enemy_health_bar: HealthBar = $EnemyPanel/Bars/HealthBar
 @onready var enemy_portrait: TextureRect = $EnemyPanel/Portrait
+@onready var enemy_name_label: Label = $EnemyPanel/Bars/NameLabel
 @onready var enemy_mana_container: ManaBarContainer = $EnemyPanel/Bars/ManaContainer
 @onready var enemy_sequence_indicator: SequenceIndicator = $EnemySequenceIndicator
 @onready var enemy_status_display: StatusEffectDisplay = $EnemyPanel/Bars/StatusEffectDisplay
@@ -29,11 +31,69 @@ var _combat_log_debugger: CombatLogDebugger
 const COMBO_TREE_DISPLAY_SCENE := preload("res://scenes/ui/combo_tree_display.tscn")
 const PET_POPULATION_DISPLAY_SCENE := preload("res://scenes/ui/pet_population_display.tscn")
 
-# Note: PlayerPanel is now at bottom (y=600), EnemyPanel at top (y=5)
+## Layout constants - single source of truth for positioning
+## Change X_OFFSET values to shift all UI elements (panel, portrait, combo tree) together
+const PLAYER_X_OFFSET := 50.0  # Shift all player UI elements horizontally
+const ENEMY_X_OFFSET := 50.0   # Shift all enemy UI elements horizontally
+
+## Base positions (before offset is applied)
+const PANEL_BASE_X := 10.0      # Base X for health/mana panel
+const COMBO_TREE_BASE_X := 290.0  # Base X for combo tree (right of board)
+const PLAYER_UI_Y := 550.0      # Y position for player UI elements
+const ENEMY_UI_Y := 5.0         # Y position for enemy UI elements
+const PLAYER_BOARD_OFFSET := 120.0  # How far below PLAYER_UI_Y the board starts
+const ENEMY_BOARD_OFFSET := 120.0   # How far below ENEMY_UI_Y the board starts
+
+## Calculated positions for external use (e.g., GameManager positioning boards)
+static func get_player_board_y() -> float:
+	return PLAYER_UI_Y + PLAYER_BOARD_OFFSET
+
+static func get_enemy_board_y() -> float:
+	return ENEMY_UI_Y + ENEMY_BOARD_OFFSET
 
 var _player_fighter: Fighter
 var _enemy_fighter: Fighter
 var _mana_system: ManaSystem
+
+@onready var _player_panel: Control = $PlayerPanel
+@onready var _enemy_panel: Control = $EnemyPanel
+
+
+func _ready() -> void:
+	# Position PlayerPanel using layout constants with offset
+	# Panels use anchor layout (layout_mode = 1), so we set offsets not position
+	if _player_panel:
+		var panel_width := _player_panel.offset_right - _player_panel.offset_left
+		var panel_height := _player_panel.offset_bottom - _player_panel.offset_top
+		_player_panel.offset_left = PANEL_BASE_X + PLAYER_X_OFFSET
+		_player_panel.offset_top = PLAYER_UI_Y
+		_player_panel.offset_right = _player_panel.offset_left + panel_width
+		_player_panel.offset_bottom = _player_panel.offset_top + panel_height
+
+	# Position EnemyPanel using layout constants with offset
+	if _enemy_panel:
+		var panel_width := _enemy_panel.offset_right - _enemy_panel.offset_left
+		var panel_height := _enemy_panel.offset_bottom - _enemy_panel.offset_top
+		_enemy_panel.offset_left = PANEL_BASE_X + ENEMY_X_OFFSET
+		_enemy_panel.offset_top = ENEMY_UI_Y
+		_enemy_panel.offset_right = _enemy_panel.offset_left + panel_width
+		_enemy_panel.offset_bottom = _enemy_panel.offset_top + panel_height
+
+	# Position SequenceIndicators (for non-Hunter characters) with offsets
+	if player_sequence_indicator:
+		var indicator_width := player_sequence_indicator.offset_right - player_sequence_indicator.offset_left
+		player_sequence_indicator.offset_left = COMBO_TREE_BASE_X + PLAYER_X_OFFSET
+		player_sequence_indicator.offset_right = player_sequence_indicator.offset_left + indicator_width
+	if enemy_sequence_indicator:
+		var indicator_width := enemy_sequence_indicator.offset_right - enemy_sequence_indicator.offset_left
+		enemy_sequence_indicator.offset_left = COMBO_TREE_BASE_X + ENEMY_X_OFFSET
+		enemy_sequence_indicator.offset_right = enemy_sequence_indicator.offset_left + indicator_width
+
+	# Setup portraits with horizontal flip
+	if player_portrait:
+		player_portrait.flip_h = true
+	if enemy_portrait:
+		enemy_portrait.flip_h = true
 
 
 func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:
@@ -43,13 +103,18 @@ func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:
 	# Get mana system reference
 	_mana_system = _get_mana_system()
 
-	# Setup health bars
+	# Setup health bars, name labels, and portraits
 	if player_fighter:
 		player_health_bar.setup(player_fighter.max_hp)
 		player_fighter.hp_changed.connect(_on_player_hp_changed)
 		player_fighter.armor_changed.connect(_on_player_armor_changed)
 
-		if player_fighter.fighter_data and player_fighter.fighter_data.portrait:
+		# Set player name label
+		if player_fighter.fighter_data and player_name_label:
+			player_name_label.text = player_fighter.fighter_data.fighter_name
+
+		# Set player portrait
+		if player_fighter.fighter_data and player_fighter.fighter_data.portrait and player_portrait:
 			player_portrait.texture = player_fighter.fighter_data.portrait
 
 	if enemy_fighter:
@@ -57,7 +122,12 @@ func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:
 		enemy_fighter.hp_changed.connect(_on_enemy_hp_changed)
 		enemy_fighter.armor_changed.connect(_on_enemy_armor_changed)
 
-		if enemy_fighter.fighter_data and enemy_fighter.fighter_data.portrait:
+		# Set enemy name label
+		if enemy_fighter.fighter_data and enemy_name_label:
+			enemy_name_label.text = enemy_fighter.fighter_data.fighter_name
+
+		# Set enemy portrait
+		if enemy_fighter.fighter_data and enemy_fighter.fighter_data.portrait and enemy_portrait:
 			enemy_portrait.texture = enemy_fighter.fighter_data.portrait
 
 	# Setup mana bars
@@ -154,7 +224,11 @@ func _create_hunter_ui(board: BoardManager, is_player: bool) -> void:
 
 	# Determine positions based on player/enemy
 	# Player UI is in the gap between boards, Enemy UI is at top
-	var combo_tree_pos := Vector2(290, 390) if is_player else Vector2(290, 5)
+	var combo_tree_pos: Vector2
+	if is_player:
+		combo_tree_pos = Vector2(COMBO_TREE_BASE_X + PLAYER_X_OFFSET, PLAYER_UI_Y)
+	else:
+		combo_tree_pos = Vector2(COMBO_TREE_BASE_X + ENEMY_X_OFFSET, ENEMY_UI_Y)
 
 	# Create ComboTreeDisplay (now includes pet population counts)
 	var combo_tree: ComboTreeDisplay = COMBO_TREE_DISPLAY_SCENE.instantiate()

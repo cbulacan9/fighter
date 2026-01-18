@@ -7,35 +7,35 @@
 │                        GameManager                          │
 │              (State Machine, Match Flow)                    │
 └─────────────────┬───────────────────────────┬───────────────┘
-                  │                           │
-       ┌──────────▼──────────┐     ┌──────────▼──────────┐
-       │   PlayerController  │     │    AIController     │
-       │   (Human Input)     │     │   (AI Decision)     │
-       └──────────┬──────────┘     └──────────┬──────────┘
-                  │                           │
-                  └─────────────┬─────────────┘
-                                │
-                  ┌─────────────▼─────────────┐
-                  │       BoardManager        │
-                  │  (Grid State, Tile Ops)   │
-                  └─────────────┬─────────────┘
-                                │
-        ┌───────────┬───────────┼───────────┬───────────┐
-        ▼           ▼           ▼           ▼           ▼
+				  │                           │
+	   ┌──────────▼──────────┐     ┌──────────▼──────────┐
+	   │   PlayerController  │     │    AIController     │
+	   │   (Human Input)     │     │   (AI Decision)     │
+	   └──────────┬──────────┘     └──────────┬──────────┘
+				  │                           │
+				  └─────────────┬─────────────┘
+								│
+				  ┌─────────────▼─────────────┐
+				  │       BoardManager        │
+				  │  (Grid State, Tile Ops)   │
+				  └─────────────┬─────────────┘
+								│
+		┌───────────┬───────────┼───────────┬───────────┐
+		▼           ▼           ▼           ▼           ▼
    ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
    │  Grid   │ │  Match  │ │ Cascade │ │  Input  │ │  Tile   │
    │ System  │ │ Detector│ │ Handler │ │ Handler │ │ Spawner │
    └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘
-                                │
-                  ┌─────────────▼─────────────┐
-                  │      CombatManager        │
-                  │  (HP, Armor, Stun, FX)    │
-                  └─────────────┬─────────────┘
-                                │
-                  ┌─────────────▼─────────────┐
-                  │    Distributed UI Layer   │
-                  │  (HUD, Overlays, Screens) │
-                  └───────────────────────────┘
+								│
+				  ┌─────────────▼─────────────┐
+				  │      CombatManager        │
+				  │  (HP, Armor, Stun, FX)    │
+				  └─────────────┬─────────────┘
+								│
+				  ┌─────────────▼─────────────┐
+				  │    Distributed UI Layer   │
+				  │  (HUD, Overlays, Screens) │
+				  └───────────────────────────┘
 ```
 
 ## Core Systems
@@ -71,28 +71,32 @@
 2. **MatchDetector** scans for valid matches
 3. If no match → **InputHandler** triggers snap-back animation
 4. If match found → **BoardManager** locks input, processes match:
-   - **CascadeHandler** removes matched tiles
-   - **TileSpawner** fills empty spaces
+   - **CascadeHandler** detects matches, emits `matches_processed` **IMMEDIATELY**
+   - **BoardManager** emits `immediate_matches` → **CombatManager** applies effects
+   - **UI reacts instantly** (damage numbers spawn, health bars update)
+   - **CascadeHandler** plays tile removal animations
+   - **TileSpawner** fills empty spaces with animations
    - **MatchDetector** checks for chain reactions (loop until stable)
-5. **CombatManager** receives aggregated match data, applies effects
-6. UI components react to signals (damage numbers spawn, health bars update)
-7. **BoardManager** unlocks input
+5. `cascade_complete` emits → Stats recorded
+6. **BoardManager** unlocks input
+
+**Key Change:** Effects apply immediately when matches are detected, before animations complete. This provides responsive gameplay feedback.
 
 ### Combat Effect Flow
 ```
 Match Data → CombatManager → Target Fighter State
-                │
-         Effect Resolution:
-         - Sword → Damage (armor first, then HP)
-         - Shield → Add armor (cap at max HP)
-         - Potion → Heal (cap at max HP)
-         - Lightning → Apply stun (diminishing returns)
-                │
-                ├──→ Fighter.hp_changed ──→ HUD (health bar update)
-                ├──→ damage_dealt ────────→ DamageNumberSpawner
-                ├──→ healing_done ────────→ DamageNumberSpawner
-                ├──→ armor_gained ────────→ DamageNumberSpawner
-                └──→ stun_applied ────────→ GameManager → StunOverlay
+				│
+		 Effect Resolution:
+		 - Sword → Damage (armor first, then HP)
+		 - Shield → Add armor (cap at max HP)
+		 - Potion → Heal (cap at max HP)
+		 - Lightning → Apply stun (diminishing returns)
+				│
+				├──→ Fighter.hp_changed ──→ HUD (health bar update)
+				├──→ damage_dealt ────────→ DamageNumberSpawner
+				├──→ healing_done ────────→ DamageNumberSpawner
+				├──→ armor_gained ────────→ DamageNumberSpawner
+				└──→ stun_applied ────────→ GameManager → StunOverlay
 ```
 
 ## Scene Hierarchy
@@ -111,17 +115,17 @@ Main (Node)
 │       └── [Grid, InputHandler, MatchDetector, etc.]
 ├── AIController (Node)
 └── UI (CanvasLayer)
-    ├── HUD (Control)
-    │   ├── PlayerPanel (HealthBar, Portrait)
-    │   └── EnemyPanel (HealthBar, Portrait)
-    ├── PlayerStunOverlay (StunOverlay)
-    ├── EnemyStunOverlay (StunOverlay)
-    ├── DamageNumbers (DamageNumberSpawner)
-    ├── GameOverlay (CanvasLayer)
-    │   ├── CountdownPanel
-    │   ├── PausePanel
-    │   └── ResultPanel
-    └── StatsScreen (CanvasLayer)
+	├── HUD (Control)
+	│   ├── PlayerPanel (HealthBar, Portrait)
+	│   └── EnemyPanel (HealthBar, Portrait)
+	├── PlayerStunOverlay (StunOverlay)
+	├── EnemyStunOverlay (StunOverlay)
+	├── DamageNumbers (DamageNumberSpawner)
+	├── GameOverlay (CanvasLayer)
+	│   ├── CountdownPanel
+	│   ├── PausePanel
+	│   └── ResultPanel
+	└── StatsScreen (CanvasLayer)
 ```
 
 ## State Machines
@@ -152,7 +156,8 @@ Key signals for decoupled communication:
 | Signal | Emitter | Listeners |
 |--------|---------|-----------|
 | `state_changed(new_state)` | GameManager | All systems |
-| `matches_resolved(cascade_result)` | BoardManager | GameManager |
+| `immediate_matches(matches)` | BoardManager | GameManager (applies combat effects immediately) |
+| `matches_resolved(cascade_result)` | BoardManager | GameManager (stats recording) |
 | `match_ended(winner_id)` | CombatManager | GameManager |
 
 ### Combat Signals
@@ -271,6 +276,6 @@ project/
 │   ├── tiles/
 │   └── fighters/
 └── assets/
-    ├── sprites/
-    └── ui/
+	├── sprites/
+	└── ui/
 ```

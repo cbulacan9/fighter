@@ -411,8 +411,9 @@ UI is implemented as independent components rather than a centralized UIManager.
 ### StatsScreen
 **Purpose:** End-of-match statistics display.
 
-**Setup:** `show_stats(MatchStats)`
+**Setup:** `show_stats(MatchStats, combat_log_entries)`
 - Displays all tracked statistics
+- Shows combat log summary (scrollable, up to 100 entries)
 - Provides Rematch and Quit options
 
 **Signals Emitted:**
@@ -420,3 +421,107 @@ UI is implemented as independent components rather than a centralized UIManager.
 |--------|-------------|
 | `rematch_pressed` | Player wants to play again |
 | `quit_pressed` | Player exiting game |
+
+---
+
+## 12. Immediate Effect System
+
+### Purpose
+Applies combat effects (damage, healing, armor, stun, mana) immediately when matches are detected, before tile animations complete. This provides responsive gameplay feedback.
+
+### Flow
+```
+Match Detected
+      ↓
+CascadeHandler emits matches_processed (IMMEDIATE)
+      ↓
+BoardManager receives → emits immediate_matches
+      ↓
+GameManager receives → calls combat_manager.process_immediate_matches()
+      ↓
+Effects Applied (damage numbers spawn, health bars update)
+      ↓
+Animations play in background (purely visual)
+      ↓
+cascade_complete emits → Stats recorded
+```
+
+### Key Functions
+| Function | Location | Description |
+|----------|----------|-------------|
+| `process_immediate_matches()` | combat_manager.gd | Applies all match effects immediately |
+| `_on_player_immediate_matches()` | game_manager.gd | Handler for player board matches |
+| `_on_enemy_immediate_matches()` | game_manager.gd | Handler for enemy board matches |
+
+### Signals
+| Signal | Emitter | Description |
+|--------|---------|-------------|
+| `matches_processed` | CascadeHandler | Fires immediately when matches detected |
+| `immediate_matches` | BoardManager | Forwards to GameManager for combat processing |
+
+---
+
+## 13. HUD Layout System
+
+### Purpose
+Centralized layout constants for positioning UI elements (panels, portraits, combo trees) and boards. Allows easy adjustment of screen layout from a single location.
+
+### Layout Constants (hud.gd)
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `PLAYER_X_OFFSET` | 50.0 | Horizontal shift for all player UI elements |
+| `ENEMY_X_OFFSET` | 50.0 | Horizontal shift for all enemy UI elements |
+| `PANEL_BASE_X` | 10.0 | Base X position for health/mana panels |
+| `COMBO_TREE_BASE_X` | 290.0 | Base X position for combo tree display |
+| `PLAYER_UI_Y` | 550.0 | Y position for player UI elements |
+| `ENEMY_UI_Y` | 5.0 | Y position for enemy UI elements |
+| `PLAYER_BOARD_OFFSET` | 120.0 | Gap between player UI and board |
+| `ENEMY_BOARD_OFFSET` | 120.0 | Gap between enemy UI and board |
+
+### Calculated Positions
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `HUD.get_player_board_y()` | float | PLAYER_UI_Y + PLAYER_BOARD_OFFSET |
+| `HUD.get_enemy_board_y()` | float | ENEMY_UI_Y + ENEMY_BOARD_OFFSET |
+
+### Elements Affected by X Offset
+- Health/Mana Panel (portrait + bars)
+- Combo Tree Display
+- Sequence Indicator (for non-Hunter characters)
+
+### Board Positioning
+GameManager calls `_position_boards()` which:
+1. Positions enemy board at `(BOARD_X, HUD.get_enemy_board_y())`
+2. Positions player board at `(BOARD_X, HUD.get_player_board_y())`
+3. Updates stun overlays to match board positions
+
+---
+
+## 14. Combat Log Debugger
+
+### Purpose
+Debug panel that logs combat events in real-time. Toggle visibility with F4 key.
+
+### Events Logged
+| Event | Color | Format |
+|-------|-------|--------|
+| Damage dealt | Red | "⚔ P1 - Hunter took 15 dmg to HP" |
+| Armor absorbed | Orange | "🛡 P2 - Hunter blocked 10 dmg" |
+| Healing | Green | "💚 P1 - Hunter healed for 8" |
+| Armor gained | Blue | "🛡 P2 - Hunter gained 12 armor" |
+| Dodge | Yellow | "💨 P1 - Hunter DODGED an attack!" |
+| DoT damage | Purple | "☠ P1 - Hunter took 5 Bleed damage" |
+| Defeat | Bright Red | "💀 P1 - Hunter DEFEATED!" |
+
+### Player Labels
+- P1 = Enemy (top board)
+- P2 = Player (bottom board)
+
+### Configuration
+| Property | Value | Description |
+|----------|-------|-------------|
+| `MAX_LOG_LINES` | 100 | Maximum entries before oldest removed |
+| Toggle Key | F4 | Show/hide the debug panel |
+
+### Stats Screen Integration
+Combat log entries are passed to StatsScreen via `show_stats(stats, combat_log_entries)` for post-match review.
