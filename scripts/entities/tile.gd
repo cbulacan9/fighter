@@ -20,10 +20,16 @@ var _activation_tween: Tween
 var _hidden_tween: Tween
 var _dimmed_tween: Tween
 var _reject_tween: Tween
+var _ultimate_glow_tween: Tween
 
 
 func _ready() -> void:
 	_update_visual()
+
+	# Start ultimate glow for Alpha Command tiles (now that sprite is ready)
+	if tile_data and tile_data.tile_type == TileTypes.Type.ALPHA_COMMAND:
+		if not _ultimate_glow_tween:
+			_start_ultimate_glow()
 
 
 func _notification(what: int) -> void:
@@ -44,12 +50,23 @@ func _notification(what: int) -> void:
 		if _reject_tween:
 			_reject_tween.kill()
 			_reject_tween = null
+		if _ultimate_glow_tween:
+			_ultimate_glow_tween.kill()
+			_ultimate_glow_tween = null
 
 
 func setup(data: PuzzleTileData, pos: Vector2i) -> void:
 	tile_data = data
 	grid_position = pos
 	_update_visual()
+
+	# Start ultimate glow for Alpha Command tiles (deferred if sprite not ready)
+	if tile_data and tile_data.tile_type == TileTypes.Type.ALPHA_COMMAND:
+		if sprite:
+			_start_ultimate_glow()
+		else:
+			# Defer until node is ready
+			call_deferred("_start_ultimate_glow")
 
 
 func get_type() -> TileTypes.Type:
@@ -278,3 +295,38 @@ func play_reject_animation() -> void:
 	# Flash red briefly
 	_reject_tween.parallel().tween_property(self, "modulate", Color(1.5, 0.5, 0.5, 1.0), 0.1)
 	_reject_tween.tween_property(self, "modulate", Color.WHITE if not is_dimmed else Color(0.4, 0.4, 0.5, 0.7), 0.15)
+
+
+# --- Ultimate Glow Effect (for Alpha Command tile) ---
+
+func _start_ultimate_glow() -> void:
+	if not sprite:
+		return
+
+	if _ultimate_glow_tween:
+		_ultimate_glow_tween.kill()
+
+	# Get base scale for the sprite
+	const BASE_SPRITE_SIZE := 64.0
+	var base_scale_factor := Grid.CELL_SIZE.x / BASE_SPRITE_SIZE
+	var base_scale := Vector2(base_scale_factor, base_scale_factor)
+	var enlarged_scale := base_scale * 1.12
+
+	# White glow colors for ultimate
+	var glow_color := Color(1.5, 1.5, 1.5, 1.0)  # Bright white
+	var dim_color := Color(1.0, 1.0, 1.0, 1.0)   # Normal white
+
+	# Create looping glow animation
+	_ultimate_glow_tween = create_tween()
+	_ultimate_glow_tween.set_loops()
+
+	# Pulse bright
+	_ultimate_glow_tween.set_parallel(true)
+	_ultimate_glow_tween.tween_property(self, "modulate", glow_color, 0.6).set_ease(Tween.EASE_IN_OUT)
+	_ultimate_glow_tween.tween_property(sprite, "scale", enlarged_scale, 0.6).set_ease(Tween.EASE_IN_OUT)
+
+	# Pulse dim
+	_ultimate_glow_tween.set_parallel(false)
+	_ultimate_glow_tween.set_parallel(true)
+	_ultimate_glow_tween.tween_property(self, "modulate", dim_color, 0.6).set_ease(Tween.EASE_IN_OUT)
+	_ultimate_glow_tween.tween_property(sprite, "scale", base_scale, 0.6).set_ease(Tween.EASE_IN_OUT)

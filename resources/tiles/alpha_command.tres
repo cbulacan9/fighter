@@ -5,7 +5,7 @@
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_alpha_command"]
 atlas = ExtResource("2")
-region = Rect2(256, 64, 64, 64)
+region = Rect2(252, 66, 64, 64)
 
 [resource]
 script = ExtResource("1")
@@ -16,5 +16,5 @@ color = Color(0.6, 0.2, 0.8, 1)
 is_matchable = false
 is_clickable = true
 click_condition = 1
-clickable_highlight_color = Color(0.7, 0.4, 1.0, 0.6)
+clickable_highlight_color = Color(0.7, 0.4, 1, 0.6)
 max_on_board = 1

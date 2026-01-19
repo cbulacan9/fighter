@@ -12,6 +12,15 @@ var _total_weight: float = 0.0
 var _min_counts: Dictionary = {}  # {TileTypes.Type: int}
 var _max_counts: Dictionary = {}  # {TileTypes.Type: int}
 var _grid_ref: Grid  # Reference to the grid for counting tiles
+var _anti_cascade_filter: AntiCascadeFilter = AntiCascadeFilter.new()
+
+# Tile count caching (avoids repeated full-grid scans)
+var _cached_type_counts: Dictionary = {}  # {TileTypes.Type: int}
+var _counts_valid: bool = false
+
+# Pre-allocated arrays for _select_random_tile_data() (avoids GC pressure)
+var _available_resources: Array[PuzzleTileData] = []
+var _available_weights: Array[float] = []
 
 
 func _ready() -> void:
@@ -54,6 +63,41 @@ func spawn_tiles(count: int) -> Array[Tile]:
 	for i in range(count):
 		tiles.append(spawn_tile())
 	return tiles
+
+
+## Spawns a tile that won't immediately create a match at the given position.
+## Uses retries to find a safe tile type, with graceful fallback to random.
+func spawn_safe_tile(row: int, col: int) -> Tile:
+	if not GameConstants.ANTI_CASCADE_ENABLED or not _grid_ref:
+		return spawn_tile()
+
+	var max_attempts := GameConstants.ANTI_CASCADE_MAX_RETRIES
+	var attempts := 0
+	var tile_data: PuzzleTileData = null
+
+	while attempts < max_attempts:
+		tile_data = _select_random_tile_data()
+		if not tile_data:
+			break
+
+		# Check if this would create a match
+		if not _anti_cascade_filter.would_create_match(_grid_ref, row, col, tile_data.tile_type):
+			break  # Found a safe tile
+
+		attempts += 1
+
+	# Graceful degradation: use last selection if no safe option found
+	if not tile_data:
+		tile_data = _select_random_tile_data()
+
+	var tile: Tile = tile_scene.instantiate()
+	tile.setup(tile_data, Vector2i(-1, -1))
+
+	# Update cached count for min/max tracking
+	if tile_data:
+		_increment_cached_count(tile_data.tile_type)
+
+	return tile
 
 
 func get_tile_data(type: TileTypes.Type) -> PuzzleTileData:
@@ -113,9 +157,9 @@ func _select_random_tile_data() -> PuzzleTileData:
 		if forced_data:
 			return forced_data
 
-	# Build a filtered selection that respects maximums
-	var available_resources: Array[PuzzleTileData] = []
-	var available_weights: Array[float] = []
+	# Build a filtered selection that respects maximums (reuse pre-allocated arrays)
+	_available_resources.clear()
+	_available_weights.clear()
 	var total_available_weight := 0.0
 
 	for tile_data in tile_resources:
@@ -123,13 +167,13 @@ func _select_random_tile_data() -> PuzzleTileData:
 		if _is_type_at_maximum(tile_data.tile_type):
 			continue
 
-		available_resources.append(tile_data)
+		_available_resources.append(tile_data)
 		var weight := _get_weight_for_type(tile_data.tile_type)
-		available_weights.append(weight)
+		_available_weights.append(weight)
 		total_available_weight += weight
 
 	# If no tiles available (all at max), fall back to any tile
-	if available_resources.is_empty() or total_available_weight <= 0:
+	if _available_resources.is_empty() or total_available_weight <= 0:
 		var fallback_roll := randf() * _total_weight
 		for i in range(_cumulative_weights.size()):
 			if fallback_roll < _cumulative_weights[i]:
@@ -140,12 +184,12 @@ func _select_random_tile_data() -> PuzzleTileData:
 	var roll := randf() * total_available_weight
 	var cumulative := 0.0
 
-	for i in range(available_resources.size()):
-		cumulative += available_weights[i]
+	for i in range(_available_resources.size()):
+		cumulative += _available_weights[i]
 		if roll < cumulative:
-			return available_resources[i]
+			return _available_resources[i]
 
-	return available_resources[available_resources.size() - 1]
+	return _available_resources[_available_resources.size() - 1]
 
 
 ## Sets the grid reference for counting tiles on board
@@ -171,16 +215,39 @@ func clear_spawn_rules() -> void:
 	_max_counts.clear()
 
 
-## Counts how many tiles of a specific type are currently on the board
-func _count_on_board(tile_type: TileTypes.Type) -> int:
-	if not _grid_ref:
-		return 0
+## Invalidates the tile count cache. Call before starting a batch of spawns.
+func invalidate_counts() -> void:
+	_counts_valid = false
 
-	var count := 0
+
+## Rebuilds the tile count cache if invalid
+func _ensure_counts_cached() -> void:
+	if _counts_valid:
+		return
+
+	_cached_type_counts.clear()
+	if not _grid_ref:
+		_counts_valid = true
+		return
+
 	for tile in _grid_ref.get_all_tiles():
-		if tile and tile.tile_data and tile.tile_data.tile_type == tile_type:
-			count += 1
-	return count
+		if tile and tile.tile_data:
+			var t: int = tile.tile_data.tile_type
+			_cached_type_counts[t] = _cached_type_counts.get(t, 0) + 1
+
+	_counts_valid = true
+
+
+## Increments the cached count for a tile type (call after spawning)
+func _increment_cached_count(tile_type: TileTypes.Type) -> void:
+	if _counts_valid:
+		_cached_type_counts[tile_type] = _cached_type_counts.get(tile_type, 0) + 1
+
+
+## Counts how many tiles of a specific type are currently on the board (cached)
+func _count_on_board(tile_type: TileTypes.Type) -> int:
+	_ensure_counts_cached()
+	return _cached_type_counts.get(tile_type, 0)
 
 
 ## Returns a tile type that is below its minimum count, or NONE if all are satisfied

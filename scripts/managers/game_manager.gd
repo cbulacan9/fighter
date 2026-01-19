@@ -364,7 +364,7 @@ func _setup_match() -> void:
 
 	# Setup HUD
 	if hud and combat_manager:
-		hud.setup(combat_manager.player_fighter, combat_manager.enemy_fighter)
+		hud.setup(combat_manager.player_fighter, combat_manager.enemy_fighter, selected_player_character, selected_enemy_character)
 
 	# Setup damage number spawner
 	if damage_spawner and combat_manager:
@@ -438,6 +438,12 @@ func reset_match() -> void:
 		player_board.reset()
 	if enemy_board:
 		enemy_board.reset()
+
+	# Reconnect board signals after reset (reset() disconnects them)
+	if player_board and combat_manager:
+		player_board.set_owner_fighter(combat_manager.player_fighter)
+	if enemy_board and combat_manager:
+		enemy_board.set_owner_fighter(combat_manager.enemy_fighter)
 
 	# Clear stun overlays
 	if player_stun_overlay:

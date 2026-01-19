@@ -36,9 +36,9 @@ Static helper methods for tile type checks. Eliminates duplicate helper function
 ### Usage
 ```gdscript
 if TileTypeHelper.is_hunter_pet_type(tile.tile_data.tile_type):
-    # Handle pet tile
+	# Handle pet tile
 if TileTypeHelper.is_special_tile(tile_type):
-    # Don't replace this tile
+	# Don't replace this tile
 ```
 
 ---
@@ -647,7 +647,7 @@ Validates character configuration and all associated tiles:
 ```gdscript
 # Validate character data on load
 if not character_data.validate():
-    push_error("Character data validation failed")
+	push_error("Character data validation failed")
 ```
 
 Validation warnings appear in the Godot output panel during development.

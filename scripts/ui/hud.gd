@@ -60,6 +60,12 @@ static func get_enemy_board_y() -> float:
 var _player_fighter: Fighter
 var _enemy_fighter: Fighter
 var _mana_system: ManaSystem
+var _player_character_data: CharacterData
+var _enemy_character_data: CharacterData
+var _player_original_portrait: Texture2D
+var _enemy_original_portrait: Texture2D
+var _player_portrait_glow_tween: Tween
+var _enemy_portrait_glow_tween: Tween
 
 @onready var _player_panel: Control = $PlayerPanel
 @onready var _enemy_panel: Control = $EnemyPanel
@@ -151,9 +157,11 @@ func _setup_portrait(portrait: TextureRect, x_offset: float, y_pos: float) -> vo
 		panel.offset_right += shift
 
 
-func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:
+func setup(player_fighter: Fighter, enemy_fighter: Fighter, player_char_data: CharacterData = null, enemy_char_data: CharacterData = null) -> void:
 	_player_fighter = player_fighter
 	_enemy_fighter = enemy_fighter
+	_player_character_data = player_char_data
+	_enemy_character_data = enemy_char_data
 
 	# Get mana system reference
 	_mana_system = _get_mana_system()
@@ -171,6 +179,13 @@ func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:
 		# Set player portrait
 		if player_fighter.fighter_data and player_fighter.fighter_data.portrait and player_portrait:
 			player_portrait.texture = player_fighter.fighter_data.portrait
+			_player_original_portrait = player_fighter.fighter_data.portrait
+
+		# Connect alpha command signals for portrait swap
+		if not player_fighter.alpha_command_activated.is_connected(_on_player_alpha_command_activated):
+			player_fighter.alpha_command_activated.connect(_on_player_alpha_command_activated)
+		if not player_fighter.alpha_command_deactivated.is_connected(_on_player_alpha_command_deactivated):
+			player_fighter.alpha_command_deactivated.connect(_on_player_alpha_command_deactivated)
 
 	if enemy_fighter:
 		enemy_health_bar.setup(enemy_fighter.max_hp)
@@ -184,6 +199,13 @@ func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:
 		# Set enemy portrait
 		if enemy_fighter.fighter_data and enemy_fighter.fighter_data.portrait and enemy_portrait:
 			enemy_portrait.texture = enemy_fighter.fighter_data.portrait
+			_enemy_original_portrait = enemy_fighter.fighter_data.portrait
+
+		# Connect alpha command signals for portrait swap
+		if not enemy_fighter.alpha_command_activated.is_connected(_on_enemy_alpha_command_activated):
+			enemy_fighter.alpha_command_activated.connect(_on_enemy_alpha_command_activated)
+		if not enemy_fighter.alpha_command_deactivated.is_connected(_on_enemy_alpha_command_deactivated):
+			enemy_fighter.alpha_command_deactivated.connect(_on_enemy_alpha_command_deactivated)
 
 	# Setup mana bars
 	_setup_mana_bars()
@@ -652,3 +674,72 @@ func get_player_status_display() -> StatusEffectDisplay:
 
 func get_enemy_status_display() -> StatusEffectDisplay:
 	return enemy_status_display
+
+
+# --- Alpha Command Portrait Swap ---
+
+func _on_player_alpha_command_activated() -> void:
+	if _player_character_data and _player_character_data.ultimate_portrait and player_portrait:
+		player_portrait.texture = _player_character_data.ultimate_portrait
+	_start_portrait_glow(player_portrait, true)
+
+
+func _on_player_alpha_command_deactivated() -> void:
+	if _player_original_portrait and player_portrait:
+		player_portrait.texture = _player_original_portrait
+	_stop_portrait_glow(player_portrait, true)
+
+
+func _on_enemy_alpha_command_activated() -> void:
+	if _enemy_character_data and _enemy_character_data.ultimate_portrait and enemy_portrait:
+		enemy_portrait.texture = _enemy_character_data.ultimate_portrait
+	_start_portrait_glow(enemy_portrait, false)
+
+
+func _on_enemy_alpha_command_deactivated() -> void:
+	if _enemy_original_portrait and enemy_portrait:
+		enemy_portrait.texture = _enemy_original_portrait
+	_stop_portrait_glow(enemy_portrait, false)
+
+
+func _start_portrait_glow(portrait: TextureRect, is_player: bool) -> void:
+	if not portrait:
+		return
+
+	# Kill any existing tween
+	if is_player and _player_portrait_glow_tween:
+		_player_portrait_glow_tween.kill()
+	elif not is_player and _enemy_portrait_glow_tween:
+		_enemy_portrait_glow_tween.kill()
+
+	# Create pulsing red glow effect
+	var glow_color := Color(1.5, 0.7, 0.7, 1.0)  # Bright red tint
+	var normal_color := Color(1.0, 1.0, 1.0, 1.0)  # Normal
+
+	var tween := create_tween()
+	tween.set_loops()
+
+	# Pulse: normal -> red -> normal
+	tween.tween_property(portrait, "modulate", glow_color, 0.4).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(portrait, "modulate", normal_color, 0.4).set_ease(Tween.EASE_IN_OUT)
+
+	if is_player:
+		_player_portrait_glow_tween = tween
+	else:
+		_enemy_portrait_glow_tween = tween
+
+
+func _stop_portrait_glow(portrait: TextureRect, is_player: bool) -> void:
+	if not portrait:
+		return
+
+	# Kill the tween
+	if is_player and _player_portrait_glow_tween:
+		_player_portrait_glow_tween.kill()
+		_player_portrait_glow_tween = null
+	elif not is_player and _enemy_portrait_glow_tween:
+		_enemy_portrait_glow_tween.kill()
+		_enemy_portrait_glow_tween = null
+
+	# Reset to normal color
+	portrait.modulate = Color(1.0, 1.0, 1.0, 1.0)

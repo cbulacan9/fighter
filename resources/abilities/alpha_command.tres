@@ -7,9 +7,10 @@
 script = ExtResource("1")
 ability_id = "alpha_command"
 display_name = "Alpha Command"
-description = "Your animal companions become empowered, dealing double damage and applying stronger effects for 8 seconds. All Pet sequence abilities gain a 2x multiplier."
-requires_full_mana = true
-drains_all_mana = true
+description = "Your animal companions become empowered. The next 3 pet activations are free and deal double damage with stronger effects."
+requires_full_mana = false
+drains_all_mana = false
+mana_cost = 50
 cooldown = 0.0
 effects = [ExtResource("2")]
-duration = 8.0
+duration = 0.0

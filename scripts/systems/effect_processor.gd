@@ -40,6 +40,9 @@ func process_effect(effect: EffectData, source: Fighter, match_count: int = 0) -
 
 	var value := _calculate_value(effect, match_count)
 
+	# Calculate multiplier for effects that scale (1 if no match_count, otherwise use it)
+	var multiplier := maxi(1, match_count)
+
 	match effect.effect_type:
 		EffectData.EffectType.DAMAGE:
 			_process_damage(effect, source, value)
@@ -51,10 +54,10 @@ func process_effect(effect: EffectData, source: Fighter, match_count: int = 0) -
 			_process_shield(effect, source, value)
 
 		EffectData.EffectType.STUN:
-			_process_stun(effect, source)
+			_process_stun(effect, source, multiplier)
 
 		EffectData.EffectType.STATUS_APPLY:
-			_process_status_apply(effect, source)
+			_process_status_apply(effect, source, multiplier)
 
 		EffectData.EffectType.STATUS_REMOVE:
 			_process_status_remove(effect, source)
@@ -72,7 +75,7 @@ func process_effect(effect: EffectData, source: Fighter, match_count: int = 0) -
 			_process_tile_hide(effect, source, value)
 
 		EffectData.EffectType.CUSTOM:
-			_process_custom_effect(effect, source)
+			_process_custom_effect(effect, source, multiplier)
 
 		_:
 			effect_failed.emit(effect, "unknown_effect_type")
@@ -107,9 +110,9 @@ func _process_shield(effect: EffectData, source: Fighter, value: int) -> void:
 			effect_processed.emit(effect, source, target, actual)
 
 
-func _process_stun(effect: EffectData, source: Fighter) -> void:
+func _process_stun(effect: EffectData, source: Fighter, multiplier: int = 1) -> void:
 	var targets := _resolve_targets(effect.target, source)
-	var duration := effect.duration
+	var duration := effect.duration * multiplier  # Scale duration by multiplier
 
 	for target in targets:
 		if target:
@@ -117,7 +120,7 @@ func _process_stun(effect: EffectData, source: Fighter) -> void:
 			effect_processed.emit(effect, source, target, int(actual))
 
 
-func _process_status_apply(effect: EffectData, source: Fighter) -> void:
+func _process_status_apply(effect: EffectData, source: Fighter, stacks: int = 1) -> void:
 	var targets := _resolve_targets(effect.target, source)
 	var status_data := effect.status_effect as StatusEffectData
 
@@ -127,8 +130,8 @@ func _process_status_apply(effect: EffectData, source: Fighter) -> void:
 
 	for target in targets:
 		if target:
-			_apply_status(target, source, status_data)
-			effect_processed.emit(effect, source, target, 1)
+			_apply_status(target, source, status_data, stacks)
+			effect_processed.emit(effect, source, target, stacks)
 
 
 func _process_status_remove(effect: EffectData, source: Fighter) -> void:
@@ -172,7 +175,7 @@ func _process_tile_hide(effect: EffectData, source: Fighter, value: int) -> void
 	effect_processed.emit(effect, source, null, value)
 
 
-func _process_custom_effect(effect: EffectData, source: Fighter) -> void:
+func _process_custom_effect(effect: EffectData, source: Fighter, multiplier: int = 1) -> void:
 	match effect.custom_effect_id:
 		SMOKE_BOMB_PASSIVE:
 			_smoke_bomb_passive(source)
@@ -192,12 +195,13 @@ func _process_custom_effect(effect: EffectData, source: Fighter) -> void:
 			effect_processed.emit(effect, source, target, 1)
 
 		HAWK_TILE_REPLACE:
-			var count := _hawk_tile_replace(source, effect.base_value)
+			var scaled_value := effect.base_value * multiplier  # Scale by multiplier
+			var count := _hawk_tile_replace(source, scaled_value)
 			effect_processed.emit(effect, source, null, count)
 
 		SNAKE_CLEANSE_HEAL:
-			_snake_cleanse_heal(source, effect)
-			effect_processed.emit(effect, source, source, effect.base_value)
+			_snake_cleanse_heal(source, effect, multiplier)  # Pass multiplier for heal scaling
+			effect_processed.emit(effect, source, source, effect.base_value * multiplier)
 
 		_:
 			effect_failed.emit(effect, "unknown_custom_effect: " + effect.custom_effect_id)
@@ -257,9 +261,9 @@ func _apply_stun(target: Fighter, duration: float) -> float:
 	return actual
 
 
-func _apply_status(target: Fighter, source: Fighter, status_data: StatusEffectData) -> void:
+func _apply_status(target: Fighter, source: Fighter, status_data: StatusEffectData, stacks: int = 1) -> void:
 	if _status_manager and status_data:
-		_status_manager.apply(target, status_data, source, 1)
+		_status_manager.apply(target, status_data, source, stacks)
 
 
 func _remove_status(target: Fighter, types: Array[String]) -> void:
@@ -350,17 +354,23 @@ func _hawk_tile_replace(source: Fighter, value: int) -> int:
 		if enemy_board.replace_tile_at(pos, TileTypes.Type.FILLER):
 			replaced_count += 1
 
+	# After replacing tiles, check for any new matches on the enemy board
+	# This handles cases where tile removal creates new match opportunities
+	if replaced_count > 0:
+		enemy_board.check_and_resolve_matches()
+
 	return replaced_count
 
 
-func _snake_cleanse_heal(source: Fighter, effect: EffectData) -> void:
+func _snake_cleanse_heal(source: Fighter, effect: EffectData, multiplier: int = 1) -> void:
 	# Cleanse poison from self
 	if _status_manager:
 		_status_manager.remove(source, StatusTypes.StatusType.POISON)
 
-	# Apply minor heal using base_value
+	# Apply heal scaled by multiplier
 	if effect.base_value > 0:
-		_apply_heal(source, effect.base_value)
+		var heal_amount := effect.base_value * multiplier
+		_apply_heal(source, heal_amount)
 
 
 # --- Helper Methods ---

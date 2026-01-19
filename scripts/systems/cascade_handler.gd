@@ -251,6 +251,9 @@ func _animate_falls(moves: Array[TileMove]) -> void:
 func _fill_empty_spaces() -> Array[Tile]:
 	var new_tiles: Array[Tile] = []
 
+	# Invalidate tile count cache before batch spawning (rebuilt once, then updated incrementally)
+	tile_spawner.invalidate_counts()
+
 	for col in range(Grid.COLS):
 		var empty_rows := grid.get_column_empties(col)
 		if empty_rows.is_empty():
@@ -261,7 +264,7 @@ func _fill_empty_spaces() -> Array[Tile]:
 
 		for i in range(empty_rows.size()):
 			var row: int = empty_rows[i]
-			var tile := tile_spawner.spawn_tile()
+			var tile := tile_spawner.spawn_safe_tile(row, col)
 
 			# Start above the grid
 			var start_row := -(empty_rows.size() - i)

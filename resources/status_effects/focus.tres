@@ -1,16 +1,11 @@
-[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3 uid="uid://dxud6qs00ecgk"]
 
-[ext_resource type="Script" path="res://scripts/data/status_effect_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://solsx176iov7" path="res://scripts/data/status_effect_data.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 effect_id = "focus"
 display_name = "Focus"
 effect_type = 7
-duration = 0.0
-tick_interval = 1.0
-max_stacks = 5
-stack_behavior = 0
-tick_behavior = 0
-base_value = 0.2
-value_per_stack = 0.0
+max_stacks = 10
+base_value = 0.075

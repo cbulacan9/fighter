@@ -20,6 +20,9 @@ extends Resource
 ## Whether activating this ability drains all mana
 @export var drains_all_mana: bool = true
 
+## Fixed mana cost to activate (used when drains_all_mana is false)
+@export var mana_cost: int = 0
+
 ## Cooldown in seconds before ability can be used again (0 = no cooldown)
 @export var cooldown: float = 0.0
 

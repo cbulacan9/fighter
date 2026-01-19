@@ -343,7 +343,9 @@ func _on_all_bars_full(fighter: Fighter) -> void:
 	if fighter != _fighter:
 		return
 
-	_show_ultimate_ready_effect()
+	# Only show ultimate ready if not on cooldown
+	if not _fighter.is_ultimate_on_cooldown():
+		_show_ultimate_ready_effect()
 
 
 func _on_bar_clicked(bar_index: int) -> void:
@@ -354,7 +356,9 @@ func _check_ultimate_ready() -> void:
 	if not _mana_system or not _fighter:
 		return
 
-	var is_ready := _mana_system.are_all_bars_full(_fighter)
+	var mana_full := _mana_system.are_all_bars_full(_fighter)
+	var on_cooldown := _fighter.is_ultimate_on_cooldown()
+	var is_ready := mana_full and not on_cooldown
 
 	if is_ready and not _was_ultimate_ready:
 		_was_ultimate_ready = true
