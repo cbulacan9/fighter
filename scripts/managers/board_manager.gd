@@ -860,6 +860,9 @@ func _consume_alpha_command_tile(tile: Tile) -> void:
 	if tile_row < 0:
 		return
 
+	# Clean up any references to this tile before freeing
+	_original_positions.erase(tile)
+
 	# Remove the tile from grid
 	grid.clear_tile(tile_row, tile_col)
 	tile.queue_free()
@@ -1181,6 +1184,11 @@ func _calculate_cells_moved() -> int:
 		return 0
 
 	var first_tile: Tile = _original_positions.keys()[0]
+	# Safety check: tile may have been freed (e.g., Alpha Command consumed)
+	if not is_instance_valid(first_tile):
+		_original_positions.clear()
+		return 0
+
 	var original_pos: Vector2 = _original_positions[first_tile]
 	var current_pos: Vector2 = first_tile.position
 
