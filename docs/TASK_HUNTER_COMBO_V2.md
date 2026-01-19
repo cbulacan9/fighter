@@ -162,8 +162,8 @@ click_condition = ALWAYS
 
 Update each:
 - `bear_sequence.tres`: pattern = [SWORD, SHIELD, SHIELD], pet_type = BEAR_PET
-- `hawk_sequence.tres`: pattern = [SHIELD, LIGHTNING], pet_type = HAWK_PET
-- `snake_sequence.tres`: pattern = [LIGHTNING, SWORD, SHIELD], pet_type = SNAKE_PET
+- `hawk_sequence.tres`: pattern = [SHIELD, FOCUS], pet_type = HAWK_PET
+- `snake_sequence.tres`: pattern = [FOCUS, SWORD, SHIELD], pet_type = SNAKE_PET
 
 Remove Pet from TileSpawner weights for Hunter.
 

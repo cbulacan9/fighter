@@ -443,8 +443,8 @@ func _on_pet_activated(pet_type: PetType) -> void:
 | Ability | Sequence | Pet Type | Notes |
 |---------|----------|----------|-------|
 | **Bear** | Physical → Shield → Shield | BEAR_PET | Starts with Physical (unique) |
-| **Hawk** | Shield → Stun | HAWK_PET | Starts with Shield (unique) |
-| **Snake** | Stun → Physical → Shield | SNAKE_PET | Starts with Stun (unique) |
+| **Hawk** | Shield → Focus | HAWK_PET | Starts with Shield (unique) |
+| **Snake** | Focus → Physical → Shield | SNAKE_PET | Starts with Focus (unique) |
 
 **Design Note:** All sequences have unique starting tiles, preventing ambiguous tree creation from a single match. However, if a player matches multiple tile types simultaneously (e.g., Physical + Shield), multiple trees will start in parallel.
 
