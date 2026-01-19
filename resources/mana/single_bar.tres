@@ -7,9 +7,9 @@ script = ExtResource("1")
 bar_count = 1
 max_mana = Array[int]([100])
 mana_per_match = {
-3: 10,
-4: 20,
-5: 35
+3: 3,
+4: 7,
+5: 12
 }
 mana_tile_types = Array[int]([])
 decay_rate = 0.0
