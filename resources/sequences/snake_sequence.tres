@@ -8,11 +8,11 @@
 script = ExtResource("1")
 sequence_id = "snake"
 display_name = "Snake"
-pattern = [3, 0, 1]
+pattern = [10, 0, 1]
 terminator = 5
 pet_type = 9
 on_complete_effect = ExtResource("2")
 self_buff_effect = ExtResource("3")
 max_stacks = 3
-description = "Stun -> Physical -> Shield -> Pet
+description = "Focus -> Physical -> Shield -> Pet
 Stuns enemy board, heals and cleanses poison."

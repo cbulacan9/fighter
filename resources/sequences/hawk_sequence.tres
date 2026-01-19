@@ -8,11 +8,11 @@
 script = ExtResource("1")
 sequence_id = "hawk"
 display_name = "Hawk"
-pattern = [1, 3]
+pattern = [1, 10]
 terminator = 5
 pet_type = 8
 on_complete_effect = ExtResource("2")
 self_buff_effect = ExtResource("3")
 max_stacks = 3
-description = "Shield -> Stun -> Pet
+description = "Shield -> Focus -> Pet
 Replaces enemy tiles, grants evasion."

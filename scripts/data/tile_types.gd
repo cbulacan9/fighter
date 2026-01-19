@@ -13,6 +13,7 @@ enum Type {
 	BEAR_PET,   # Hunter combo pet - click to deal damage
 	HAWK_PET,   # Hunter combo pet - click for defense
 	SNAKE_PET,  # Hunter combo pet - click for healing
+	FOCUS,      # Hunter - builds stacks consumed on next attack
 }
 
 enum ClickCondition {

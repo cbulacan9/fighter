@@ -120,6 +120,12 @@ func _setup_systems() -> void:
 	_setup_click_handling()
 
 
+## Call this after the board position has been changed to update input handling
+func update_input_position() -> void:
+	if _input_handler and grid:
+		_input_handler.setup(grid, global_position)
+
+
 func _setup_click_handling() -> void:
 	_click_condition_checker = ClickConditionChecker.new()
 
@@ -309,11 +315,17 @@ func set_state(new_state: BoardState) -> void:
 				_sync_visuals_to_grid()
 				_clear_drag_state()
 				_input_handler.set_enabled(is_player_controlled)
+				_input_handler.set_clicks_enabled(is_player_controlled)
 				ready_for_input.emit()
 			BoardState.DRAGGING:
 				pass  # Keep input enabled to track ongoing drag
-			BoardState.RESOLVING, BoardState.STUNNED:
+			BoardState.RESOLVING:
+				# Disable drags but allow clicks for pet activation during cascade
 				_input_handler.set_enabled(false)
+				_input_handler.set_clicks_enabled(is_player_controlled)
+			BoardState.STUNNED:
+				_input_handler.set_enabled(false)
+				_input_handler.set_clicks_enabled(false)
 
 
 func lock_input() -> void:
@@ -324,6 +336,13 @@ func lock_input() -> void:
 func unlock_input() -> void:
 	if state == BoardState.RESOLVING:
 		set_state(BoardState.IDLE)
+
+
+func disable_all_input() -> void:
+	## Completely disables all input including clicks (for game over state)
+	if _input_handler:
+		_input_handler.set_enabled(false)
+		_input_handler.set_clicks_enabled(false)
 
 
 func apply_stun(duration: float) -> void:

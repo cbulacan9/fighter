@@ -9,6 +9,7 @@ enum StatusType {
 	EVASION,        # Next attack auto-misses
 	MANA_BLOCK,     # Prevent mana generation
 	ALPHA_COMMAND,  # Hunter ultimate - 2x multiplier on animal companion abilities
+	FOCUS,          # Hunter - 20% attack bonus per stack, consumed on attack
 }
 
 enum StackBehavior {

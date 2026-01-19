@@ -7,9 +7,9 @@ signal tiles_spawned(tiles: Array[Tile])
 signal cascade_complete(result: CascadeResult)
 signal matches_processed(matches: Array[MatchDetector.MatchResult])  # Fires immediately when matches are cleared
 
-const CLEAR_ANIMATION_TIME: float = 0.3
-const FALL_ANIMATION_TIME_PER_ROW: float = 0.1
-const SPAWN_ANIMATION_TIME: float = 0.2
+const CLEAR_ANIMATION_TIME: float = 0.2
+const FALL_ANIMATION_TIME_PER_ROW: float = 0.07
+const SPAWN_ANIMATION_TIME: float = 0.15
 
 var grid: Grid
 var tile_spawner: TileSpawner

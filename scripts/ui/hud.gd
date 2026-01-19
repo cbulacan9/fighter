@@ -33,16 +33,22 @@ const PET_POPULATION_DISPLAY_SCENE := preload("res://scenes/ui/pet_population_di
 
 ## Layout constants - single source of truth for positioning
 ## Change X_OFFSET values to shift all UI elements (panel, portrait, combo tree) together
-const PLAYER_X_OFFSET := 50.0  # Shift all player UI elements horizontally
-const ENEMY_X_OFFSET := 50.0   # Shift all enemy UI elements horizontally
+const PLAYER_X_OFFSET := 20.0  # Shift all player UI elements horizontally
+const ENEMY_X_OFFSET := 20.0   # Shift all enemy UI elements horizontally
 
 ## Base positions (before offset is applied)
 const PANEL_BASE_X := 10.0      # Base X for health/mana panel
-const COMBO_TREE_BASE_X := 290.0  # Base X for combo tree (right of board)
-const PLAYER_UI_Y := 550.0      # Y position for player UI elements
+const COMBO_TREE_BASE_X := 405.0  # Base X for combo tree (right of board)
+const PLAYER_UI_Y := 645.0      # Y position for player UI elements
 const ENEMY_UI_Y := 5.0         # Y position for enemy UI elements
-const PLAYER_BOARD_OFFSET := 120.0  # How far below PLAYER_UI_Y the board starts
+const PLAYER_BOARD_OFFSET := 125.0  # How far below PLAYER_UI_Y the board starts
 const ENEMY_BOARD_OFFSET := 120.0   # How far below ENEMY_UI_Y the board starts
+
+## UI Background positions (adjust these to fine-tune black boxes behind UI)
+const ENEMY_BG_Y := 0.0         # Top of enemy UI background
+const ENEMY_BG_HEIGHT := 125.0  # Height of enemy UI background
+const PLAYER_BG_Y := 605.0      # Top of player UI background
+const PLAYER_BG_HEIGHT := 165.0 # Height of player UI background
 
 ## Calculated positions for external use (e.g., GameManager positioning boards)
 static func get_player_board_y() -> float:
@@ -58,8 +64,32 @@ var _mana_system: ManaSystem
 @onready var _player_panel: Control = $PlayerPanel
 @onready var _enemy_panel: Control = $EnemyPanel
 
+var _enemy_ui_background: ColorRect
+var _player_ui_background: ColorRect
+
+
+func _create_ui_backgrounds() -> void:
+	# Create background for enemy UI area (top of screen)
+	_enemy_ui_background = ColorRect.new()
+	_enemy_ui_background.color = Color(0, 0, 0, 1)
+	_enemy_ui_background.position = Vector2(0, ENEMY_BG_Y)
+	_enemy_ui_background.size = Vector2(720, ENEMY_BG_HEIGHT)
+	add_child(_enemy_ui_background)
+	move_child(_enemy_ui_background, 0)  # Move to back
+
+	# Create background for player UI area
+	_player_ui_background = ColorRect.new()
+	_player_ui_background.color = Color(0, 0, 0, 1)
+	_player_ui_background.position = Vector2(0, PLAYER_BG_Y)
+	_player_ui_background.size = Vector2(720, PLAYER_BG_HEIGHT)
+	add_child(_player_ui_background)
+	move_child(_player_ui_background, 1)  # Move to back (after enemy bg)
+
 
 func _ready() -> void:
+	# Add black backgrounds behind UI areas to hide falling tiles
+	_create_ui_backgrounds()
+
 	# Position PlayerPanel using layout constants with offset
 	# Panels use anchor layout (layout_mode = 1), so we set offsets not position
 	if _player_panel:
@@ -89,11 +119,36 @@ func _ready() -> void:
 		enemy_sequence_indicator.offset_left = COMBO_TREE_BASE_X + ENEMY_X_OFFSET
 		enemy_sequence_indicator.offset_right = enemy_sequence_indicator.offset_left + indicator_width
 
-	# Setup portraits with horizontal flip
-	if player_portrait:
-		player_portrait.flip_h = true
-	if enemy_portrait:
-		enemy_portrait.flip_h = true
+	# Setup portraits - move outside panel, position to the left, make larger
+	_setup_portrait(player_portrait, PLAYER_X_OFFSET, PLAYER_UI_Y)
+	_setup_portrait(enemy_portrait, ENEMY_X_OFFSET, ENEMY_UI_Y)
+
+
+func _setup_portrait(portrait: TextureRect, x_offset: float, y_pos: float) -> void:
+	if not portrait:
+		return
+
+	const PORTRAIT_SIZE := 96.0
+	const PORTRAIT_MARGIN := 10.0  # Gap between portrait and panel
+
+	# Reparent portrait to HUD root (out of panel)
+	var original_parent := portrait.get_parent()
+	if original_parent and original_parent != self:
+		original_parent.remove_child(portrait)
+		add_child(portrait)
+
+	# Position portrait to the left of where the panel will be
+	portrait.flip_h = false
+	portrait.custom_minimum_size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	portrait.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	portrait.position = Vector2(x_offset, y_pos)
+
+	# Shift panel to the right to make room for portrait
+	if original_parent and original_parent is Control:
+		var panel := original_parent as Control
+		var shift := PORTRAIT_SIZE + PORTRAIT_MARGIN
+		panel.offset_left += shift
+		panel.offset_right += shift
 
 
 func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:

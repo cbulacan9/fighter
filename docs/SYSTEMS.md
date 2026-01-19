@@ -178,10 +178,11 @@ Manages fighter state (HP, armor, stun) and applies match effects.
 ### Effect Application
 | Tile Type | Target | Effect Logic |
 |-----------|--------|--------------|
-| SWORD | Enemy | Reduce armor first, then HP |
+| SWORD | Enemy | Reduce armor first, then HP. Consumes Focus stacks for bonus damage. |
 | SHIELD | Self | Add armor (cap at max_hp) |
 | POTION | Self | Add HP (cap at max_hp) |
 | LIGHTNING | Enemy | Add stun duration (diminishing returns) |
+| FOCUS | Self | Add Focus stacks (1/2/3 for 3/4/5-match). Max 5 stacks. 20% damage boost per stack on next SWORD match, then consumed. |
 | FILLER | None | No effect |
 
 ### Stun Diminishing Returns
@@ -432,17 +433,17 @@ Applies combat effects (damage, healing, armor, stun, mana) immediately when mat
 ### Flow
 ```
 Match Detected
-      ↓
+	  ↓
 CascadeHandler emits matches_processed (IMMEDIATE)
-      ↓
+	  ↓
 BoardManager receives → emits immediate_matches
-      ↓
+	  ↓
 GameManager receives → calls combat_manager.process_immediate_matches()
-      ↓
+	  ↓
 Effects Applied (damage numbers spawn, health bars update)
-      ↓
+	  ↓
 Animations play in background (purely visual)
-      ↓
+	  ↓
 cascade_complete emits → Stats recorded
 ```
 

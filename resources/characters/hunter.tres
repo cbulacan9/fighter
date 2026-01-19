@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" path="res://assets/portraits/hunter_portrait.png" id="1_portrait"]
 [ext_resource type="Resource" path="res://resources/tiles/sword.tres" id="2"]
 [ext_resource type="Resource" path="res://resources/tiles/shield.tres" id="3"]
-[ext_resource type="Resource" path="res://resources/tiles/lightning.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/tiles/focus.tres" id="4"]
 [ext_resource type="Resource" path="res://resources/tiles/filler.tres" id="5"]
 [ext_resource type="Resource" path="res://resources/mana/single_bar.tres" id="7"]
 [ext_resource type="Resource" path="res://resources/sequences/bear_sequence.tres" id="8"]
@@ -24,14 +24,14 @@ specialty_tiles = []
 spawn_weights = {
 0: 26.0,
 1: 26.0,
-3: 22.0,
+10: 22.0,
 4: 26.0
 }
 mana_config = ExtResource("7")
 sequences = [ExtResource("8"), ExtResource("9"), ExtResource("10")]
 ultimate_ability = ExtResource("11")
-passive_description = "Animal Companions: Build sequences by matching tiles in order (Physical/Shield/Lightning), then click a Pet tile to activate the companion's ability. Each companion has unique offensive and defensive effects."
-base_hp = 100
+passive_description = "Animal Companions: Build sequences by matching tiles in order (Physical/Shield/Focus), then click a Pet tile to activate the companion's ability. Each companion has unique offensive and defensive effects. Focus tiles grant stacks that boost your next attack by 20% per stack."
+base_hp = 150
 base_armor = 0
 is_starter = false
 unlock_opponent_id = "hunter"

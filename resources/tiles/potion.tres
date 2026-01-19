@@ -1,17 +1,20 @@
-[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=5 format=3 uid="uid://d3rjj3potup4"]
 
-[ext_resource type="Script" path="res://scripts/data/tile_data.gd" id="1"]
-[ext_resource type="Resource" path="res://resources/effects/heal_effect.tres" id="2"]
+[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://chrxnjtgpewt0" path="res://assets/sprites/spritesheettiles.png" id="2"]
+[ext_resource type="Resource" path="res://resources/effects/heal_effect.tres" id="3"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_potion"]
+atlas = ExtResource("2")
+region = Rect2(315, 195, 64, 64)
 
 [resource]
 script = ExtResource("1")
 tile_type = 2
 display_name = "Health Potion"
+sprite = SubResource("AtlasTexture_potion")
 color = Color(0.2, 0.8, 0.3, 1)
 match_3_value = 10
 match_4_value = 25
 match_5_value = 50
-is_matchable = true
-match_effect = ExtResource("2")
-is_clickable = false
-click_condition = 0
+match_effect = ExtResource("3")

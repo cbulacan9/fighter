@@ -1,13 +1,19 @@
-[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=3 format=3 uid="uid://hqjrruvp3k4f"]
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=5 format=3 uid="uid://hqjrruvp3k4f"]
 
 [ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
-[ext_resource type="Resource" path="res://resources/effects/damage_effect.tres" id="2"]
+[ext_resource type="Texture2D" uid="uid://chrxnjtgpewt0" path="res://assets/sprites/spritesheettiles.png" id="2"]
+[ext_resource type="Resource" path="res://resources/effects/damage_effect.tres" id="3"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sword"]
+atlas = ExtResource("2")
+region = Rect2(0, 0, 64, 64)
 
 [resource]
 script = ExtResource("1")
 display_name = "Sword"
+sprite = SubResource("AtlasTexture_sword")
 color = Color(0.8, 0.2, 0.2, 1)
 match_3_value = 10
 match_4_value = 20
 match_5_value = 35
-match_effect = ExtResource("2")
+match_effect = ExtResource("3")

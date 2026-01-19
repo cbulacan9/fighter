@@ -190,9 +190,17 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 		TileTypes.Type.FILLER:
 			pass  # No combat effect
 
+		TileTypes.Type.FOCUS:
+			# Stacks based on match count: 3=1, 4=2, 5=3
+			var stacks := match_result.count - 2
+			if status_effect_manager:
+				var focus_effect := preload("res://resources/status_effects/focus.tres")
+				status_effect_manager.apply(source, focus_effect, source, stacks)
+
 
 func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 	var final_damage := base_damage
+	var focus_stacks_used := 0
 
 	if status_effect_manager:
 		# Apply attacker's damage modifiers (ATTACK_UP)
@@ -200,6 +208,15 @@ func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 			var attack_bonus := status_effect_manager.get_modifier(source, StatusTypes.StatusType.ATTACK_UP)
 			if attack_bonus > 0:
 				final_damage = int(float(final_damage) * (1.0 + attack_bonus))
+
+		# Apply Focus bonus (20% per stack, consumes all stacks)
+		if source != null and status_effect_manager.has_effect(source, StatusTypes.StatusType.FOCUS):
+			var focus_stacks := status_effect_manager.get_stacks(source, StatusTypes.StatusType.FOCUS)
+			if focus_stacks > 0:
+				var focus_bonus := 0.2 * float(focus_stacks)
+				final_damage = int(float(final_damage) * (1.0 + focus_bonus))
+				focus_stacks_used = focus_stacks
+				status_effect_manager.remove(source, StatusTypes.StatusType.FOCUS)
 
 		# Check target's EVASION (auto-miss, consumes one stack)
 		if status_effect_manager.has_effect(target, StatusTypes.StatusType.EVASION):
@@ -216,6 +233,7 @@ func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 
 	# Apply damage normally
 	var result := target.take_damage(final_damage)
+	result.focus_stacks_consumed = focus_stacks_used
 	damage_dealt.emit(target, result)
 
 
@@ -299,6 +317,7 @@ func _load_tile_data() -> void:
 	_tile_data_cache[TileTypes.Type.POTION] = preload("res://resources/tiles/potion.tres")
 	_tile_data_cache[TileTypes.Type.LIGHTNING] = preload("res://resources/tiles/lightning.tres")
 	_tile_data_cache[TileTypes.Type.FILLER] = preload("res://resources/tiles/filler.tres")
+	_tile_data_cache[TileTypes.Type.FOCUS] = preload("res://resources/tiles/focus.tres")
 
 
 func _get_effect_value(tile_type: TileTypes.Type, count: int) -> int:

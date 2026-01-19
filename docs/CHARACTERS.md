@@ -61,7 +61,7 @@ The Hunter builds combos by matching tiles in specific sequences. Only **player-
 - Self-buffs stack up to 3 times
 
 **Example:**
-1. Player matches Physical + Stun simultaneously → Bear tree starts (Physical), Snake tree starts (Stun)
+1. Player matches Physical + Focus simultaneously → Bear tree starts (Physical), Snake tree starts (Focus)
 2. Player matches Shield → Bear tree advances (Physical → Shield), Snake tree dies (needed Physical)
 3. Player matches Shield → Bear tree completes (Physical → Shield → Shield) → Bear Pet drops!
 
@@ -71,7 +71,7 @@ The Hunter builds combos by matching tiles in specific sequences. Only **player-
 |------|--------|
 | Physical Attack | Deals damage to opponent |
 | Shield | Adds defensive protection |
-| Stun | Stuns opponent, interrupting their actions |
+| Focus | Builds stacks (1/2/3 for 3/4/5-match) that boost next attack by 20% per stack (max 5 stacks, 100% bonus). Consumed on next Physical match. |
 | Empty Box | Filler tile (low spawn rate); match to clear |
 
 ### Specialty Tiles: Pets
@@ -99,8 +99,8 @@ Click a Pet tile to activate its ability.
 | Ability | Sequence | Offensive Effect | Self Buff (3x stack) |
 |---------|----------|------------------|----------------------|
 | **Bear** | Physical → Shield → Shield | 1 bleed stack (damages on enemy's next match) | Attack strength increase |
-| **Hawk** | Shield → Stun | Replaces 5 enemy tiles with empty boxes | Evasion (next attack auto-misses) |
-| **Snake** | Stun → Physical → Shield | 3-second enemy board stun | Cleanses poison and heals 5 HP |
+| **Hawk** | Shield → Focus | Replaces 5 enemy tiles with empty boxes | Evasion (next attack auto-misses) |
+| **Snake** | Focus → Physical → Shield | 3-second enemy board stun | Cleanses poison and heals 5 HP |
 
 *Note: All sequences have unique starting tiles, so a single match can only start one tree (unless multiple tile types are matched simultaneously).*
 

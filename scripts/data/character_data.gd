@@ -52,6 +52,9 @@ extends Resource
 ## Starting armor value
 @export var base_armor: int = 0
 
+## Maximum armor cap (0 = use base_hp as cap)
+@export var max_armor: int = 0
+
 ## Strength stat - scales sword damage (10 = baseline, 15 = +50% damage)
 @export var base_strength: int = 10
 

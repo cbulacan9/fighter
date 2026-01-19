@@ -3,7 +3,7 @@ extends Node2D
 
 const ROWS: int = 6
 const COLS: int = 8
-const CELL_SIZE: Vector2 = Vector2(64, 64)
+const CELL_SIZE: Vector2 = Vector2(80, 80)
 
 var _tiles: Array[Array] = []
 

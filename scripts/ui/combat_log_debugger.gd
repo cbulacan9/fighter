@@ -75,7 +75,7 @@ func _create_ui() -> void:
 	_title_label.name = "TitleLabel"
 	_title_label.text = "COMBAT LOG (F4 to toggle)"
 	_title_label.add_theme_font_size_override("font_size", 14)
-	_title_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
+	_title_label.add_theme_color_override("font_color", Color.WHITE)
 	_vbox.add_child(_title_label)
 
 	# Separator
@@ -161,17 +161,21 @@ func _disconnect_signals() -> void:
 
 func _on_damage_dealt(target: Fighter, result: Fighter.DamageResult) -> void:
 	var target_name := _get_fighter_name(target)
+	var focus_suffix := ""
+	if result.focus_stacks_consumed > 0:
+		var focus_percent := result.focus_stacks_consumed * 20
+		focus_suffix = " (Focus +%d%%)" % focus_percent
 
 	if result.armor_absorbed > 0 and result.hp_damage > 0:
-		_log("⚔ %s took %d dmg (%d blocked, %d to HP)" % [
-			target_name, result.total_damage, result.armor_absorbed, result.hp_damage
+		_log("⚔ %s took %d dmg (%d blocked, %d to HP)%s" % [
+			target_name, result.total_damage, result.armor_absorbed, result.hp_damage, focus_suffix
 		], COLOR_DAMAGE)
 	elif result.armor_absorbed > 0:
-		_log("🛡 %s blocked %d dmg (all absorbed by armor)" % [
-			target_name, result.armor_absorbed
+		_log("🛡 %s blocked %d dmg (all absorbed by armor)%s" % [
+			target_name, result.armor_absorbed, focus_suffix
 		], COLOR_DAMAGE_BLOCKED)
 	else:
-		_log("⚔ %s took %d dmg to HP" % [target_name, result.hp_damage], COLOR_DAMAGE)
+		_log("⚔ %s took %d dmg to HP%s" % [target_name, result.hp_damage, focus_suffix], COLOR_DAMAGE)
 
 
 func _on_healing_done(target: Fighter, amount: int) -> void:

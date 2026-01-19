@@ -404,9 +404,9 @@ func execute_move(move: Move) -> void:
 
 func set_difficulty_easy() -> void:
 	_difficulty = Difficulty.EASY
-	decision_delay = 2.0
+	decision_delay = 6.0
 	look_ahead = 0
-	randomness = 0.5
+	randomness = 0.7
 	_apply_difficulty_modifiers()
 
 
@@ -436,11 +436,11 @@ func set_difficulty(difficulty: Difficulty) -> void:
 func _apply_difficulty_modifiers() -> void:
 	match _difficulty:
 		Difficulty.EASY:
-			_sequence_awareness = 0.3  # Rarely completes sequences
-			_pet_click_delay = 1.5
-			decision_delay = 2.0
+			_sequence_awareness = 0.1  # Almost never completes sequences
+			_pet_click_delay = 2.5
+			decision_delay = 3.0
 			look_ahead = 0
-			randomness = 0.5
+			randomness = 0.7  # Very random/suboptimal moves
 
 		Difficulty.MEDIUM:
 			_sequence_awareness = 0.6

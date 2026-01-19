@@ -17,7 +17,6 @@ enum DragAxis {
 @export var drag_threshold: float = 10.0
 @export var click_threshold: float = 10.0  # Max movement for click vs drag
 @export var click_time_threshold: float = 0.3  # Max time for click
-@export var cell_size: float = 64.0
 
 var is_dragging: bool = false
 var drag_axis: DragAxis = DragAxis.NONE
@@ -33,6 +32,7 @@ var _press_tile: Tile = null
 var _is_potential_click: bool = false
 
 var _enabled: bool = true
+var _clicks_enabled: bool = true  # Separate flag to allow clicks during cascade
 var _grid: Grid
 var _board_rect: Rect2
 
@@ -41,7 +41,7 @@ func setup(grid: Grid, board_position: Vector2) -> void:
 	_grid = grid
 	_board_rect = Rect2(
 		board_position,
-		Vector2(Grid.COLS * cell_size, Grid.ROWS * cell_size)
+		Vector2(Grid.COLS * Grid.CELL_SIZE.x, Grid.ROWS * Grid.CELL_SIZE.y)
 	)
 
 
@@ -49,6 +49,10 @@ func set_enabled(enabled: bool) -> void:
 	_enabled = enabled
 	if not enabled:
 		reset()
+
+
+func set_clicks_enabled(enabled: bool) -> void:
+	_clicks_enabled = enabled
 
 
 func reset() -> void:
@@ -62,17 +66,25 @@ func reset() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not _enabled or not _grid:
+	if not _grid:
 		return
 
-	if event is InputEventMouseButton:
-		_handle_mouse_button(event)
-	elif event is InputEventMouseMotion:
-		_handle_mouse_motion(event)
-	elif event is InputEventScreenTouch:
-		_handle_touch(event)
-	elif event is InputEventScreenDrag:
-		_handle_screen_drag(event)
+	# If fully enabled, handle all input (drags and clicks)
+	if _enabled:
+		if event is InputEventMouseButton:
+			_handle_mouse_button(event)
+		elif event is InputEventMouseMotion:
+			_handle_mouse_motion(event)
+		elif event is InputEventScreenTouch:
+			_handle_touch(event)
+		elif event is InputEventScreenDrag:
+			_handle_screen_drag(event)
+	# If only clicks enabled, handle click events only (no drags)
+	elif _clicks_enabled:
+		if event is InputEventMouseButton:
+			_handle_click_only(event)
+		elif event is InputEventScreenTouch:
+			_handle_touch_click_only(event)
 
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
@@ -100,6 +112,52 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 	if is_dragging:
 		_on_drag(event.position)
+
+
+func _handle_click_only(event: InputEventMouseButton) -> void:
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	if event.pressed:
+		_on_click_press(event.position)
+	else:
+		_on_click_release()
+
+
+func _handle_touch_click_only(event: InputEventScreenTouch) -> void:
+	if event.pressed:
+		_on_click_press(event.position)
+	else:
+		_on_click_release()
+
+
+func _on_click_press(pos: Vector2) -> void:
+	var local_pos := _screen_to_board(pos)
+	var check_point := local_pos + _board_rect.position
+	var in_bounds := _board_rect.has_point(check_point)
+
+	if not in_bounds:
+		return
+
+	var grid_pos := _grid.world_to_grid(local_pos)
+	if not _is_valid_grid_pos(grid_pos):
+		return
+
+	# Track for click detection
+	_press_position = pos
+	_press_time = Time.get_ticks_msec() / 1000.0
+	_press_tile = _grid.get_tile(grid_pos.x, grid_pos.y)
+	_is_potential_click = true
+
+
+func _on_click_release() -> void:
+	if _is_potential_click and _press_tile:
+		var release_time := Time.get_ticks_msec() / 1000.0
+		var elapsed := release_time - _press_time
+		if elapsed < click_time_threshold:
+			_handle_click()
+
+	_reset_click_state()
 
 
 func _on_press(pos: Vector2) -> void:

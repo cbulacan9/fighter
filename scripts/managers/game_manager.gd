@@ -17,11 +17,18 @@ enum GameMode {
 	AI_VS_AI
 }
 
+enum Difficulty {
+	EASY,
+	MEDIUM,
+	HARD
+}
+
 @export var player_data_path: String = "res://resources/fighters/default_player.tres"
 @export var enemy_data_path: String = "res://resources/fighters/default_enemy.tres"
 
 var current_state: GameState = GameState.STATS  # Start at STATS so transition to MODE_SELECT actually triggers
 var current_mode: GameMode = GameMode.PLAYER_VS_AI
+var current_difficulty: Difficulty = Difficulty.MEDIUM
 var match_timer: float = 0.0
 var winner_id: int = 0
 
@@ -141,14 +148,15 @@ func _find_node_references() -> void:
 ## Position boards based on HUD layout constants
 ## This ensures board positions stay in sync with UI positioning
 func _position_boards() -> void:
-	const BOARD_X := 104.0  # X position for both boards
-	const BOARD_WIDTH := 512.0
-	const BOARD_HEIGHT := 384.0
+	const BOARD_X := 30.0  # X position for both boards (closer to left edge)
+	const BOARD_WIDTH := 640.0  # 8 cols × 80px
+	const BOARD_HEIGHT := 480.0  # 6 rows × 80px
 
 	# Enemy board Y is calculated from HUD.ENEMY_UI_Y + offset
 	var enemy_board_y := HUD.get_enemy_board_y()
 	if enemy_board:
 		enemy_board.position = Vector2(BOARD_X, enemy_board_y)
+		enemy_board.update_input_position()  # Update input handler with new position
 
 		# Also update enemy stun overlay to match board position
 		if enemy_stun_overlay:
@@ -161,6 +169,7 @@ func _position_boards() -> void:
 	var player_board_y := HUD.get_player_board_y()
 	if player_board:
 		player_board.position = Vector2(BOARD_X, player_board_y)
+		player_board.update_input_position()  # Update input handler with new position
 
 		# Also update player stun overlay to match board position
 		if player_stun_overlay:
@@ -384,10 +393,14 @@ func _enable_gameplay() -> void:
 
 
 func _disable_gameplay() -> void:
-	if player_board and player_board.state == BoardManager.BoardState.IDLE:
-		player_board.lock_input()
-	if enemy_board and enemy_board.state == BoardManager.BoardState.IDLE:
-		enemy_board.lock_input()
+	if player_board:
+		if player_board.state == BoardManager.BoardState.IDLE:
+			player_board.lock_input()
+		player_board.disable_all_input()
+	if enemy_board:
+		if enemy_board.state == BoardManager.BoardState.IDLE:
+			enemy_board.lock_input()
+		enemy_board.disable_all_input()
 
 	# Disable enemy AI
 	if ai_controller:
@@ -469,10 +482,14 @@ func reset_match() -> void:
 
 # --- Signal Handlers ---
 
-func _on_mode_selected(mode: int) -> void:
-	# Convert the int to our GameMode enum
+func _on_mode_selected(mode: int, difficulty: int) -> void:
+	# Convert the ints to our enums
 	current_mode = mode as GameMode
-	print("Game mode selected: %s" % ("Player vs AI" if current_mode == GameMode.PLAYER_VS_AI else "AI vs AI"))
+	current_difficulty = difficulty as Difficulty
+	var mode_name: String = "Player vs AI" if current_mode == GameMode.PLAYER_VS_AI else "AI vs AI"
+	var diff_names: Array[String] = ["Easy", "Medium", "Hard"]
+	var diff_name: String = diff_names[current_difficulty]
+	print("Game mode selected: %s (%s)" % [mode_name, diff_name])
 	change_state(GameState.INIT)
 
 
@@ -665,6 +682,7 @@ func _create_fighter_data(char_data: CharacterData) -> FighterData:
 	var fighter := FighterData.new()
 	fighter.fighter_name = char_data.display_name
 	fighter.max_hp = char_data.base_hp
+	fighter.max_armor = char_data.max_armor
 	fighter.strength = char_data.base_strength
 	fighter.portrait = PlaceholderTextures.get_or_generate_portrait(char_data, false)
 

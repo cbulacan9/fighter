@@ -18,6 +18,7 @@ signal status_effect_removed(effect_type: StatusTypes.StatusType)
 
 var current_hp: int = 0
 var max_hp: int = 100
+var max_armor: int = 0  ## 0 = use max_hp as cap
 var strength: int = 10  ## Scales sword damage (10 = baseline, 15 = +50%)
 var armor: int = 0
 var stun_remaining: float = 0.0
@@ -35,11 +36,13 @@ class DamageResult:
 	var armor_absorbed: int = 0
 	var hp_damage: int = 0
 	var is_defeated: bool = false
+	var focus_stacks_consumed: int = 0
 
 
 func initialize(data: FighterData) -> void:
 	fighter_data = data
 	max_hp = data.max_hp if data else 100
+	max_armor = data.max_armor if data else 0
 	strength = data.strength if data else 10
 	current_hp = max_hp
 	armor = 0
@@ -88,7 +91,8 @@ func heal(amount: int) -> int:
 
 
 func add_armor(amount: int) -> int:
-	var actual := mini(amount, max_hp - armor)
+	var armor_cap := max_armor if max_armor > 0 else max_hp
+	var actual := mini(amount, armor_cap - armor)
 	if actual > 0:
 		armor += actual
 		armor_changed.emit(armor)
@@ -135,9 +139,10 @@ func get_hp_percent() -> float:
 
 
 func get_armor_percent() -> float:
-	if max_hp <= 0:
+	var armor_cap := max_armor if max_armor > 0 else max_hp
+	if armor_cap <= 0:
 		return 0.0
-	return float(armor) / float(max_hp)
+	return float(armor) / float(armor_cap)
 
 
 # Mana-related methods

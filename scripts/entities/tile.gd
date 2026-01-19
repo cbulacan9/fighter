@@ -56,6 +56,11 @@ func _update_visual() -> void:
 		else:
 			sprite.modulate = tile_data.color
 
+		# Scale sprite to fill the cell (base sprite is 64x64)
+		const BASE_SPRITE_SIZE := 64.0
+		var scale_factor := Grid.CELL_SIZE.x / BASE_SPRITE_SIZE
+		sprite.scale = Vector2(scale_factor, scale_factor)
+
 
 func _on_animation_player_animation_finished(_anim_name: String) -> void:
 	animation_finished.emit()
@@ -76,17 +81,28 @@ func _show_clickable_highlight() -> void:
 	if _highlight_tween:
 		_highlight_tween.kill()
 
-	# Use highlight color from tile_data if available, otherwise default
-	var highlight_color := Color(1.2, 1.2, 0.8)
+	# Bright highlight color for more visibility
+	var highlight_color := Color(1.5, 1.5, 0.5)  # Bright yellow-white
 	if tile_data and tile_data.clickable_highlight_color != Color.TRANSPARENT:
-		# Use a brightened version for the pulse effect
-		highlight_color = tile_data.clickable_highlight_color + Color(0.2, 0.2, 0.2, 0)
+		# Use a much brighter version for the pulse effect
+		highlight_color = tile_data.clickable_highlight_color + Color(0.5, 0.5, 0.5, 0)
 
-	# Pulsing glow effect
+	# Get base scale for the sprite
+	const BASE_SPRITE_SIZE := 64.0
+	var base_scale_factor := Grid.CELL_SIZE.x / BASE_SPRITE_SIZE
+	var base_scale := Vector2(base_scale_factor, base_scale_factor)
+	var enlarged_scale := base_scale * 1.15  # 15% larger when highlighted
+
+	# Pulsing glow + scale effect for more visibility
 	_highlight_tween = create_tween()
 	_highlight_tween.set_loops()
+	_highlight_tween.set_parallel(true)
 	_highlight_tween.tween_property(self, "modulate", highlight_color, 0.5)
+	_highlight_tween.tween_property(sprite, "scale", enlarged_scale, 0.5)
+	_highlight_tween.set_parallel(false)
+	_highlight_tween.set_parallel(true)
 	_highlight_tween.tween_property(self, "modulate", Color.WHITE, 0.5)
+	_highlight_tween.tween_property(sprite, "scale", base_scale, 0.5)
 
 
 func _hide_clickable_highlight() -> void:
@@ -97,6 +113,12 @@ func _hide_clickable_highlight() -> void:
 		_highlight_tween = null
 
 	modulate = Color.WHITE
+
+	# Reset scale to base
+	if sprite:
+		const BASE_SPRITE_SIZE := 64.0
+		var base_scale_factor := Grid.CELL_SIZE.x / BASE_SPRITE_SIZE
+		sprite.scale = Vector2(base_scale_factor, base_scale_factor)
 
 
 func play_activation_animation() -> void:
