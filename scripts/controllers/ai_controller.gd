@@ -382,24 +382,78 @@ func execute_move(move: Move) -> void:
 	if not move or not board:
 		return
 
-	# Apply the shift directly to the grid
+	# Store original positions for animation
+	var tiles_to_animate: Array[Dictionary] = []
+	if move.axis == InputHandler.DragAxis.HORIZONTAL:
+		for col in range(Grid.COLS):
+			var tile: Tile = board.grid.get_tile(move.index, col)
+			if tile:
+				tiles_to_animate.append({
+					"tile": tile,
+					"from": tile.position
+				})
+	else:
+		for row in range(Grid.ROWS):
+			var tile: Tile = board.grid.get_tile(row, move.index)
+			if tile:
+				tiles_to_animate.append({
+					"tile": tile,
+					"from": tile.position
+				})
+
+	# Apply the shift to the grid data
 	if move.axis == InputHandler.DragAxis.HORIZONTAL:
 		board.grid.shift_row(move.index, move.offset)
 	else:
 		board.grid.shift_column(move.index, move.offset)
 
-	# Sync visuals
-	_sync_board_visuals()
+	# Calculate target positions and animate
+	_animate_move(tiles_to_animate, move)
 
-	# Trigger match processing
+	move_executed.emit(move)
+
+
+func _animate_move(tiles_data: Array[Dictionary], _move: Move) -> void:
+	## Animates tiles to their new positions, then processes matches
+	const ANIM_DURATION := 0.15
+
+	var tween := board.create_tween()
+	tween.set_parallel(true)
+
+	# Find each tile's new position in the grid and animate to it
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile: Tile = board.grid.get_tile(row, col)
+			if not tile or not is_instance_valid(tile):
+				continue
+
+			var target_pos: Vector2 = board.grid.grid_to_world(row, col)
+
+			# Only animate if position changed
+			if tile.position.distance_to(target_pos) > 1.0:
+				tween.tween_property(tile, "position", target_pos, ANIM_DURATION).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			else:
+				tile.position = target_pos
+
+			# Update grid_position
+			tile.grid_position = Vector2i(row, col)
+
+	# After animation completes, process matches
+	tween.set_parallel(false)
+	tween.tween_callback(_on_move_animation_complete)
+
+
+func _on_move_animation_complete() -> void:
+	## Called when move animation finishes - triggers match processing
+	if not board or not match_detector:
+		return
+
 	board.set_state(BoardManager.BoardState.RESOLVING)
 	var matches := match_detector.find_matches(board.grid)
 	if matches.size() > 0:
 		board._cascade_handler.process_matches(matches)
 	else:
 		board.set_state(BoardManager.BoardState.IDLE)
-
-	move_executed.emit(move)
 
 
 func set_difficulty_easy() -> void:
