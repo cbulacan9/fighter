@@ -325,6 +325,11 @@ func _setup_match() -> void:
 	# Initialize combat
 	if combat_manager:
 		combat_manager.initialize(_player_data, _enemy_data)
+		# Set character data for ultimate abilities
+		if selected_player_character:
+			combat_manager.set_character_data(combat_manager.player_fighter, selected_player_character)
+		if selected_enemy_character:
+			combat_manager.set_character_data(combat_manager.enemy_fighter, selected_enemy_character)
 
 	# Link boards to their owner fighters and combat manager
 	if player_board and combat_manager:

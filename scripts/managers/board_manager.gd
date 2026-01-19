@@ -878,6 +878,7 @@ func _process_alpha_command_tile_removal(row: int, col: int) -> void:
 func spawn_alpha_command_tile() -> void:
 	## Spawns an Alpha Command tile at a random column (drops from top of board).
 	## Only spawns if there isn't already an Alpha Command tile on the board.
+	print("BoardManager: spawn_alpha_command_tile called, already_on_board=%s" % _alpha_command_on_board)
 	if _alpha_command_on_board:
 		return
 
@@ -1129,6 +1130,7 @@ func _on_fighter_mana_changed(_bar_index: int, _current: int, _max_value: int) -
 func _on_fighter_ultimate_ready() -> void:
 	## Called when the fighter's mana bars are all full (ultimate ready).
 	## Spawns an Alpha Command tile if one isn't already on the board.
+	print("BoardManager: Ultimate ready signal received, spawning Alpha Command tile")
 	spawn_alpha_command_tile()
 
 
