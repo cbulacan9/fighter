@@ -13,6 +13,8 @@ signal ultimate_ready()
 signal status_effect_applied(effect: StatusEffect)
 @warning_ignore("unused_signal")  # Emitted by StatusEffectManager
 signal status_effect_removed(effect_type: StatusTypes.StatusType)
+signal alpha_command_activated()
+signal alpha_command_deactivated()
 
 @export var fighter_data: FighterData
 
@@ -26,6 +28,8 @@ var is_defeated: bool = false
 var mana_system: ManaSystem  # Set by CombatManager
 var status_manager: StatusEffectManager  # Set by CombatManager
 var _mana_blocked: bool = false  # Direct mana block flag (for simple blocking without status effects)
+var _ultimate_cooldown_end_time: float = 0.0  # Time.get_ticks_msec() when ultimate cooldown ends
+var alpha_command_free_activations: int = 0  # Free pet activations remaining from Alpha Command
 
 const MIN_STUN_DURATION: float = 0.25
 const STUN_DIMINISHING_FACTOR: float = 0.5
@@ -126,6 +130,12 @@ func reset() -> void:
 	stun_remaining = 0.0
 	is_defeated = false
 	_mana_blocked = false
+	_ultimate_cooldown_end_time = 0.0
+
+	# Reset Alpha Command state
+	if alpha_command_free_activations > 0:
+		alpha_command_free_activations = 0
+		alpha_command_deactivated.emit()
 
 	hp_changed.emit(current_hp, max_hp)
 	armor_changed.emit(armor)
@@ -206,6 +216,51 @@ func are_all_mana_bars_full() -> bool:
 	if mana_system:
 		return mana_system.are_all_bars_full(self)
 	return false
+
+
+# Ultimate cooldown methods
+
+func is_ultimate_on_cooldown() -> bool:
+	return Time.get_ticks_msec() < _ultimate_cooldown_end_time
+
+
+func start_ultimate_cooldown(duration_seconds: float) -> void:
+	_ultimate_cooldown_end_time = Time.get_ticks_msec() + (duration_seconds * 1000.0)
+
+
+func get_ultimate_cooldown_remaining() -> float:
+	var remaining_ms := _ultimate_cooldown_end_time - Time.get_ticks_msec()
+	return maxf(0.0, remaining_ms / 1000.0)
+
+
+# Alpha Command free activation methods
+
+func has_free_pet_activation() -> bool:
+	return alpha_command_free_activations > 0
+
+
+func use_free_pet_activation() -> bool:
+	if alpha_command_free_activations > 0:
+		alpha_command_free_activations -= 1
+		# Emit deactivation signal when all free activations are used
+		if alpha_command_free_activations == 0:
+			alpha_command_deactivated.emit()
+		return true
+	return false
+
+
+func is_alpha_command_active() -> bool:
+	return alpha_command_free_activations > 0
+
+
+## Returns true if the fighter can activate a pet tile.
+## Either has free activations from Alpha Command or enough mana.
+func can_activate_pet() -> bool:
+	if has_free_pet_activation():
+		return true
+	if not mana_system:
+		return false
+	return mana_system.get_mana(self, 0) >= GameConstants.PET_MANA_COST
 
 
 # Status effect-related methods

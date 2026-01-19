@@ -34,7 +34,6 @@ enum BoardState {
 }
 
 const SNAP_BACK_DURATION: float = 0.2
-const PET_MANA_COST: int = 33  # Mana cost to activate pet tiles (allows 3 activations per full bar)
 
 @export var tile_scene: PackedScene
 @export var fighter_data: FighterData
@@ -80,6 +79,7 @@ var _clickable_dirty: bool = true
 # Alpha Command tile tracking (only one on board at a time)
 var _alpha_command_on_board: bool = false
 var _alpha_command_tile_data: PuzzleTileData
+const ULTIMATE_COOLDOWN_DURATION: float = 60.0  # 1 minute cooldown after using ultimate
 
 
 func _ready() -> void:
@@ -294,6 +294,9 @@ func reset() -> void:
 	# Reset pet spawner
 	if pet_spawner:
 		pet_spawner.reset()
+
+	# Clear pending pet spawns from previous game
+	_pending_pet_spawns.clear()
 
 	# Clear any stun state
 	_stun_timer = 0.0
@@ -537,80 +540,46 @@ func _process_pending_pet_spawns() -> void:
 	if _pending_pet_spawns.is_empty():
 		return
 
-	# Track columns that have already been used for pet spawns this cycle
-	# to avoid one pet replacing another
-	var used_columns: Array[int] = []
+	# Track actual positions that have been used for pet spawns this cycle
+	# This prevents multiple pets from spawning at the same position
+	var used_positions: Array[Vector2i] = []
 
 	for spawn_data in _pending_pet_spawns:
 		var pet_type: int = spawn_data["pet_type"]
 		var preferred_column: int = spawn_data["column"]
 
-		# If preferred column was already used, find an alternative
-		if preferred_column in used_columns:
-			var found_alt := false
-			for col in range(Grid.COLS):
-				if col not in used_columns:
-					preferred_column = col
-					found_alt = true
-					break
-			if not found_alt:
-				# All columns used - shouldn't happen with max 3 pets per type
-				push_warning("BoardManager: All columns used for pet spawns, skipping")
-				continue
-
-		_spawn_pet_tile(pet_type, preferred_column)
-		used_columns.append(preferred_column)
+		var actual_pos := _spawn_pet_tile_at_available(pet_type, preferred_column, used_positions)
+		if actual_pos.x >= 0:
+			used_positions.append(actual_pos)
 
 	_pending_pet_spawns.clear()
 
 
-## Spawns a pet tile by replacing the top tile in a column
-## Since the cascade fills the board, we need to replace rather than add
-## Avoids replacing existing pet tiles to prevent count desync
-func _spawn_pet_tile(pet_type: int, preferred_column: int) -> void:
+## Spawns a pet tile at an available position, avoiding used_positions
+## Returns the actual position used, or Vector2i(-1, -1) if spawn failed
+func _spawn_pet_tile_at_available(pet_type: int, preferred_column: int, used_positions: Array[Vector2i]) -> Vector2i:
 	var tile_data := _get_pet_tile_data(pet_type)
 	if not tile_data:
 		push_warning("BoardManager: Could not find tile data for pet type %d" % pet_type)
-		return
+		return Vector2i(-1, -1)
 
-	# Find a valid position - top tile in a column that is NOT a pet tile
-	var target_column := -1
-	var target_row := -1
+	# Find a valid position - prefer top tile, but any non-special tile will do
+	var target_pos := _find_spawn_position(preferred_column, used_positions)
 
-	# Try preferred column first
-	var row := _find_top_tile_row(preferred_column)
-	if row >= 0:
-		var existing := grid.get_tile(row, preferred_column)
-		if existing and existing.tile_data and not _is_hunter_pet_type(existing.tile_data.tile_type):
-			target_column = preferred_column
-			target_row = row
+	if target_pos.x < 0:
+		push_error("BoardManager: Cannot spawn pet tile - no valid position found!")
+		return Vector2i(-1, -1)
 
-	# If preferred column has a pet tile or is empty, try other columns
-	if target_column < 0:
-		for col in range(Grid.COLS):
-			if col == preferred_column:
-				continue
-			row = _find_top_tile_row(col)
-			if row >= 0:
-				var existing := grid.get_tile(row, col)
-				if existing and existing.tile_data and not _is_hunter_pet_type(existing.tile_data.tile_type):
-					target_column = col
-					target_row = row
-					break
-
-	# If all top tiles are pets, try finding empty space (fallback)
-	if target_column < 0:
-		target_row = _find_empty_row_in_column(preferred_column)
-		target_column = preferred_column
-		if target_row < 0:
-			push_error("BoardManager: Cannot spawn pet tile - no valid position found!")
-			# Don't confirm spawn since we couldn't place it
-			return
+	var target_row := target_pos.x
+	var target_column := target_pos.y
 
 	# Remove the existing tile at this position (if any)
 	var existing_tile := grid.get_tile(target_row, target_column)
 	if existing_tile:
 		grid.set_tile(target_row, target_column, null)
+		# Remove from parent immediately to prevent visual overlap
+		if existing_tile.get_parent():
+			existing_tile.get_parent().remove_child(existing_tile)
 		existing_tile.queue_free()
 
 	# Create the pet tile
@@ -623,6 +592,50 @@ func _spawn_pet_tile(pet_type: int, preferred_column: int) -> void:
 	# Confirm the spawn so PetSpawner updates its count
 	if pet_spawner:
 		pet_spawner.confirm_spawn(pet_type)
+
+	return target_pos
+
+
+## Finds a valid position for spawning a pet tile
+## Avoids special tiles and already-used positions
+func _find_spawn_position(preferred_column: int, used_positions: Array[Vector2i]) -> Vector2i:
+	# Helper to check if position is valid
+	var is_valid_pos := func(row: int, col: int) -> bool:
+		var pos := Vector2i(row, col)
+		if pos in used_positions:
+			return false
+		var tile := grid.get_tile(row, col)
+		if not tile or not tile.tile_data:
+			return false
+		return not TileTypeHelper.is_special_tile(tile.tile_data.tile_type)
+
+	# Try preferred column first - check top tile
+	var row := _find_top_tile_row(preferred_column)
+	if row >= 0 and is_valid_pos.call(row, preferred_column):
+		return Vector2i(row, preferred_column)
+
+	# Try other columns' top tiles
+	for col in range(Grid.COLS):
+		if col == preferred_column:
+			continue
+		row = _find_top_tile_row(col)
+		if row >= 0 and is_valid_pos.call(row, col):
+			return Vector2i(row, col)
+
+	# If all top tiles are special/used, find ANY valid tile on the board
+	for r in range(Grid.ROWS):
+		for c in range(Grid.COLS):
+			if is_valid_pos.call(r, c):
+				return Vector2i(r, c)
+
+	# Last resort: find empty space
+	for col in range(Grid.COLS):
+		for r in range(Grid.ROWS):
+			var pos := Vector2i(r, col)
+			if pos not in used_positions and grid.get_tile(r, col) == null:
+				return pos
+
+	return Vector2i(-1, -1)
 
 
 ## Helper to find the first empty row in a column (from top to bottom)
@@ -678,7 +691,20 @@ func _on_drag_ended(_final_offset: float) -> void:
 # --- Click Handlers ---
 
 func _on_tile_clicked(tile: Tile) -> void:
-	# Clicks are blocked during non-IDLE states
+	# During RESOLVING state, only allow pet tile and Alpha Command clicks
+	if state == BoardState.RESOLVING:
+		if tile and tile.tile_data:
+			var tile_type: TileTypes.Type = tile.tile_data.tile_type
+			if TileTypeHelper.is_hunter_pet_type(tile_type) or tile_type == TileTypes.Type.ALPHA_COMMAND:
+				if _can_click_tile(tile):
+					_activate_tile(tile)
+					_input_handler.tile_click_attempted.emit(tile, true)
+					return
+		_input_handler.tile_click_attempted.emit(tile, false)
+		tile_click_failed.emit(tile, "board_resolving")
+		return
+
+	# Block all clicks during STUNNED or DRAGGING states
 	if state != BoardState.IDLE:
 		_input_handler.tile_click_attempted.emit(tile, false)
 		tile_click_failed.emit(tile, "board_not_idle")
@@ -719,7 +745,7 @@ func _activate_tile(tile: Tile) -> void:
 		return
 
 	# Check if this is a Hunter-style pet tile (BEAR_PET, HAWK_PET, SNAKE_PET)
-	if _is_hunter_pet_type(data.tile_type):
+	if TileTypeHelper.is_hunter_pet_type(data.tile_type):
 		_activate_hunter_pet(tile, data)
 		return
 
@@ -764,18 +790,14 @@ func _activate_tile(tile: Tile) -> void:
 		_consume_tile(tile)
 
 
-func _is_hunter_pet_type(tile_type: TileTypes.Type) -> bool:
-	return tile_type in [TileTypes.Type.BEAR_PET, TileTypes.Type.HAWK_PET, TileTypes.Type.SNAKE_PET]
-
-
 func _activate_hunter_pet(tile: Tile, data: PuzzleTileData) -> void:
 	## Activates a Hunter-style pet tile (BEAR_PET, HAWK_PET, SNAKE_PET).
 	## These tiles have their effects defined in click_effect and are consumed on use.
-	## Requires PET_MANA_COST mana to activate.
+	## Requires GameConstants.PET_MANA_COST mana to activate.
 
 	# Check mana requirement
 	var fighter := _get_owner_fighter()
-	if not _has_enough_mana_for_pet(fighter):
+	if not fighter or not fighter.can_activate_pet():
 		tile_click_failed.emit(tile, "not_enough_mana")
 		tile.play_reject_animation()  # Visual feedback for failed click
 		return
@@ -804,17 +826,17 @@ func _activate_hunter_pet(tile: Tile, data: PuzzleTileData) -> void:
 	_consume_pet_tile(tile)
 
 
-func _has_enough_mana_for_pet(fighter: Fighter) -> bool:
-	## Checks if the fighter has enough mana to activate a pet tile.
-	if not fighter or not fighter.mana_system:
-		return false
-	return fighter.mana_system.get_mana(fighter, 0) >= PET_MANA_COST
-
-
 func _drain_pet_mana_cost(fighter: Fighter) -> void:
 	## Drains the pet activation mana cost from the fighter.
-	if fighter and fighter.mana_system:
-		fighter.mana_system.drain(fighter, PET_MANA_COST, 0)
+	## Uses free activation from Alpha Command if available.
+	if not fighter:
+		return
+	# Use free activation if available
+	if fighter.use_free_pet_activation():
+		return
+	# Otherwise drain mana
+	if fighter.mana_system:
+		fighter.mana_system.drain(fighter, GameConstants.PET_MANA_COST, 0)
 
 
 # --- Alpha Command (Ultimate) Methods ---
@@ -837,6 +859,9 @@ func _activate_alpha_command(tile: Tile) -> void:
 
 	# Visual feedback
 	tile.play_activation_animation()
+
+	# Start cooldown on the fighter before spawning another ultimate
+	fighter.start_ultimate_cooldown(ULTIMATE_COOLDOWN_DURATION)
 
 	# Consume the Alpha Command tile
 	_consume_alpha_command_tile(tile)
@@ -881,9 +906,13 @@ func _process_alpha_command_tile_removal(row: int, col: int) -> void:
 
 func spawn_alpha_command_tile() -> void:
 	## Spawns an Alpha Command tile at a random column (drops from top of board).
-	## Only spawns if there isn't already an Alpha Command tile on the board.
-	print("BoardManager: spawn_alpha_command_tile called, already_on_board=%s" % _alpha_command_on_board)
+	## Only spawns if there isn't already an Alpha Command tile on the board or on cooldown.
 	if _alpha_command_on_board:
+		return
+
+	# Check if ultimate is on cooldown
+	var fighter := _get_owner_fighter()
+	if fighter and fighter.is_ultimate_on_cooldown():
 		return
 
 	# Load tile data if not cached
@@ -916,7 +945,7 @@ func spawn_alpha_command_tile() -> void:
 	var existing_tile := grid.get_tile(target_row, col)
 	if existing_tile and existing_tile.tile_data:
 		var existing_type: int = existing_tile.tile_data.tile_type
-		if _is_hunter_pet_type(existing_type) or existing_type == TileTypes.Type.ALPHA_COMMAND:
+		if TileTypeHelper.is_hunter_pet_type(existing_type) or existing_type == TileTypes.Type.ALPHA_COMMAND:
 			# Find a column without a special tile at the top
 			for c in range(Grid.COLS):
 				var row := _find_top_tile_row(c)
@@ -924,7 +953,7 @@ func spawn_alpha_command_tile() -> void:
 					var t := grid.get_tile(row, c)
 					if t and t.tile_data:
 						var tt: int = t.tile_data.tile_type
-						if not _is_hunter_pet_type(tt) and tt != TileTypes.Type.ALPHA_COMMAND:
+						if not TileTypeHelper.is_hunter_pet_type(tt) and tt != TileTypes.Type.ALPHA_COMMAND:
 							target_row = row
 							col = c
 							existing_tile = t
@@ -1004,9 +1033,9 @@ func _get_pet_tile_data(pet_type: int) -> PuzzleTileData:
 ## At full duration: 2.0x, decays linearly to 1.0x when expired.
 func _get_alpha_command_multiplier() -> float:
 	var fighter := _get_owner_fighter()
-	var combat_mgr := _get_combat_manager()
-	if fighter and combat_mgr and combat_mgr.status_effect_manager:
-		return combat_mgr.status_effect_manager.get_alpha_command_multiplier(fighter)
+	# Alpha Command gives 2x multiplier while free activations remain
+	if fighter and fighter.is_alpha_command_active():
+		return 2.0
 	return 1.0
 
 
@@ -1134,7 +1163,6 @@ func _on_fighter_mana_changed(_bar_index: int, _current: int, _max_value: int) -
 func _on_fighter_ultimate_ready() -> void:
 	## Called when the fighter's mana bars are all full (ultimate ready).
 	## Spawns an Alpha Command tile if one isn't already on the board.
-	print("BoardManager: Ultimate ready signal received, spawning Alpha Command tile")
 	spawn_alpha_command_tile()
 
 
@@ -1148,7 +1176,7 @@ func _update_clickable_highlights() -> void:
 
 	# Update each tile's clickable highlight based on current conditions
 	var fighter := _get_owner_fighter()
-	var has_pet_mana := _has_enough_mana_for_pet(fighter)
+	var has_pet_mana := fighter.can_activate_pet() if fighter else false
 
 	for tile in grid.get_all_tiles():
 		if not tile or not tile.tile_data:
@@ -1162,7 +1190,7 @@ func _update_clickable_highlights() -> void:
 			tile.update_clickable_state(can_click)
 
 			# Dim Hunter pet tiles when mana is insufficient
-			if _is_hunter_pet_type(tile.tile_data.tile_type):
+			if TileTypeHelper.is_hunter_pet_type(tile.tile_data.tile_type):
 				tile.set_dimmed(not has_pet_mana)
 			else:
 				tile.set_dimmed(false)
@@ -1236,9 +1264,17 @@ func _place_tile(tile: Tile, row: int, col: int) -> void:
 
 
 func _clear_all_tiles() -> void:
+	# Clear all tiles from the grid
 	for tile in grid.get_all_tiles():
 		if tile:
 			tile.queue_free()
+
+	# Also clear ALL children from the tiles container to catch any orphaned tiles
+	# This ensures no tiles persist between games
+	if _tiles_container:
+		for child in _tiles_container.get_children():
+			child.queue_free()
+
 	grid.initialize()
 
 
@@ -1283,12 +1319,15 @@ func _ensure_minimum_tiles() -> void:
 	var empty_positions := grid.get_empty_positions()
 	if empty_positions.is_empty():
 		# No empty positions - need to replace existing tiles
-		# Get all non-specialty tile positions
+		# Get all non-specialty tile positions (excluding special tiles like pets and Alpha Command)
 		var replaceable: Array[Vector2i] = []
 		for row in range(Grid.ROWS):
 			for col in range(Grid.COLS):
 				var tile := grid.get_tile(row, col)
 				if tile and tile.tile_data:
+					# Never replace special tiles (pets, Alpha Command)
+					if TileTypeHelper.is_special_tile(tile.tile_data.tile_type):
+						continue
 					# Only replace tiles without min/max rules
 					if tile.tile_data.min_on_board == 0 and tile.tile_data.max_on_board <= 0:
 						replaceable.append(Vector2i(row, col))
@@ -1573,3 +1612,30 @@ func replace_tile_at(pos: Vector2i, new_type: TileTypes.Type) -> bool:
 	_place_tile(new_tile, pos.x, pos.y)
 
 	return true
+
+
+## Checks for matches on the board and processes them through the cascade system.
+## Call this after making external tile changes (e.g., Hawk tile replacement).
+## Returns true if matches were found and processing started.
+func check_and_resolve_matches() -> bool:
+	if not _match_detector or not _cascade_handler:
+		return false
+
+	var matches := _match_detector.find_matches(grid)
+	if matches.is_empty():
+		return false
+
+	# Start resolution
+	set_state(BoardState.RESOLVING)
+	_process_external_matches(matches)
+	return true
+
+
+## Async handler for processing matches from external tile changes.
+func _process_external_matches(matches: Array[MatchDetector.MatchResult]) -> void:
+	# Tag all matches as CASCADE since they're from an external effect, not player input
+	for match_result in matches:
+		match_result.origin = TileTypes.MatchOrigin.CASCADE
+
+	var _result := await _cascade_handler.process_matches(matches)
+	set_state(BoardState.IDLE)

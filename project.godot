@@ -31,6 +31,10 @@ pause={
 ]
 }
 
+[autoload]
+
+GameConstants="*res://scripts/autoload/game_constants.gd"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

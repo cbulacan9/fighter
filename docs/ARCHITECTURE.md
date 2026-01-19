@@ -38,6 +38,12 @@
 				  └───────────────────────────┘
 ```
 
+## Autoloads
+
+| Autoload | Responsibility |
+|----------|----------------|
+| **GameConstants** | Centralized constants (PET_MANA_COST, animation timings) |
+
 ## Core Systems
 
 | System | Responsibility |
@@ -52,6 +58,13 @@
 | **CombatManager** | Applies match effects (damage, heal, armor, stun), manages fighter state |
 | **AIController** | Evaluates board, selects moves based on difficulty |
 | **StatsTracker** | Collects match statistics (damage, healing, chains, duration) |
+
+## Utilities
+
+| Utility | Responsibility |
+|---------|----------------|
+| **TileTypeHelper** | Static methods for tile type checks (is_hunter_pet_type, is_special_tile) |
+| **ClickConditionChecker** | Validates tile click conditions (mana, cooldowns, sequences) |
 
 ### UI Components (Distributed Pattern)
 | Component | Responsibility |
@@ -82,6 +95,32 @@
 
 **Key Change:** Effects apply immediately when matches are detected, before animations complete. This provides responsive gameplay feedback.
 
+### Match Origin Tagging
+
+BoardManager distinguishes between player-initiated and cascade matches for combo tracking (Hunter's sequence system).
+
+| Origin | Description | Used For |
+|--------|-------------|----------|
+| `PLAYER_INITIATED` | Direct result of player's drag action (first match detection) | Combo sequence tracking, combat effects |
+| `CASCADE` | Result of gravity fill (subsequent match detections) | Combat effects only |
+
+```
+InputHandler.drag_released
+        ↓
+MatchDetector.find_matches() → tagged as PLAYER_INITIATED
+        ↓
+CascadeHandler.process_cascade()
+        ↓
+    ┌───┴───┐
+    ↓       ↓
+ Remove   Fill + Detect → tagged as CASCADE
+        ↓
+CascadeResult.all_matches (each tagged with origin)
+        ↓
+SequenceTracker receives ONLY PLAYER_INITIATED matches
+CombatManager receives ALL matches (effects apply regardless of origin)
+```
+
 ### Combat Effect Flow
 ```
 Match Data → CombatManager → Target Fighter State
@@ -90,14 +129,17 @@ Match Data → CombatManager → Target Fighter State
 		 - Sword → Damage (armor first, then HP)
 		 - Shield → Add armor (cap at max HP)
 		 - Potion → Heal (cap at max HP)
-		 - Lightning → Apply stun (diminishing returns)
+		 - Focus → Add stacks (7.5% boost per stack, max 10 stacks)
+		 - Filler → No effect (but matchable; clears adjacent on other matches)
 				│
 				├──→ Fighter.hp_changed ──→ HUD (health bar update)
 				├──→ damage_dealt ────────→ DamageNumberSpawner
 				├──→ healing_done ────────→ DamageNumberSpawner
 				├──→ armor_gained ────────→ DamageNumberSpawner
-				└──→ stun_applied ────────→ GameManager → StunOverlay
+				└──→ focus_changed ───────→ HUD (focus stacks display)
 ```
+
+**Note:** Tile availability varies by character. Hunter uses Sword, Shield, Focus, and Filler. Other characters may use different tile sets (see CHARACTERS.md).
 
 ## Scene Hierarchy
 
@@ -240,6 +282,8 @@ project/
 │       ├── stats_screen.tscn
 │       └── stun_overlay.tscn
 ├── scripts/
+│   ├── autoload/
+│   │   └── game_constants.gd      # Centralized constants (PET_MANA_COST, animation timings)
 │   ├── managers/
 │   │   ├── game_manager.gd
 │   │   ├── board_manager.gd
@@ -250,6 +294,7 @@ project/
 │   │   ├── cascade_handler.gd
 │   │   ├── input_handler.gd
 │   │   ├── tile_spawner.gd
+│   │   ├── click_condition_checker.gd  # Validates tile click conditions
 │   │   └── stats_tracker.gd
 │   ├── controllers/
 │   │   └── ai_controller.gd
@@ -268,12 +313,16 @@ project/
 │   │   ├── status_effect_icon.gd
 │   │   ├── ability_announcement.gd
 │   │   └── ability_announcement_spawner.gd
+│   ├── utils/
+│   │   └── tile_type_helper.gd    # Static tile type utilities
 │   └── data/
 │       ├── tile_data.gd
 │       ├── tile_types.gd
+│       ├── character_data.gd
 │       └── fighter_data.gd
 ├── resources/
 │   ├── tiles/
+│   ├── characters/
 │   └── fighters/
 └── assets/
 	├── sprites/

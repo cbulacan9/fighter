@@ -48,3 +48,22 @@ func can_be_matched() -> bool:
 
 func can_be_clicked() -> bool:
 	return is_clickable and click_condition != TileTypes.ClickCondition.NONE
+
+
+## Validates the tile data configuration for common errors
+func validate() -> bool:
+	var valid := true
+
+	if is_clickable and click_condition == TileTypes.ClickCondition.NONE:
+		push_warning("PuzzleTileData '%s': is_clickable but click_condition is NONE" % display_name)
+		valid = false
+
+	if click_condition != TileTypes.ClickCondition.NONE and not click_effect:
+		push_warning("PuzzleTileData '%s': has click_condition but no click_effect" % display_name)
+		valid = false
+
+	if min_on_board > 0 and max_on_board > 0 and min_on_board > max_on_board:
+		push_warning("PuzzleTileData '%s': min_on_board (%d) > max_on_board (%d)" % [display_name, min_on_board, max_on_board])
+		valid = false
+
+	return valid

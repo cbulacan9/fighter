@@ -7,10 +7,6 @@ signal tiles_spawned(tiles: Array[Tile])
 signal cascade_complete(result: CascadeResult)
 signal matches_processed(matches: Array[MatchDetector.MatchResult])  # Fires immediately when matches are cleared
 
-const CLEAR_ANIMATION_TIME: float = 0.2
-const FALL_ANIMATION_TIME_PER_ROW: float = 0.07
-const SPAWN_ANIMATION_TIME: float = 0.15
-
 var grid: Grid
 var tile_spawner: TileSpawner
 var match_detector: MatchDetector
@@ -45,14 +41,22 @@ func setup(g: Grid, spawner: TileSpawner, detector: MatchDetector, container: No
 
 func process_matches(initial_matches: Array[MatchDetector.MatchResult]) -> CascadeResult:
 	var result := CascadeResult.new()
+	await _run_cascade_loop(result, initial_matches, false)
+	cascade_complete.emit(result)
+	return result
+
+
+## Runs the main cascade loop, processing matches and their resulting cascades.
+## tag_first_as_cascade: If true, even the first round of matches will be tagged as CASCADE.
+func _run_cascade_loop(result: CascadeResult, initial_matches: Array[MatchDetector.MatchResult], tag_first_as_cascade: bool) -> void:
 	var current_matches := initial_matches
 	var is_first_round := true
 
 	while current_matches.size() > 0:
 		result.chain_count += 1
 
-		# Tag cascade matches (non-first rounds) with CASCADE origin
-		if not is_first_round:
+		# Tag cascade matches with CASCADE origin
+		if not is_first_round or tag_first_as_cascade:
 			for match_result in current_matches:
 				match_result.origin = TileTypes.MatchOrigin.CASCADE
 
@@ -82,9 +86,6 @@ func process_matches(initial_matches: Array[MatchDetector.MatchResult]) -> Casca
 		current_matches = match_detector.find_matches(grid)
 		is_first_round = false
 
-	cascade_complete.emit(result)
-	return result
-
 
 func remove_tiles(positions: Array[Vector2i]) -> void:
 	await _remove_tiles(positions)
@@ -107,37 +108,11 @@ func process_single_removal(_row: int, _col: int) -> CascadeResult:
 	if new_tiles.size() > 0:
 		await _animate_spawns(new_tiles)
 
-	# Check for new matches caused by the refill
-	var current_matches := match_detector.find_matches(grid)
-
-	# Continue cascade if there are matches
-	# Note: All matches here are CASCADE since they result from gravity/removal
-	while current_matches.size() > 0:
-		result.chain_count += 1
-
-		# Tag all matches as CASCADE (not player-initiated)
-		for match_result in current_matches:
-			match_result.origin = TileTypes.MatchOrigin.CASCADE
-
-		result.all_matches.append_array(current_matches)
-
-		# Emit immediately so UI can update before animations
-		matches_processed.emit(current_matches)
-
-		var positions := _collect_positions(current_matches)
-		result.total_tiles_cleared += positions.size()
-
-		await _remove_tiles(positions)
-
-		moves = _calculate_gravity()
-		if moves.size() > 0:
-			await _animate_falls(moves)
-
-		new_tiles = _fill_empty_spaces()
-		if new_tiles.size() > 0:
-			await _animate_spawns(new_tiles)
-
-		current_matches = match_detector.find_matches(grid)
+	# Check for new matches caused by the refill and run cascade loop
+	# All matches are tagged as CASCADE since they result from gravity/removal
+	var new_matches := match_detector.find_matches(grid)
+	if new_matches.size() > 0:
+		await _run_cascade_loop(result, new_matches, true)
 
 	cascade_complete.emit(result)
 	return result
@@ -161,7 +136,43 @@ func _collect_positions(matches: Array[MatchDetector.MatchResult]) -> Array[Vect
 				seen[pos] = true
 				positions.append(pos)
 
+	# Also collect adjacent FILLER tiles (they get cleared by nearby matches)
+	var adjacent_fillers := _find_adjacent_fillers(positions, seen)
+	positions.append_array(adjacent_fillers)
+
 	return positions
+
+
+## Finds FILLER tiles adjacent to the given positions
+## These tiles are cleared when matches are made next to them
+func _find_adjacent_fillers(match_positions: Array[Vector2i], seen: Dictionary) -> Array[Vector2i]:
+	var fillers: Array[Vector2i] = []
+
+	for pos in match_positions:
+		# Check all 4 directions: up, down, left, right
+		var adjacents: Array[Vector2i] = [
+			Vector2i(pos.x - 1, pos.y),
+			Vector2i(pos.x + 1, pos.y),
+			Vector2i(pos.x, pos.y - 1),
+			Vector2i(pos.x, pos.y + 1)
+		]
+
+		for adjacent in adjacents:
+			# Skip if out of bounds
+			if adjacent.x < 0 or adjacent.x >= Grid.ROWS or adjacent.y < 0 or adjacent.y >= Grid.COLS:
+				continue
+			# Skip if already seen
+			if seen.has(adjacent):
+				continue
+
+			var tile := grid.get_tile(adjacent.x, adjacent.y)
+			if tile and tile.tile_data:
+				# Check if it's a FILLER tile
+				if tile.tile_data.tile_type == TileTypes.Type.FILLER:
+					seen[adjacent] = true
+					fillers.append(adjacent)
+
+	return fillers
 
 
 func _remove_tiles(positions: Array[Vector2i]) -> void:
@@ -181,7 +192,7 @@ func _remove_tiles(positions: Array[Vector2i]) -> void:
 
 	# Wait for animation
 	if tiles_to_clear.size() > 0:
-		await _wait(CLEAR_ANIMATION_TIME)
+		await _wait(GameConstants.CLEAR_ANIMATION_TIME)
 
 		# Remove from scene
 		for tile in tiles_to_clear:
@@ -230,7 +241,7 @@ func _animate_falls(moves: Array[TileMove]) -> void:
 		max_distance = maxi(max_distance, distance)
 
 		var target_pos := grid.grid_to_world(move.to_row, move.col)
-		var duration := distance * FALL_ANIMATION_TIME_PER_ROW
+		var duration := distance * GameConstants.FALL_ANIMATION_TIME_PER_ROW
 		tween.parallel().tween_property(move.tile, "position", target_pos, duration) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
@@ -276,7 +287,7 @@ func _animate_spawns(tiles: Array[Tile]) -> void:
 		var target_pos := grid.grid_to_world(tile.grid_position.x, tile.grid_position.y)
 		var start_pos := tile.position
 		var distance := int((target_pos.y - start_pos.y) / Grid.CELL_SIZE.y)
-		var duration := maxi(distance, 1) * FALL_ANIMATION_TIME_PER_ROW
+		var duration := maxi(distance, 1) * GameConstants.FALL_ANIMATION_TIME_PER_ROW
 
 		tile.play_spawn_animation()
 		tween.parallel().tween_property(tile, "position", target_pos, duration) \

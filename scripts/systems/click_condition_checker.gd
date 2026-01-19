@@ -1,26 +1,24 @@
 class_name ClickConditionChecker
 extends RefCounted
 
-var _sequence_tracker  # Set externally, type: SequenceTracker
-var _mana_system  # Set externally, type: ManaSystem
+var _sequence_tracker: SequenceTracker
+var _mana_system: ManaSystem
 var _cooldown_timers: Dictionary = {}  # {Tile: float}
 
 
-func set_sequence_tracker(tracker) -> void:
+func set_sequence_tracker(tracker: SequenceTracker) -> void:
 	_sequence_tracker = tracker
 
 
-func set_mana_system(mana_system) -> void:
+func set_mana_system(mana_system: ManaSystem) -> void:
 	_mana_system = mana_system
 
 
-const PET_MANA_COST: int = 33  # Must match BoardManager.PET_MANA_COST
-
-func can_click(tile, fighter: Fighter) -> bool:
+func can_click(tile: Tile, fighter: Fighter) -> bool:
 	if not tile or not tile.tile_data:
 		return false
 
-	var data = tile.tile_data as PuzzleTileData
+	var data := tile.tile_data as PuzzleTileData
 	if not data.is_clickable:
 		return false
 
@@ -30,8 +28,8 @@ func can_click(tile, fighter: Fighter) -> bool:
 
 		TileTypes.ClickCondition.ALWAYS:
 			# Hunter pet tiles require mana even with ALWAYS condition
-			if _is_hunter_pet_type(data.tile_type):
-				return _has_enough_mana_for_pet(fighter)
+			if TileTypeHelper.is_hunter_pet_type(data.tile_type):
+				return fighter.can_activate_pet() if fighter else false
 			return true
 
 		TileTypes.ClickCondition.SEQUENCE_COMPLETE:
@@ -53,21 +51,9 @@ func can_click(tile, fighter: Fighter) -> bool:
 	return false
 
 
-func _is_hunter_pet_type(tile_type: int) -> bool:
-	## Checks if the tile type is a Hunter pet (BEAR_PET, HAWK_PET, SNAKE_PET).
-	return tile_type in [TileTypes.Type.BEAR_PET, TileTypes.Type.HAWK_PET, TileTypes.Type.SNAKE_PET]
-
-
-func _has_enough_mana_for_pet(fighter: Fighter) -> bool:
-	## Checks if the fighter has enough mana to activate a pet tile.
-	if not _mana_system or not fighter:
-		return false
-	return _mana_system.get_mana(fighter, 0) >= PET_MANA_COST
-
-
-func start_cooldown(tile) -> void:
+func start_cooldown(tile: Tile) -> void:
 	if tile and tile.tile_data:
-		var data = tile.tile_data as PuzzleTileData
+		var data := tile.tile_data as PuzzleTileData
 		if data.click_cooldown > 0:
 			_cooldown_timers[tile] = data.click_cooldown
 
@@ -83,28 +69,28 @@ func tick(delta: float) -> void:
 		_cooldown_timers.erase(tile)
 
 
-func _is_on_cooldown(tile) -> bool:
+func _is_on_cooldown(tile: Tile) -> bool:
 	return _cooldown_timers.has(tile) and _cooldown_timers[tile] > 0
 
 
-func _check_custom_condition(tile, _fighter: Fighter) -> bool:
+func _check_custom_condition(tile: Tile, _fighter: Fighter) -> bool:
 	# Override in subclass or implement custom logic
 	# For now, check if there's a custom_effect_id on the click_effect
 	if tile and tile.tile_data:
-		var data = tile.tile_data as PuzzleTileData
+		var data := tile.tile_data as PuzzleTileData
 		if data.click_effect and data.click_effect.custom_effect_id != "":
 			# Custom conditions can be added here as needed
 			pass
 	return true
 
 
-func get_cooldown_remaining(tile) -> float:
+func get_cooldown_remaining(tile: Tile) -> float:
 	if _cooldown_timers.has(tile):
 		return maxf(0.0, _cooldown_timers[tile])
 	return 0.0
 
 
-func clear_cooldown(tile) -> void:
+func clear_cooldown(tile: Tile) -> void:
 	_cooldown_timers.erase(tile)
 
 

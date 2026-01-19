@@ -1,5 +1,48 @@
 # Puzzle Fighter - Core Systems Specification
 
+## 0. GameConstants (Autoload)
+
+### Purpose
+Centralized constants used across multiple systems. Registered as autoload in project.godot.
+
+### Constants
+| Constant | Type | Value | Description |
+|----------|------|-------|-------------|
+| `PET_MANA_COST` | int | 33 | Mana cost to activate pet tiles (allows 3 activations per full bar) |
+| `CLEAR_ANIMATION_TIME` | float | 0.2 | Duration of tile clear animation |
+| `FALL_ANIMATION_TIME_PER_ROW` | float | 0.07 | Fall animation time per row of distance |
+| `SPAWN_ANIMATION_TIME` | float | 0.15 | Duration of new tile spawn animation |
+
+### Usage
+```gdscript
+# Access from any script
+var cost := GameConstants.PET_MANA_COST
+var anim_time := GameConstants.CLEAR_ANIMATION_TIME
+```
+
+---
+
+## 0.1 TileTypeHelper (Utility)
+
+### Purpose
+Static helper methods for tile type checks. Eliminates duplicate helper functions across systems.
+
+### Static Methods
+| Method | Input | Output | Description |
+|--------|-------|--------|-------------|
+| `is_hunter_pet_type` | TileTypes.Type | bool | True if BEAR_PET, HAWK_PET, or SNAKE_PET |
+| `is_special_tile` | TileTypes.Type | bool | True if pet tile or ALPHA_COMMAND (not replaceable) |
+
+### Usage
+```gdscript
+if TileTypeHelper.is_hunter_pet_type(tile.tile_data.tile_type):
+    # Handle pet tile
+if TileTypeHelper.is_special_tile(tile_type):
+    # Don't replace this tile
+```
+
+---
+
 ## 1. Grid System
 
 ### Purpose
@@ -103,6 +146,8 @@ Manages tile removal, gravity fill, and chain reaction processing.
 ```
 Remove Matched Tiles
 		↓
+Collect Adjacent FILLER Tiles (also removed)
+		↓
 Apply Gravity (tiles fall down)
 		↓
 Spawn New Tiles (from top)
@@ -114,6 +159,29 @@ Check for new matches
 If matches exist → Loop
 If no matches → Complete
 ```
+
+### Internal Architecture
+The cascade logic is centralized in `_run_cascade_loop()` to eliminate code duplication:
+
+| Method | Description |
+|--------|-------------|
+| `process_matches(initial_matches)` | Entry point for player-initiated matches. Calls `_run_cascade_loop(result, matches, false)` |
+| `process_single_removal(row, col)` | Entry point for tile consumption (pet clicks). Does gravity/fill first, then calls `_run_cascade_loop(result, new_matches, true)` |
+| `_run_cascade_loop(result, matches, tag_first_as_cascade)` | Core loop that processes matches, applies gravity, fills empty spaces, and checks for cascades |
+
+The `tag_first_as_cascade` parameter controls match origin tagging:
+- `false`: First round tagged as PLAYER_INITIATED (for combo tracking)
+- `true`: All matches tagged as CASCADE (for pet tile consumption)
+
+### FILLER Tile Clearing
+FILLER tiles (Empty Boxes) can be cleared in two ways:
+1. **Direct matching**: 3+ FILLER tiles in a row/column match and clear like normal tiles
+2. **Adjacent clearing**: FILLER tiles orthogonally adjacent to any matched tiles are automatically cleared
+
+This allows players to remove FILLER tiles placed by effects like Hawk's ability.
+
+### External Tile Changes
+When abilities modify tiles on a board (e.g., Hawk replacing tiles with FILLER), the board automatically checks for new matches and processes them. This is handled by `BoardManager.check_and_resolve_matches()`.
 
 ### Operations
 | Operation | Input | Output | Description |
@@ -174,21 +242,42 @@ Manages fighter state (HP, armor, stun) and applies match effects.
 | `armor` | int | Damage buffer (capped at max_hp) |
 | `stun_remaining` | float | Seconds of stun left |
 | `is_defeated` | bool | HP reached 0 |
+| `alpha_command_free_activations` | int | Free pet activations remaining from Alpha Command |
+
+### Fighter Pet Activation
+The Fighter class owns the logic for determining if a pet can be activated:
+
+| Method | Description |
+|--------|-------------|
+| `can_activate_pet()` | Returns true if fighter has free activations OR enough mana (≥ PET_MANA_COST) |
+| `has_free_pet_activation()` | Returns true if alpha_command_free_activations > 0 |
+| `use_free_pet_activation()` | Decrements free activations, returns true if one was used |
+
+This centralizes the "can afford pet?" check that was previously duplicated in BoardManager, ClickConditionChecker, and AIController.
 
 ### Effect Application
+
+**Note:** Tile availability varies by character. See CHARACTERS.md for character-specific tile sets.
+
+#### Hunter Tiles
 | Tile Type | Target | Effect Logic |
 |-----------|--------|--------------|
-| SWORD | Enemy | Reduce armor first, then HP. Consumes Focus stacks for bonus damage. |
+| SWORD | Enemy | Reduce armor first, then HP. Consumes Focus stacks for bonus damage (7.5% per stack). |
 | SHIELD | Self | Add armor (cap at max_hp) |
+| FOCUS | Self | Add Focus stacks (1/2/3 for 3/4/5-match). Max 10 stacks (75% max bonus). Consumed on next SWORD match for bonus damage. |
+| FILLER | None | No combat effect. Matchable; also cleared when adjacent to other matches. |
+
+#### Other Character Tiles (Future)
+| Tile Type | Target | Effect Logic |
+|-----------|--------|--------------|
 | POTION | Self | Add HP (cap at max_hp) |
 | LIGHTNING | Enemy | Add stun duration (diminishing returns) |
-| FOCUS | Self | Add Focus stacks (1/2/3 for 3/4/5-match). Max 5 stacks. 20% damage boost per stack on next SWORD match, then consumed. |
-| FILLER | None | No effect |
 
-### Stun Diminishing Returns
+### Stun Diminishing Returns (Lightning tile)
 - Base stun applied fully if target not stunned
 - If already stunned: `new_stun = base_stun * 0.5`
 - Minimum stun addition: 0.25 seconds
+- **Note:** Hunter does not have Lightning tiles. Stun mechanics apply to characters with Lightning in their tile set.
 
 ### Signals
 | Signal | Parameters | Description |
@@ -276,8 +365,8 @@ Controls overall match flow and game state.
 ### State Transitions
 ```
 INIT → COUNTDOWN → BATTLE ⇄ PAUSED
-                      ↓
-                     END → STATS → INIT
+					  ↓
+					 END → STATS → INIT
 ```
 
 ### State Behaviors
@@ -526,3 +615,39 @@ Debug panel that logs combat events in real-time. Toggle visibility with F4 key.
 
 ### Stats Screen Integration
 Combat log entries are passed to StatsScreen via `show_stats(stats, combat_log_entries)` for post-match review.
+
+---
+
+## 15. Data Validation
+
+### Purpose
+Resource data classes include `validate()` methods to catch configuration errors early.
+
+### PuzzleTileData.validate()
+Checks for common tile configuration errors:
+
+| Check | Warning |
+|-------|---------|
+| `is_clickable` but `click_condition == NONE` | Tile marked clickable but has no condition to enable clicks |
+| `click_condition != NONE` but no `click_effect` | Tile has click condition but no effect to trigger |
+| `min_on_board > max_on_board` | Invalid spawn rule configuration |
+
+### CharacterData.validate()
+Validates character configuration and all associated tiles:
+
+| Check | Warning |
+|-------|---------|
+| Empty `character_id` | Character has no ID |
+| Empty `display_name` | Character has no name |
+| No tiles configured | Neither basic_tiles nor specialty_tiles populated |
+| Invalid `mana_config` | Mana configuration fails validation |
+| Invalid tiles | Calls `validate()` on all basic and specialty tiles |
+
+### Usage
+```gdscript
+# Validate character data on load
+if not character_data.validate():
+    push_error("Character data validation failed")
+```
+
+Validation warnings appear in the Godot output panel during development.

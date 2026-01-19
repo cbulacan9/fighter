@@ -684,12 +684,11 @@ func _get_clickable_hunter_pet_tiles() -> Array[Tile]:
 	if not board:
 		return []
 
-	# Check if we have enough mana to activate pets (cost is 33)
-	const PET_MANA_COST := 33
+	# Check if we have enough mana to activate pets
 	var fighter := _get_owner_fighter()
 	if fighter and fighter.mana_system:
 		var current_mana: int = fighter.mana_system.get_mana(fighter, 0)
-		if current_mana < PET_MANA_COST:
+		if current_mana < GameConstants.PET_MANA_COST:
 			return []  # Not enough mana to click any pet
 
 	# Use BoardManager's helper method if available

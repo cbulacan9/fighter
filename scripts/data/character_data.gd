@@ -20,6 +20,9 @@ extends Resource
 ## Small portrait for HUD and lists
 @export var portrait_small: Texture2D
 
+## Portrait shown during ultimate ability activation
+@export var ultimate_portrait: Texture2D
+
 # Tiles
 ## Basic tiles available to all characters or shared between archetypes
 @export var basic_tiles: Array[PuzzleTileData] = []
@@ -115,5 +118,16 @@ func validate() -> bool:
 	if mana_config != null and not mana_config.validate():
 		push_warning("CharacterData: Invalid mana_config for character '%s'" % character_id)
 		valid = false
+
+	# Validate all tiles
+	for tile in basic_tiles:
+		if tile and not tile.validate():
+			push_warning("CharacterData '%s': Invalid basic tile '%s'" % [character_id, tile.display_name])
+			valid = false
+
+	for tile in specialty_tiles:
+		if tile and not tile.validate():
+			push_warning("CharacterData '%s': Invalid specialty tile '%s'" % [character_id, tile.display_name])
+			valid = false
 
 	return valid
