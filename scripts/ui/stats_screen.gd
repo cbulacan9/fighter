@@ -1,8 +1,8 @@
 class_name StatsScreen
 extends CanvasLayer
 
+signal new_game_pressed
 signal rematch_pressed
-signal quit_pressed
 
 @onready var panel: Control = $Panel
 @onready var damage_value: Label = $Panel/StatsContainer/DamageDealt/Value
@@ -13,8 +13,8 @@ signal quit_pressed
 @onready var duration_value: Label = $Panel/StatsContainer/MatchDuration/Value
 @onready var stun_value: Label = $Panel/StatsContainer/StunInflicted/Value
 @onready var chain_value: Label = $Panel/StatsContainer/LongestChain/Value
+@onready var new_game_button: Button = $Panel/ButtonContainer/NewGameButton
 @onready var rematch_button: Button = $Panel/ButtonContainer/RematchButton
-@onready var quit_button: Button = $Panel/ButtonContainer/QuitButton
 
 # Combat log UI (created programmatically)
 var _combat_log_panel: PanelContainer
@@ -29,10 +29,10 @@ func _ready() -> void:
 
 
 func _connect_buttons() -> void:
+	if new_game_button:
+		new_game_button.pressed.connect(_on_new_game_pressed)
 	if rematch_button:
 		rematch_button.pressed.connect(_on_rematch_pressed)
-	if quit_button:
-		quit_button.pressed.connect(_on_quit_pressed)
 
 
 func _create_combat_log_panel() -> void:
@@ -160,10 +160,11 @@ func _format_duration(seconds: float) -> String:
 	return "%d:%02d" % [minutes, secs]
 
 
+func _on_new_game_pressed() -> void:
+	hide_stats()
+	new_game_pressed.emit()
+
+
 func _on_rematch_pressed() -> void:
 	hide_stats()
 	rematch_pressed.emit()
-
-
-func _on_quit_pressed() -> void:
-	quit_pressed.emit()

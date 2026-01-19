@@ -329,6 +329,8 @@ func _get_tile_color(tile_type: int) -> Color:
 			return Color(0.8, 0.4, 0.95)  # Purple
 		TileTypes.Type.MANA:
 			return Color(0.2, 0.8, 0.95)  # Cyan
+		TileTypes.Type.FOCUS:
+			return Color(0.95, 0.85, 0.2)  # Yellow/Gold
 		_:
 			return Color(0.4, 0.4, 0.4)
 

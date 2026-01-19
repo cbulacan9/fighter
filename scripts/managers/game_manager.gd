@@ -199,8 +199,8 @@ func _connect_signals() -> void:
 
 	# StatsScreen signals
 	if stats_screen:
+		stats_screen.new_game_pressed.connect(_on_new_game_pressed)
 		stats_screen.rematch_pressed.connect(_on_rematch_pressed)
-		stats_screen.quit_pressed.connect(_on_stats_quit_pressed)
 
 	# CombatManager signals
 	if combat_manager:
@@ -557,8 +557,8 @@ func _on_rematch_pressed() -> void:
 	reset_match()
 
 
-func _on_stats_quit_pressed() -> void:
-	get_tree().quit()
+func _on_new_game_pressed() -> void:
+	change_state(GameState.MODE_SELECT)
 
 
 func _on_match_ended(result: int) -> void:

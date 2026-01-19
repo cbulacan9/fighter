@@ -171,12 +171,12 @@ grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/separation = 40
 
+[node name="NewGameButton" type="Button" parent="Panel/ButtonContainer"]
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+text = "New Game"
+
 [node name="RematchButton" type="Button" parent="Panel/ButtonContainer"]
 custom_minimum_size = Vector2(120, 40)
 layout_mode = 2
 text = "Rematch"
-
-[node name="QuitButton" type="Button" parent="Panel/ButtonContainer"]
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-text = "Quit"
