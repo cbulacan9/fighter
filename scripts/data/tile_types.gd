@@ -14,6 +14,7 @@ enum Type {
 	HAWK_PET,   # Hunter combo pet - click for defense
 	SNAKE_PET,  # Hunter combo pet - click for healing
 	FOCUS,      # Hunter - builds stacks consumed on next attack
+	ALPHA_COMMAND,  # Hunter ultimate - spawns when mana full, click to activate
 }
 
 enum ClickCondition {

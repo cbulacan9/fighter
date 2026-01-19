@@ -34,6 +34,7 @@ enum BoardState {
 }
 
 const SNAP_BACK_DURATION: float = 0.2
+const PET_MANA_COST: int = 33  # Mana cost to activate pet tiles (allows 3 activations per full bar)
 
 @export var tile_scene: PackedScene
 @export var fighter_data: FighterData
@@ -75,6 +76,10 @@ var _snap_back_tween: Tween
 
 # Clickable highlight optimization - dirty flag pattern
 var _clickable_dirty: bool = true
+
+# Alpha Command tile tracking (only one on board at a time)
+var _alpha_command_on_board: bool = false
+var _alpha_command_tile_data: PuzzleTileData
 
 
 func _ready() -> void:
@@ -296,6 +301,9 @@ func reset() -> void:
 	# Clear hidden tiles
 	_hidden_tiles.clear()
 
+	# Reset Alpha Command state
+	_alpha_command_on_board = false
+
 	# Reset dirty flag to ensure highlights update
 	_clickable_dirty = true
 
@@ -309,8 +317,11 @@ func reset() -> void:
 
 func _disconnect_fighter_signals() -> void:
 	"""Disconnect signals from the owner fighter to prevent memory leaks."""
-	if _owner_fighter and _owner_fighter.mana_changed.is_connected(_on_fighter_mana_changed):
-		_owner_fighter.mana_changed.disconnect(_on_fighter_mana_changed)
+	if _owner_fighter:
+		if _owner_fighter.mana_changed.is_connected(_on_fighter_mana_changed):
+			_owner_fighter.mana_changed.disconnect(_on_fighter_mana_changed)
+		if _owner_fighter.ultimate_ready.is_connected(_on_fighter_ultimate_ready):
+			_owner_fighter.ultimate_ready.disconnect(_on_fighter_ultimate_ready)
 
 
 func get_state() -> BoardState:
@@ -702,6 +713,11 @@ func _activate_tile(tile: Tile) -> void:
 	if not data:
 		return
 
+	# Check if this is the Alpha Command tile (Hunter ultimate)
+	if data.tile_type == TileTypes.Type.ALPHA_COMMAND:
+		_activate_alpha_command(tile)
+		return
+
 	# Check if this is a Hunter-style pet tile (BEAR_PET, HAWK_PET, SNAKE_PET)
 	if _is_hunter_pet_type(data.tile_type):
 		_activate_hunter_pet(tile, data)
@@ -755,6 +771,16 @@ func _is_hunter_pet_type(tile_type: TileTypes.Type) -> bool:
 func _activate_hunter_pet(tile: Tile, data: PuzzleTileData) -> void:
 	## Activates a Hunter-style pet tile (BEAR_PET, HAWK_PET, SNAKE_PET).
 	## These tiles have their effects defined in click_effect and are consumed on use.
+	## Requires PET_MANA_COST mana to activate.
+
+	# Check mana requirement
+	var fighter := _get_owner_fighter()
+	if not _has_enough_mana_for_pet(fighter):
+		tile_click_failed.emit(tile, "not_enough_mana")
+		return
+
+	# Drain mana cost
+	_drain_pet_mana_cost(fighter)
 
 	# Notify PetSpawner to decrement count
 	if pet_spawner:
@@ -775,6 +801,147 @@ func _activate_hunter_pet(tile: Tile, data: PuzzleTileData) -> void:
 
 	# Consume the pet tile
 	_consume_pet_tile(tile)
+
+
+func _has_enough_mana_for_pet(fighter: Fighter) -> bool:
+	## Checks if the fighter has enough mana to activate a pet tile.
+	if not fighter or not fighter.mana_system:
+		return false
+	return fighter.mana_system.get_mana(fighter, 0) >= PET_MANA_COST
+
+
+func _drain_pet_mana_cost(fighter: Fighter) -> void:
+	## Drains the pet activation mana cost from the fighter.
+	if fighter and fighter.mana_system:
+		fighter.mana_system.drain(fighter, PET_MANA_COST, 0)
+
+
+# --- Alpha Command (Ultimate) Methods ---
+
+func _activate_alpha_command(tile: Tile) -> void:
+	## Activates the Alpha Command tile (Hunter ultimate).
+	## Calls CombatManager.activate_ultimate() and consumes the tile.
+	var fighter := _get_owner_fighter()
+	var combat_mgr := _get_combat_manager()
+
+	if not combat_mgr or not fighter:
+		tile_click_failed.emit(tile, "no_combat_manager")
+		return
+
+	# Activate the ultimate ability
+	var success := combat_mgr.activate_ultimate(fighter)
+	if not success:
+		tile_click_failed.emit(tile, "ultimate_activation_failed")
+		return
+
+	# Visual feedback
+	tile.play_activation_animation()
+
+	# Consume the Alpha Command tile
+	_consume_alpha_command_tile(tile)
+
+
+func _consume_alpha_command_tile(tile: Tile) -> void:
+	## Consume the Alpha Command tile after activation.
+	_alpha_command_on_board = false
+
+	# Find tile position
+	var tile_row := -1
+	var tile_col := -1
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			if grid.get_tile(row, col) == tile:
+				tile_row = row
+				tile_col = col
+				break
+		if tile_row >= 0:
+			break
+
+	if tile_row < 0:
+		return
+
+	# Remove the tile from grid
+	grid.clear_tile(tile_row, tile_col)
+	tile.queue_free()
+
+	# Trigger column fall and refill
+	set_state(BoardState.RESOLVING)
+	_process_alpha_command_tile_removal(tile_row, tile_col)
+
+
+func _process_alpha_command_tile_removal(row: int, col: int) -> void:
+	## Async handler for Alpha Command tile removal cascade.
+	var _result := await _cascade_handler.process_single_removal(row, col)
+	set_state(BoardState.IDLE)
+
+
+func spawn_alpha_command_tile() -> void:
+	## Spawns an Alpha Command tile at a random column (drops from top of board).
+	## Only spawns if there isn't already an Alpha Command tile on the board.
+	if _alpha_command_on_board:
+		return
+
+	# Load tile data if not cached
+	if not _alpha_command_tile_data:
+		_alpha_command_tile_data = preload("res://resources/tiles/alpha_command.tres")
+	if not _alpha_command_tile_data:
+		push_warning("BoardManager: Could not load Alpha Command tile data")
+		return
+
+	# Find a random column to spawn in
+	var col := randi() % Grid.COLS
+
+	# Find the top-most row that has a non-pet, non-alpha-command tile to replace
+	var target_row := _find_top_tile_row(col)
+	if target_row < 0:
+		# Try other columns
+		for c in range(Grid.COLS):
+			if c == col:
+				continue
+			target_row = _find_top_tile_row(c)
+			if target_row >= 0:
+				col = c
+				break
+
+	if target_row < 0:
+		push_warning("BoardManager: No valid position to spawn Alpha Command tile")
+		return
+
+	# Check if the top tile is a special tile (pet or alpha command)
+	var existing_tile := grid.get_tile(target_row, col)
+	if existing_tile and existing_tile.tile_data:
+		var existing_type: int = existing_tile.tile_data.tile_type
+		if _is_hunter_pet_type(existing_type) or existing_type == TileTypes.Type.ALPHA_COMMAND:
+			# Find a column without a special tile at the top
+			for c in range(Grid.COLS):
+				var row := _find_top_tile_row(c)
+				if row >= 0:
+					var t := grid.get_tile(row, c)
+					if t and t.tile_data:
+						var tt: int = t.tile_data.tile_type
+						if not _is_hunter_pet_type(tt) and tt != TileTypes.Type.ALPHA_COMMAND:
+							target_row = row
+							col = c
+							existing_tile = t
+							break
+
+	# Remove the existing tile
+	if existing_tile:
+		grid.clear_tile(target_row, col)
+		existing_tile.queue_free()
+
+	# Create the Alpha Command tile
+	var tile: Tile = _tile_spawner.tile_scene.instantiate()
+	tile.setup(_alpha_command_tile_data, Vector2i(target_row, col))
+	_place_tile(tile, target_row, col)
+
+	_alpha_command_on_board = true
+	_clickable_dirty = true
+
+
+func has_alpha_command_on_board() -> bool:
+	## Returns true if an Alpha Command tile is currently on the board.
+	return _alpha_command_on_board
 
 
 func _get_pattern_for_pet_type(pet_type: TileTypes.Type) -> SequencePattern:
@@ -950,10 +1117,19 @@ func set_owner_fighter(fighter: Fighter) -> void:
 	if fighter:
 		if not fighter.mana_changed.is_connected(_on_fighter_mana_changed):
 			fighter.mana_changed.connect(_on_fighter_mana_changed)
+		# Connect to ultimate ready signal to spawn Alpha Command tile
+		if not fighter.ultimate_ready.is_connected(_on_fighter_ultimate_ready):
+			fighter.ultimate_ready.connect(_on_fighter_ultimate_ready)
 
 
 func _on_fighter_mana_changed(_bar_index: int, _current: int, _max_value: int) -> void:
 	_clickable_dirty = true
+
+
+func _on_fighter_ultimate_ready() -> void:
+	## Called when the fighter's mana bars are all full (ultimate ready).
+	## Spawns an Alpha Command tile if one isn't already on the board.
+	spawn_alpha_command_tile()
 
 
 func _update_clickable_highlights() -> void:

@@ -14,6 +14,8 @@ func set_mana_system(mana_system) -> void:
 	_mana_system = mana_system
 
 
+const PET_MANA_COST: int = 33  # Must match BoardManager.PET_MANA_COST
+
 func can_click(tile, fighter: Fighter) -> bool:
 	if not tile or not tile.tile_data:
 		return false
@@ -27,6 +29,9 @@ func can_click(tile, fighter: Fighter) -> bool:
 			return false
 
 		TileTypes.ClickCondition.ALWAYS:
+			# Hunter pet tiles require mana even with ALWAYS condition
+			if _is_hunter_pet_type(data.tile_type):
+				return _has_enough_mana_for_pet(fighter)
 			return true
 
 		TileTypes.ClickCondition.SEQUENCE_COMPLETE:
@@ -46,6 +51,18 @@ func can_click(tile, fighter: Fighter) -> bool:
 			return _check_custom_condition(tile, fighter)
 
 	return false
+
+
+func _is_hunter_pet_type(tile_type: int) -> bool:
+	## Checks if the tile type is a Hunter pet (BEAR_PET, HAWK_PET, SNAKE_PET).
+	return tile_type in [TileTypes.Type.BEAR_PET, TileTypes.Type.HAWK_PET, TileTypes.Type.SNAKE_PET]
+
+
+func _has_enough_mana_for_pet(fighter: Fighter) -> bool:
+	## Checks if the fighter has enough mana to activate a pet tile.
+	if not _mana_system or not fighter:
+		return false
+	return _mana_system.get_mana(fighter, 0) >= PET_MANA_COST
 
 
 func start_cooldown(tile) -> void:
