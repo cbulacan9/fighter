@@ -71,8 +71,9 @@ The Hunter builds combos by matching tiles in specific sequences. Only **player-
 |------|--------|
 | Physical Attack | Deals damage to opponent |
 | Shield | Adds defensive protection |
-| Focus | Builds stacks (1/2/3 for 3/4/5-match) that boost next attack by 20% per stack (max 5 stacks, 100% bonus). Consumed on next Physical match. |
-| Empty Box | Filler tile (low spawn rate); match to clear |
+| Focus | Builds stacks (1/2/3 for 3/4/5-match) that boost next attack by 7.5% per stack (max 10 stacks, 75% bonus). Consumed on next Physical match. |
+| Mana Crystal | Grants bonus mana (3/5/8 for 3/4/5-match) on top of base match mana. Increases tile variety to reduce cascade frequency. |
+| Empty Box | Filler tile (low spawn rate); matchable to clear. Also cleared when adjacent to other matches. |
 
 ### Specialty Tiles: Pets
 
@@ -94,7 +95,7 @@ Three distinct Pet tile types that spawn when their combo sequence completes.
 
 ### Pet Abilities
 
-Click a Pet tile to activate its ability.
+Click a Pet tile to activate its ability. **Costs 33 mana per activation** (allows 3 activations per full mana bar). Pet tiles can be activated during cascades.
 
 | Ability | Sequence | Offensive Effect | Self Buff (3x stack) |
 |---------|----------|------------------|----------------------|
@@ -116,11 +117,14 @@ Click a Pet tile to activate its ability.
 
 **Alpha Command**
 
-Requires full mana bar.
+Requires full mana bar. When mana is full, an Alpha Command tile spawns on the board. Click it to activate.
 
-- 2x multiplier to pet ability offensive effects
-- 2x multiplier to self-buffs
-- Multiplier decays over time
+**Activation Effects:**
+- Drains all mana
+- Restores full armor (capped at max HP: 150)
+- Grants 3 free pet activations (no mana cost)
+- 2x multiplier to pet ability offensive effects while free activations remain
+- 60-second cooldown before another Alpha Command tile can spawn
 
 ---
 

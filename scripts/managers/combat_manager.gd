@@ -63,6 +63,13 @@ func _setup_effect_processor() -> void:
 
 
 func initialize(player_data: FighterData, enemy_data: FighterData) -> void:
+	# Clear any existing status effects before reinitializing
+	if status_effect_manager:
+		if player_fighter:
+			status_effect_manager.remove_all(player_fighter)
+		if enemy_fighter:
+			status_effect_manager.remove_all(enemy_fighter)
+
 	if not player_fighter:
 		player_fighter = Fighter.new()
 		add_child(player_fighter)
@@ -74,8 +81,18 @@ func initialize(player_data: FighterData, enemy_data: FighterData) -> void:
 	player_fighter.initialize(player_data)
 	enemy_fighter.initialize(enemy_data)
 
+	# Disconnect old signals before reconnecting to avoid duplicates
+	if player_fighter.defeated.is_connected(_on_fighter_defeated):
+		player_fighter.defeated.disconnect(_on_fighter_defeated)
+	if enemy_fighter.defeated.is_connected(_on_fighter_defeated):
+		enemy_fighter.defeated.disconnect(_on_fighter_defeated)
+
 	player_fighter.defeated.connect(_on_fighter_defeated.bind(player_fighter))
 	enemy_fighter.defeated.connect(_on_fighter_defeated.bind(enemy_fighter))
+
+	# Reset mana system before setting up new configs
+	if mana_system:
+		mana_system.reset_all()
 
 	# Setup mana for fighters (if they have mana config)
 	_setup_fighter_mana(player_fighter, player_data)
@@ -190,6 +207,11 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 		TileTypes.Type.FILLER:
 			pass  # No combat effect
 
+		TileTypes.Type.MANA:
+			var mana_value: int = _tile_data_cache[TileTypes.Type.MANA].get_value(match_result.count)
+			if mana_system and not source.is_mana_blocked():
+				mana_system.add_mana(source, mana_value)
+
 		TileTypes.Type.FOCUS:
 			# Stacks based on match count: 3=1, 4=2, 5=3
 			var stacks := match_result.count - 2
@@ -209,11 +231,11 @@ func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 			if attack_bonus > 0:
 				final_damage = int(float(final_damage) * (1.0 + attack_bonus))
 
-		# Apply Focus bonus (20% per stack, consumes all stacks)
+		# Apply Focus bonus (7.5% per stack, consumes all stacks)
 		if source != null and status_effect_manager.has_effect(source, StatusTypes.StatusType.FOCUS):
 			var focus_stacks := status_effect_manager.get_stacks(source, StatusTypes.StatusType.FOCUS)
 			if focus_stacks > 0:
-				var focus_bonus := 0.2 * float(focus_stacks)
+				var focus_bonus := 0.075 * float(focus_stacks)
 				final_damage = int(float(final_damage) * (1.0 + focus_bonus))
 				focus_stacks_used = focus_stacks
 				status_effect_manager.remove(source, StatusTypes.StatusType.FOCUS)
@@ -318,6 +340,7 @@ func _load_tile_data() -> void:
 	_tile_data_cache[TileTypes.Type.LIGHTNING] = preload("res://resources/tiles/lightning.tres")
 	_tile_data_cache[TileTypes.Type.FILLER] = preload("res://resources/tiles/filler.tres")
 	_tile_data_cache[TileTypes.Type.FOCUS] = preload("res://resources/tiles/focus.tres")
+	_tile_data_cache[TileTypes.Type.MANA] = preload("res://resources/tiles/mana.tres")
 
 
 func _get_effect_value(tile_type: TileTypes.Type, count: int) -> int:
@@ -366,15 +389,27 @@ func activate_ultimate(fighter: Fighter) -> bool:
 	if ability.requires_full_mana:
 		if not mana_system or not mana_system.can_use_ultimate(fighter):
 			return false
+	elif ability.mana_cost > 0:
+		# Check if fighter has enough mana for the fixed cost
+		if not mana_system or mana_system.get_mana(fighter, 0) < ability.mana_cost:
+			return false
 
 	# Drain mana
 	if ability.drains_all_mana and mana_system:
 		mana_system.drain_all(fighter)
+	elif ability.mana_cost > 0 and mana_system:
+		mana_system.drain(fighter, ability.mana_cost, 0)
 
-	# Apply effects
-	for effect_data in ability.effects:
-		if effect_data and effect_processor:
-			effect_processor.process_effect(effect_data, fighter, 0)
+	# Restore full armor
+	var armor_cap: int = fighter.max_armor if fighter.max_armor > 0 else fighter.max_hp
+	var armor_restored := fighter.add_armor(armor_cap - fighter.armor)
+	if armor_restored > 0:
+		armor_gained.emit(fighter, armor_restored)
+
+	# Grant 3 free pet activations for Alpha Command
+	# This replaces the time-based status effect
+	fighter.alpha_command_free_activations = 3
+	fighter.alpha_command_activated.emit()
 
 	# Visual feedback
 	_show_ultimate_activation(fighter, ability)
