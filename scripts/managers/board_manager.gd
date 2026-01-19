@@ -777,6 +777,7 @@ func _activate_hunter_pet(tile: Tile, data: PuzzleTileData) -> void:
 	var fighter := _get_owner_fighter()
 	if not _has_enough_mana_for_pet(fighter):
 		tile_click_failed.emit(tile, "not_enough_mana")
+		tile.play_reject_animation()  # Visual feedback for failed click
 		return
 
 	# Drain mana cost
@@ -1147,6 +1148,8 @@ func _update_clickable_highlights() -> void:
 
 	# Update each tile's clickable highlight based on current conditions
 	var fighter := _get_owner_fighter()
+	var has_pet_mana := _has_enough_mana_for_pet(fighter)
+
 	for tile in grid.get_all_tiles():
 		if not tile or not tile.tile_data:
 			continue
@@ -1157,9 +1160,16 @@ func _update_clickable_highlights() -> void:
 			if _click_condition_checker:
 				can_click = _click_condition_checker.can_click(tile, fighter)
 			tile.update_clickable_state(can_click)
+
+			# Dim Hunter pet tiles when mana is insufficient
+			if _is_hunter_pet_type(tile.tile_data.tile_type):
+				tile.set_dimmed(not has_pet_mana)
+			else:
+				tile.set_dimmed(false)
 		else:
 			# Ensure non-clickable tiles don't have highlight
 			tile.update_clickable_state(false)
+			tile.set_dimmed(false)
 
 
 # --- Helper Methods ---

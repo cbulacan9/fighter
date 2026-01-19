@@ -13,10 +13,13 @@ var tile_data: PuzzleTileData
 var grid_position: Vector2i
 var is_clickable_highlighted: bool = false
 var is_hidden: bool = false
+var is_dimmed: bool = false  # For tiles that can't be activated (e.g., no mana)
 
 var _highlight_tween: Tween
 var _activation_tween: Tween
 var _hidden_tween: Tween
+var _dimmed_tween: Tween
+var _reject_tween: Tween
 
 
 func _ready() -> void:
@@ -35,6 +38,12 @@ func _notification(what: int) -> void:
 		if _hidden_tween:
 			_hidden_tween.kill()
 			_hidden_tween = null
+		if _dimmed_tween:
+			_dimmed_tween.kill()
+			_dimmed_tween = null
+		if _reject_tween:
+			_reject_tween.kill()
+			_reject_tween = null
 
 
 func setup(data: PuzzleTileData, pos: Vector2i) -> void:
@@ -207,3 +216,65 @@ func _show_revealed_state() -> void:
 	# Flash briefly then return to normal
 	_hidden_tween.tween_property(self, "modulate", Color(1.5, 1.5, 1.5, 1.0), 0.1)
 	_hidden_tween.tween_property(self, "modulate", Color.WHITE, 0.15)
+
+
+# --- Dimmed State Management (for tiles without enough mana) ---
+
+func set_dimmed(dimmed: bool) -> void:
+	if is_dimmed == dimmed:
+		return
+
+	is_dimmed = dimmed
+
+	if _dimmed_tween:
+		_dimmed_tween.kill()
+		_dimmed_tween = null
+
+	if dimmed:
+		_show_dimmed_state()
+	else:
+		_clear_dimmed_state()
+
+
+func _show_dimmed_state() -> void:
+	# Dim the tile to show it can't be clicked
+	_dimmed_tween = create_tween()
+	_dimmed_tween.set_ease(Tween.EASE_OUT)
+	_dimmed_tween.set_trans(Tween.TRANS_QUAD)
+
+	# Gray out the tile
+	var dimmed_color := Color(0.4, 0.4, 0.5, 0.7)
+	_dimmed_tween.tween_property(self, "modulate", dimmed_color, 0.2)
+
+
+func _clear_dimmed_state() -> void:
+	# Return to normal state
+	_dimmed_tween = create_tween()
+	_dimmed_tween.set_ease(Tween.EASE_OUT)
+	_dimmed_tween.set_trans(Tween.TRANS_QUAD)
+	_dimmed_tween.tween_property(self, "modulate", Color.WHITE, 0.2)
+
+
+# --- Click Rejection Feedback ---
+
+func play_reject_animation() -> void:
+	## Plays a shake animation to indicate click was rejected (e.g., not enough mana)
+	if _reject_tween:
+		_reject_tween.kill()
+
+	var original_pos := position
+
+	_reject_tween = create_tween()
+	_reject_tween.set_ease(Tween.EASE_OUT)
+	_reject_tween.set_trans(Tween.TRANS_QUAD)
+
+	# Quick shake left-right
+	_reject_tween.tween_property(self, "position", original_pos + Vector2(-5, 0), 0.05)
+	_reject_tween.tween_property(self, "position", original_pos + Vector2(5, 0), 0.05)
+	_reject_tween.tween_property(self, "position", original_pos + Vector2(-3, 0), 0.05)
+	_reject_tween.tween_property(self, "position", original_pos + Vector2(3, 0), 0.05)
+	_reject_tween.tween_property(self, "position", original_pos, 0.05)
+
+	# Flash red briefly
+	_reject_tween.parallel().tween_property(self, "modulate", Color(1.5, 0.5, 0.5, 1.0), 0.1)
+	_reject_tween.tween_property(self, "modulate", Color.WHITE if not is_dimmed else Color(0.4, 0.4, 0.5, 0.7), 0.15)
