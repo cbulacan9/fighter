@@ -34,6 +34,13 @@ const COLOR_INFO := Color(0.6, 0.6, 0.6)       # Gray
 
 
 func _ready() -> void:
+	# Disable entirely in non-debug builds for performance
+	if not OS.is_debug_build():
+		set_process(false)
+		set_process_input(false)
+		visible = false
+		return
+
 	# Always create UI programmatically
 	_create_ui()
 	visible = false  # Hidden by default
@@ -109,6 +116,10 @@ func _input(event: InputEvent) -> void:
 
 ## Sets up the debugger with a sequence tracker
 func setup(sequence_tracker: SequenceTracker) -> void:
+	# Skip setup in non-debug builds
+	if not OS.is_debug_build():
+		return
+
 	# Disconnect from old tracker
 	if _sequence_tracker:
 		_disconnect_signals()
@@ -206,11 +217,28 @@ func _log(text: String, color: Color = Color.WHITE) -> void:
 	}
 	_log_entries.append(entry)
 
-	# Trim old entries
+	# Add new label directly instead of rebuilding entire display
+	_add_log_label(entry)
+
+	# Trim old entries and remove corresponding labels
 	while _log_entries.size() > MAX_LOG_LINES:
 		_log_entries.pop_front()
+		if _log_container and _log_container.get_child_count() > 0:
+			var oldest_label := _log_container.get_child(0)
+			_log_container.remove_child(oldest_label)
+			oldest_label.queue_free()
 
-	_update_display()
+
+func _add_log_label(entry: Dictionary) -> void:
+	if not _log_container:
+		return
+
+	var label := Label.new()
+	label.text = entry.text
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", entry.color)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_log_container.add_child(label)
 
 
 func _update_display() -> void:
@@ -221,14 +249,9 @@ func _update_display() -> void:
 	for child in _log_container.get_children():
 		child.queue_free()
 
-	# Add new labels
+	# Add labels for all entries
 	for entry in _log_entries:
-		var label := Label.new()
-		label.text = entry.text
-		label.add_theme_font_size_override("font_size", 11)
-		label.add_theme_color_override("font_color", entry.color)
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD
-		_log_container.add_child(label)
+		_add_log_label(entry)
 
 
 func _on_clear_pressed() -> void:

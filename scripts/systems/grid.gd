@@ -6,10 +6,13 @@ const COLS: int = 8
 const CELL_SIZE: Vector2 = Vector2(80, 80)
 
 var _tiles: Array[Array] = []
+var _all_tiles_cache: Array[Tile] = []
+var _cache_dirty: bool = true
 
 
 func initialize() -> void:
 	_tiles.clear()
+	_cache_dirty = true
 	for row in range(ROWS):
 		var row_array: Array[Tile] = []
 		row_array.resize(COLS)
@@ -26,6 +29,7 @@ func get_tile(row: int, col: int) -> Tile:
 func set_tile(row: int, col: int, tile: Tile) -> void:
 	var wrapped := wrap_position(row, col)
 	_tiles[wrapped.x][wrapped.y] = tile
+	_cache_dirty = true
 	if tile:
 		tile.grid_position = wrapped
 
@@ -34,6 +38,7 @@ func clear_tile(row: int, col: int) -> Tile:
 	var wrapped := wrap_position(row, col)
 	var tile: Tile = _tiles[wrapped.x][wrapped.y]
 	_tiles[wrapped.x][wrapped.y] = null
+	_cache_dirty = true
 	return tile
 
 
@@ -88,6 +93,7 @@ func shift_row(row_index: int, offset: int) -> void:
 		_tiles[wrapped_row][new_col] = old_row[col]
 		if old_row[col]:
 			old_row[col].grid_position = Vector2i(wrapped_row, new_col)
+	_cache_dirty = true
 
 
 func shift_column(col_index: int, offset: int) -> void:
@@ -98,17 +104,26 @@ func shift_column(col_index: int, offset: int) -> void:
 		_tiles[new_row][wrapped_col] = old_col[row]
 		if old_col[row]:
 			old_col[row].grid_position = Vector2i(new_row, wrapped_col)
+	_cache_dirty = true
 
 
 func get_all_tiles() -> Array[Tile]:
-	var result: Array[Tile] = []
 	if _tiles.is_empty():
-		return result
+		return []
+
+	# Return cached array if not dirty
+	if not _cache_dirty:
+		return _all_tiles_cache
+
+	# Rebuild cache
+	_all_tiles_cache.clear()
 	for row in range(ROWS):
 		for col in range(COLS):
 			if _tiles[row][col]:
-				result.append(_tiles[row][col])
-	return result
+				_all_tiles_cache.append(_tiles[row][col])
+
+	_cache_dirty = false
+	return _all_tiles_cache
 
 
 func get_empty_positions() -> Array[Vector2i]:

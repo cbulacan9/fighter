@@ -12,5 +12,5 @@ tick_interval = 1.0
 max_stacks = 5
 stack_behavior = 0
 tick_behavior = 1
-base_value = 10.0
+base_value = 15.0
 value_per_stack = 5.0

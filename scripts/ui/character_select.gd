@@ -9,6 +9,7 @@ signal back_pressed()
 
 @export var character_card_scene: PackedScene
 
+@onready var title_label: Label = $VBoxContainer/Title
 @onready var cards_container: GridContainer = $VBoxContainer/CardsContainer
 @onready var description_panel: Panel = $VBoxContainer/DescriptionPanel
 @onready var description_label: Label = $VBoxContainer/DescriptionPanel/MarginContainer/VBoxContainer/Description
@@ -58,10 +59,14 @@ func _populate_cards() -> void:
 	for char_data in _characters:
 		var card := _create_character_card(char_data)
 		cards_container.add_child(card)
+		# Setup must be called AFTER add_child so @onready vars are initialized
+		var unlocked := _is_unlocked(char_data)
+		card.setup(char_data, unlocked)
 		_character_cards.append(card)
 
 
 ## Creates a character card for the given character data.
+## Note: setup() must be called AFTER adding the card to the tree.
 func _create_character_card(char_data: CharacterData) -> CharacterCard:
 	var card: CharacterCard
 
@@ -76,10 +81,7 @@ func _create_character_card(char_data: CharacterData) -> CharacterCard:
 			push_error("CharacterSelect: Could not load character_card.tscn")
 			return null
 
-	var unlocked := _is_unlocked(char_data)
-	card.setup(char_data, unlocked)
-
-	# Connect signals
+	# Connect signals (can be done before add_child)
 	card.pressed.connect(_on_card_pressed.bind(char_data))
 
 	return card
@@ -169,3 +171,19 @@ func select_character(character_id: String) -> void:
 		if char_data and char_data.character_id == character_id and card.is_unlocked():
 			_on_card_pressed(char_data)
 			return
+
+
+## Sets the title text (e.g., "SELECT PLAYER 1" or "SELECT PLAYER 2").
+func set_title(text: String) -> void:
+	if title_label:
+		title_label.text = text
+
+
+## Shows the character select screen.
+func show_screen() -> void:
+	visible = true
+
+
+## Hides the character select screen.
+func hide_screen() -> void:
+	visible = false

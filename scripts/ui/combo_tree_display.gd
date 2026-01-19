@@ -28,6 +28,7 @@ const MAX_PET_PER_TYPE := 3
 var _sequence_tracker: SequenceTracker
 var _pet_spawner: PetSpawner
 var _pattern_rows: Dictionary = {}  # {pattern_name: {label: Label, icons: Array[Control], pattern: SequencePattern, count_label: Label}}
+var _active_tweens: Dictionary = {}  # {pattern_name: Array[Tween]} - track active tweens to prevent accumulation
 
 @onready var _vbox: VBoxContainer = $VBox
 
@@ -228,14 +229,32 @@ func _on_tree_progressed(pattern_name: String, progress: int, _total: int) -> vo
 			_set_icon_modulate(icons[i], BRIGHT_MODULATE)
 
 
+## Kills all active tweens for a pattern to prevent accumulation.
+func _kill_pattern_tweens(pattern_name: String) -> void:
+	if pattern_name in _active_tweens:
+		for tween in _active_tweens[pattern_name]:
+			if tween and tween.is_valid():
+				tween.kill()
+		_active_tweens[pattern_name].clear()
+
+
+## Tracks a tween for a pattern so it can be killed later.
+func _track_tween(pattern_name: String, tween: Tween) -> void:
+	if pattern_name not in _active_tweens:
+		_active_tweens[pattern_name] = []
+	_active_tweens[pattern_name].append(tween)
+
+
 ## Signal handler: tree died - red flash then dim all icons.
 func _on_tree_died(pattern_name: String) -> void:
 	if pattern_name in _pattern_rows:
+		_kill_pattern_tweens(pattern_name)
 		var row: Dictionary = _pattern_rows[pattern_name]
 		var icons: Array = row.icons
 		for icon in icons:
 			# Flash red then dim
 			var tween := create_tween()
+			_track_tween(pattern_name, tween)
 			tween.tween_callback(_set_icon_modulate.bind(icon, DEATH_COLOR))
 			tween.tween_interval(0.1)
 			tween.tween_callback(_set_icon_modulate.bind(icon, DIM_MODULATE)).set_delay(0.3)
@@ -245,11 +264,13 @@ func _on_tree_died(pattern_name: String) -> void:
 func _on_sequence_completed(pet_type: int) -> void:
 	var pattern_name := _get_pattern_name_for_pet(pet_type)
 	if pattern_name in _pattern_rows:
+		_kill_pattern_tweens(pattern_name)
 		var row: Dictionary = _pattern_rows[pattern_name]
 		var icons: Array = row.icons
 		for icon in icons:
 			# Glow yellow then dim
 			var tween := create_tween()
+			_track_tween(pattern_name, tween)
 			tween.tween_callback(_set_icon_glow.bind(icon, 1.0))
 			tween.tween_callback(_set_icon_modulate.bind(icon, COMPLETE_COLOR))
 			tween.tween_interval(0.15)
@@ -316,6 +337,11 @@ func _get_tile_color(tile_type: int) -> Color:
 
 ## Disconnects from sequence tracker and pet spawner signals.
 func clear() -> void:
+	# Kill all active tweens to prevent memory leaks
+	for pattern_name in _active_tweens:
+		_kill_pattern_tweens(pattern_name)
+	_active_tweens.clear()
+
 	if _sequence_tracker:
 		if _sequence_tracker.tree_started.is_connected(_on_tree_started):
 			_sequence_tracker.tree_started.disconnect(_on_tree_started)
@@ -357,8 +383,11 @@ func _on_pet_spawn_blocked(pet_type: int) -> void:
 		var row: Dictionary = _pattern_rows[pattern_name]
 		var count_label: Label = row.get("count_label")
 		if count_label:
+			# Kill any existing tweens for this pattern before creating new one
+			_kill_pattern_tweens(pattern_name)
 			# Flash the count label orange to indicate max
 			var tween := create_tween()
+			_track_tween(pattern_name, tween)
 			tween.tween_property(count_label, "modulate", MAX_POP_COLOR, 0.1)
 			tween.tween_property(count_label, "modulate", Color.WHITE, 0.3).set_delay(0.5)
 

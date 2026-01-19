@@ -43,23 +43,24 @@ func setup(fighter: Fighter, status_manager: StatusEffectManager = null) -> void
 	if _status_manager:
 		if not _status_manager.effect_stacked.is_connected(_on_effect_stacked):
 			_status_manager.effect_stacked.connect(_on_effect_stacked)
+		# Connect to effect_ticked signal for duration updates (replaces per-frame polling)
+		if not _status_manager.effect_ticked.is_connected(_on_effect_ticked):
+			_status_manager.effect_ticked.connect(_on_effect_ticked)
 
 	# Initial refresh to show any existing effects
 	_refresh_all()
 
 
-func _process(_delta: float) -> void:
-	"""Update duration displays for all active icons."""
-	if _fighter == null:
+func _on_effect_ticked(target: Fighter, effect: StatusEffect, _damage: float) -> void:
+	"""Called when a status effect ticks - update only the relevant icon."""
+	if target != _fighter:
 		return
 
-	# Update duration bars for all icons
-	for effect_type in _icons.keys():
+	var effect_type := effect.data.effect_type
+	if _icons.has(effect_type):
 		var icon: StatusEffectIcon = _icons[effect_type]
 		if icon and is_instance_valid(icon):
-			var effect := _get_effect_for_type(effect_type)
-			if effect:
-				icon.update_display(effect)
+			icon.update_display(effect)
 
 
 func _on_status_effect_applied(effect: StatusEffect) -> void:
@@ -197,6 +198,8 @@ func _cleanup_connections() -> void:
 	if _status_manager:
 		if _status_manager.effect_stacked.is_connected(_on_effect_stacked):
 			_status_manager.effect_stacked.disconnect(_on_effect_stacked)
+		if _status_manager.effect_ticked.is_connected(_on_effect_ticked):
+			_status_manager.effect_ticked.disconnect(_on_effect_ticked)
 
 
 func _notification(what: int) -> void:

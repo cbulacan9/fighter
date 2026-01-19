@@ -4,6 +4,7 @@ signal state_changed(new_state: GameState)
 
 enum GameState {
 	MODE_SELECT,
+	CHARACTER_SELECT,
 	INIT,
 	COUNTDOWN,
 	BATTLE,
@@ -51,7 +52,11 @@ var damage_spawner: DamageNumberSpawner
 var player_stun_overlay: StunOverlay
 var enemy_stun_overlay: StunOverlay
 var mode_select_screen: ModeSelectScreen
+var character_select_screen: CharacterSelect
 var ability_announcement_spawner: AbilityAnnouncementSpawner
+
+# Character selection tracking
+var _selecting_player: bool = true
 
 var _stats_tracker: StatsTracker
 var _player_data: FighterData
@@ -75,10 +80,6 @@ func _initialize_character_registry() -> void:
 	unlock_manager = UnlockManager.new()
 	unlock_manager.setup(character_registry)
 	unlock_manager.character_unlocked.connect(_on_character_unlocked)
-
-	# DEBUG: Force Hunter for testing (remove after testing)
-	selected_player_character = character_registry.get_character("hunter")
-	selected_enemy_character = character_registry.get_character("hunter")
 
 
 func _process(delta: float) -> void:
@@ -137,6 +138,7 @@ func _find_node_references() -> void:
 		player_stun_overlay = ui.get_node_or_null("PlayerStunOverlay")
 		enemy_stun_overlay = ui.get_node_or_null("EnemyStunOverlay")
 		mode_select_screen = ui.get_node_or_null("ModeSelectScreen")
+		character_select_screen = ui.get_node_or_null("CharacterSelectScreen")
 		ability_announcement_spawner = ui.get_node_or_null("AbilityAnnouncements")
 
 	# Position boards and stun overlays using HUD layout constants
@@ -182,6 +184,11 @@ func _connect_signals() -> void:
 	# ModeSelectScreen signals
 	if mode_select_screen:
 		mode_select_screen.mode_selected.connect(_on_mode_selected)
+
+	# CharacterSelectScreen signals
+	if character_select_screen:
+		character_select_screen.character_selected.connect(_on_character_selected)
+		character_select_screen.back_pressed.connect(_on_character_select_back)
 
 	# GameOverlay signals
 	if game_overlay:
@@ -236,6 +243,10 @@ func _enter_state(state: GameState) -> void:
 			if mode_select_screen:
 				mode_select_screen.show_screen()
 
+		GameState.CHARACTER_SELECT:
+			_disable_gameplay()
+			_show_character_select()
+
 		GameState.INIT:
 			_setup_match()
 			change_state(GameState.COUNTDOWN)
@@ -275,6 +286,9 @@ func _exit_state(state: GameState) -> void:
 		GameState.MODE_SELECT:
 			if mode_select_screen:
 				mode_select_screen.hide_screen()
+		GameState.CHARACTER_SELECT:
+			if character_select_screen:
+				character_select_screen.hide_screen()
 		GameState.PAUSED:
 			if game_overlay:
 				game_overlay.hide_pause()
@@ -466,7 +480,58 @@ func _on_mode_selected(mode: int, difficulty: int) -> void:
 	# Convert the ints to our enums
 	current_mode = mode as GameMode
 	current_difficulty = difficulty as Difficulty
-	change_state(GameState.INIT)
+
+	# Reset selection state and clear previous selections
+	_selecting_player = true
+	selected_player_character = null
+	selected_enemy_character = null
+
+	change_state(GameState.CHARACTER_SELECT)
+
+
+## Shows character select screen with appropriate title for current selection phase.
+func _show_character_select() -> void:
+	if not character_select_screen:
+		return
+
+	# Setup the screen with available characters
+	var characters := get_all_characters()
+	var unlocked := get_unlocked_character_ids()
+	character_select_screen.setup(characters, unlocked)
+
+	# Set title based on which player we're selecting for
+	if _selecting_player:
+		character_select_screen.set_title("SELECT PLAYER 1")
+	else:
+		character_select_screen.set_title("SELECT PLAYER 2")
+
+	character_select_screen.show_screen()
+
+
+## Called when a character is selected on the character select screen.
+func _on_character_selected(character_id: String) -> void:
+	if _selecting_player:
+		# First selection - store as player character
+		select_player_character(character_id)
+		_selecting_player = false
+		# Show again for P2 selection
+		_show_character_select()
+	else:
+		# Second selection - store as enemy character and start match
+		select_enemy_character(character_id)
+		change_state(GameState.INIT)
+
+
+## Called when back is pressed on character select screen.
+func _on_character_select_back() -> void:
+	if _selecting_player:
+		# On P1 selection, back goes to mode select
+		change_state(GameState.MODE_SELECT)
+	else:
+		# On P2 selection, back goes to P1 selection
+		_selecting_player = true
+		selected_player_character = null
+		_show_character_select()
 
 
 func _on_countdown_finished() -> void:

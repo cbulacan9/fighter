@@ -31,6 +31,7 @@ const FLOAT_DISTANCE: float = 50.0
 @onready var label: Label = $Label
 
 var _tween: Tween
+var _on_finished_callback: Callable
 
 
 func setup(value: float, type: EffectType, pos: Vector2) -> void:
@@ -54,9 +55,11 @@ func setup(value: float, type: EffectType, pos: Vector2) -> void:
 	position.x += randf_range(-10.0, 10.0)
 
 
-func play() -> void:
+func play(on_finished: Callable = Callable()) -> void:
 	if _tween:
 		_tween.kill()
+
+	_on_finished_callback = on_finished
 
 	_tween = create_tween()
 	_tween.set_parallel(true)
@@ -74,5 +77,12 @@ func play() -> void:
 	_tween.tween_property(self, "modulate:a", 0.0, ANIMATION_DURATION * 0.3) \
 		.set_delay(ANIMATION_DURATION * 0.7)
 
-	# Queue free when done
-	_tween.chain().tween_callback(queue_free)
+	# Return to pool or queue free when done
+	_tween.chain().tween_callback(_on_animation_finished)
+
+
+func _on_animation_finished() -> void:
+	if _on_finished_callback.is_valid():
+		_on_finished_callback.call(self)
+	else:
+		queue_free()

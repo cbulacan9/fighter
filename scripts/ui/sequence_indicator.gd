@@ -18,36 +18,15 @@ const PULSE_SPEED := 8.0  # Speed of pulse animation
 
 var _sequence_tracker: SequenceTracker
 var _history_slots: Array[Control] = []
+var _slot_glows: Array[ColorRect] = []  # Cached glow references
 var _highlighted_indices: Array[int] = []
-var _highlight_timer: float = 0.0
+var _highlight_tween: Tween
+var _fade_tween: Tween
 
 
 func _ready() -> void:
 	_create_history_slots()
 	_update_display()
-
-
-func _process(delta: float) -> void:
-	# Animate and fade out highlights over time
-	if _highlight_timer > 0:
-		_highlight_timer -= delta
-
-		# Pulse animation for highlighted slots
-		var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.001 * PULSE_SPEED) * 0.08
-		var fade := minf(_highlight_timer / 0.5, 1.0)  # Fade out in last 0.5 seconds
-
-		for idx in _highlighted_indices:
-			if idx >= 0 and idx < _history_slots.size():
-				var slot := _history_slots[idx]
-				slot.scale = Vector2.ONE * HIGHLIGHT_SCALE * pulse
-
-				# Fade the glow
-				var glow := slot.get_node_or_null("Glow") as ColorRect
-				if glow:
-					glow.modulate.a = fade
-
-		if _highlight_timer <= 0:
-			_clear_highlights()
 
 
 ## Creates the 10 empty history slots
@@ -59,12 +38,16 @@ func _create_history_slots() -> void:
 	for child in history_container.get_children():
 		child.queue_free()
 	_history_slots.clear()
+	_slot_glows.clear()
 
-	# Create slots
+	# Create slots and cache glow references
 	for i in range(HISTORY_SIZE):
 		var slot := _create_empty_slot()
 		history_container.add_child(slot)
 		_history_slots.append(slot)
+		# Cache glow node reference
+		var glow := slot.get_node_or_null("Glow") as ColorRect
+		_slot_glows.append(glow)
 
 
 func _create_empty_slot() -> Control:
@@ -192,16 +175,16 @@ func _highlight_slots(indices: Array) -> void:
 		if idx >= 0 and idx < _history_slots.size():
 			var slot := _history_slots[idx]
 
-			# Show the glow border
-			var glow := slot.get_node_or_null("Glow") as ColorRect
-			if glow:
-				glow.visible = true
-				glow.modulate.a = 1.0
+			# Show the glow border (use cached reference)
+			if idx < _slot_glows.size():
+				var glow := _slot_glows[idx]
+				if glow:
+					glow.visible = true
+					glow.modulate.a = 1.0
 
 			# Brighten the tile color
 			var color_rect := slot.get_node_or_null("TileColor") as ColorRect
 			if color_rect and color_rect.visible:
-				# Store original color and brighten it
 				var bright_color := color_rect.color.lightened(0.4)
 				color_rect.color = bright_color
 
@@ -209,17 +192,87 @@ func _highlight_slots(indices: Array) -> void:
 			slot.scale = Vector2.ONE * HIGHLIGHT_SCALE
 
 	_highlighted_indices.assign(indices)
-	_highlight_timer = HIGHLIGHT_DURATION
+
+	# Start tween-based pulse animation
+	_start_pulse_tween()
+
+	# Start fade out tween (fades glow in last 0.5 seconds)
+	_start_fade_tween()
+
+
+func _start_pulse_tween() -> void:
+	"""Start a looping pulse animation using a tween."""
+	if _highlight_tween:
+		_highlight_tween.kill()
+
+	if _highlighted_indices.is_empty():
+		return
+
+	var pulse_period := 2.0 * PI / PULSE_SPEED  # Full cycle duration
+
+	_highlight_tween = create_tween()
+	_highlight_tween.set_loops()  # Loop until stopped
+
+	# Animate scale up then down
+	var base_scale := Vector2.ONE * HIGHLIGHT_SCALE
+	var max_scale := base_scale * 1.08
+	var min_scale := base_scale * 0.92
+
+	# Tween all highlighted slots together
+	for idx in _highlighted_indices:
+		if idx >= 0 and idx < _history_slots.size():
+			var slot := _history_slots[idx]
+			_highlight_tween.parallel().tween_property(slot, "scale", max_scale, pulse_period * 0.5) \
+				.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+	# Second half of pulse
+	for idx in _highlighted_indices:
+		if idx >= 0 and idx < _history_slots.size():
+			var slot := _history_slots[idx]
+			_highlight_tween.parallel().tween_property(slot, "scale", min_scale, pulse_period * 0.5) \
+				.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+
+func _start_fade_tween() -> void:
+	"""Start a fade out tween for the glow effect."""
+	if _fade_tween:
+		_fade_tween.kill()
+
+	_fade_tween = create_tween()
+
+	# Stay visible for most of duration, then fade in last 0.5 seconds
+	var stay_duration := HIGHLIGHT_DURATION - 0.5
+
+	_fade_tween.tween_interval(stay_duration)
+
+	# Fade out glows
+	for idx in _highlighted_indices:
+		if idx >= 0 and idx < _slot_glows.size():
+			var glow := _slot_glows[idx]
+			if glow:
+				_fade_tween.parallel().tween_property(glow, "modulate:a", 0.0, 0.5)
+
+	# Clear highlights when done
+	_fade_tween.tween_callback(_clear_highlights)
 
 
 func _clear_highlights() -> void:
+	# Stop tweens
+	if _highlight_tween:
+		_highlight_tween.kill()
+		_highlight_tween = null
+	if _fade_tween:
+		_fade_tween.kill()
+		_fade_tween = null
+
 	for i in range(_history_slots.size()):
 		var slot := _history_slots[i]
 
-		# Hide the glow
-		var glow := slot.get_node_or_null("Glow") as ColorRect
-		if glow:
-			glow.visible = false
+		# Hide the glow (use cached reference)
+		if i < _slot_glows.size():
+			var glow := _slot_glows[i]
+			if glow:
+				glow.visible = false
 
 		# Reset scale
 		slot.scale = Vector2.ONE

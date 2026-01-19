@@ -26,5 +26,6 @@ sequences = []
 passive_description = ""
 base_hp = 100
 base_armor = 0
+max_armor = 30
 is_starter = true
 unlock_opponent_id = ""

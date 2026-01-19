@@ -194,6 +194,11 @@ func setup(player_fighter: Fighter, enemy_fighter: Fighter) -> void:
 	# Setup status effect displays
 	_setup_status_displays()
 
+	# Setup mana block signal connections (replaces per-frame polling)
+	_setup_mana_block_signals()
+	# Initial update for mana blocked states
+	_update_mana_blocked_states()
+
 	# Setup combat log debugger
 	_setup_combat_log_debugger()
 
@@ -470,6 +475,9 @@ func _get_enemy_board() -> BoardManager:
 	return null
 
 
+var _status_manager_for_mana: StatusEffectManager
+
+
 func _get_mana_system() -> ManaSystem:
 	# Try to get mana system from CombatManager
 	var combat_manager := get_node_or_null("/root/Main/CombatManager")
@@ -496,9 +504,28 @@ func _get_mana_system() -> ManaSystem:
 	return null
 
 
-func _process(_delta: float) -> void:
-	# Update blocked state periodically (in case status effects change)
-	_update_mana_blocked_states()
+func _setup_mana_block_signals() -> void:
+	"""Connect to status manager signals for mana block changes (replaces per-frame polling)."""
+	_status_manager_for_mana = _get_status_manager()
+	if _status_manager_for_mana:
+		if not _status_manager_for_mana.effect_applied.is_connected(_on_status_effect_for_mana):
+			_status_manager_for_mana.effect_applied.connect(_on_status_effect_for_mana)
+		if not _status_manager_for_mana.effect_removed.is_connected(_on_status_removed_for_mana):
+			_status_manager_for_mana.effect_removed.connect(_on_status_removed_for_mana)
+
+
+func _on_status_effect_for_mana(target: Fighter, effect: StatusEffect) -> void:
+	"""Called when any status effect is applied - check if it's mana block."""
+	if effect.data.effect_type == StatusTypes.StatusType.MANA_BLOCK:
+		if target == _player_fighter or target == _enemy_fighter:
+			_update_mana_blocked_states()
+
+
+func _on_status_removed_for_mana(target: Fighter, effect_type: StatusTypes.StatusType) -> void:
+	"""Called when any status effect is removed - check if it's mana block."""
+	if effect_type == StatusTypes.StatusType.MANA_BLOCK:
+		if target == _player_fighter or target == _enemy_fighter:
+			_update_mana_blocked_states()
 
 
 func _update_mana_blocked_states() -> void:

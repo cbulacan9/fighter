@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" uid="uid://mode_select_screen_scene" path="res://scenes/ui/mode_select_screen.tscn" id="11"]
 [ext_resource type="Script" path="res://scripts/ui/ability_announcement_spawner.gd" id="12"]
 [ext_resource type="PackedScene" uid="uid://ability_announcement_scene" path="res://scenes/ui/ability_announcement.tscn" id="13"]
+[ext_resource type="PackedScene" uid="uid://character_select_scene" path="res://scenes/ui/character_select.tscn" id="14"]
 
 [node name="Main" type="Node"]
 
@@ -69,6 +70,9 @@ number_scene = ExtResource("9")
 [node name="StatsScreen" parent="UI" instance=ExtResource("7")]
 
 [node name="ModeSelectScreen" parent="UI" instance=ExtResource("11")]
+
+[node name="CharacterSelectScreen" parent="UI" instance=ExtResource("14")]
+visible = false
 
 [node name="AbilityAnnouncements" type="Node2D" parent="UI"]
 script = ExtResource("12")

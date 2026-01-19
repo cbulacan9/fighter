@@ -10,35 +10,13 @@ const FLOAT_DISTANCE := 30.0
 @onready var label: Label = $Label
 @onready var effect_label: Label = $EffectLabel
 
-var _timer: float = 0.0
 var _start_pos: Vector2
+var _tween: Tween
 
 
 func _ready() -> void:
 	modulate.a = 0.0
 	visible = false
-
-
-func _process(delta: float) -> void:
-	if not visible:
-		return
-
-	_timer -= delta
-
-	if _timer <= 0:
-		visible = false
-		queue_free()
-		return
-
-	# Float upward
-	var progress := 1.0 - (_timer / DISPLAY_DURATION)
-	position.y = _start_pos.y - (progress * FLOAT_DISTANCE)
-
-	# Fade out in last portion
-	if _timer < FADE_DURATION:
-		modulate.a = _timer / FADE_DURATION
-	else:
-		modulate.a = 1.0
 
 
 func show_announcement(ability_name: String, effect_description: String, color: Color = Color.WHITE) -> void:
@@ -50,6 +28,23 @@ func show_announcement(ability_name: String, effect_description: String, color: 
 		effect_label.text = effect_description
 
 	_start_pos = position
-	_timer = DISPLAY_DURATION
 	modulate.a = 1.0
 	visible = true
+
+	# Use tween instead of _process for animation
+	if _tween:
+		_tween.kill()
+
+	_tween = create_tween()
+	_tween.set_parallel(true)
+
+	# Float upward over full duration
+	_tween.tween_property(self, "position:y", _start_pos.y - FLOAT_DISTANCE, DISPLAY_DURATION) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+	# Stay visible, then fade out in last portion
+	_tween.tween_property(self, "modulate:a", 0.0, FADE_DURATION) \
+		.set_delay(DISPLAY_DURATION - FADE_DURATION)
+
+	# Queue free when done
+	_tween.chain().tween_callback(queue_free)

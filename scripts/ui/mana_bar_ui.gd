@@ -46,12 +46,6 @@ func _ready() -> void:
 	_update_display()
 
 
-func _process(_delta: float) -> void:
-	# Update glow pulse if needed
-	if glow and _glow_pulsing and not _glow_tween:
-		_start_glow_pulse()
-
-
 func setup(max_value: int) -> void:
 	_max_value = maxi(1, max_value)  # Ensure at least 1 to avoid division by zero
 	_current_value = 0
