@@ -618,10 +618,18 @@ func _should_click_hunter_pet(pet_type: int) -> bool:
 
 
 ## Gets all clickable Hunter pet tiles (BEAR_PET, HAWK_PET, SNAKE_PET) on the board.
-## Uses BoardManager's helper method for consistency.
+## Only returns tiles that can actually be clicked (have enough mana).
 func _get_clickable_hunter_pet_tiles() -> Array[Tile]:
 	if not board:
 		return []
+
+	# Check if we have enough mana to activate pets (cost is 33)
+	const PET_MANA_COST := 33
+	var fighter := _get_owner_fighter()
+	if fighter and fighter.mana_system:
+		var current_mana: int = fighter.mana_system.get_mana(fighter, 0)
+		if current_mana < PET_MANA_COST:
+			return []  # Not enough mana to click any pet
 
 	# Use BoardManager's helper method if available
 	if board.has_method("get_hunter_pet_tiles"):
@@ -665,35 +673,52 @@ func _get_enemy_fighter() -> Fighter:
 
 # --- Ultimate Activation Decision Logic ---
 
-## Determines if the AI should activate their ultimate ability
+## Determines if the AI should activate their ultimate ability (click Alpha Command tile)
 func _should_use_ultimate() -> bool:
-	if not _owner_fighter:
+	if not board:
 		return false
 
-	if not _combat_manager:
+	# Check if Alpha Command tile is on the board
+	var alpha_tile := _get_alpha_command_tile()
+	if not alpha_tile:
 		return false
 
-	var mana_system: ManaSystem = _combat_manager.mana_system
-	if not mana_system or not mana_system.can_use_ultimate(_owner_fighter):
-		return false
-
-	# Use ultimate when we have sequences banked (maximize Hunter potential)
-	if _sequence_tracker and _sequence_tracker.has_completable_sequence():
+	# Use ultimate when we have pet tiles to boost (maximize Hunter potential)
+	var pet_tiles := _get_clickable_hunter_pet_tiles()
+	if not pet_tiles.is_empty():
 		return true
 
 	# Consider using ultimate when low on health for self-preservation
-	if _owner_fighter.get_hp_percent() < 0.3:
+	if _owner_fighter and _owner_fighter.get_hp_percent() < 0.3:
 		return true
 
-	return false
+	# Default: use it when available (it's powerful!)
+	return true
 
 
-## Activates the ultimate ability
+## Activates the ultimate ability by clicking the Alpha Command tile
 func _activate_ultimate() -> void:
-	if not _combat_manager or not _owner_fighter:
+	if not board:
 		return
 
-	_combat_manager.activate_ultimate(_owner_fighter)
+	var alpha_tile := _get_alpha_command_tile()
+	if alpha_tile:
+		board._on_tile_clicked(alpha_tile)
+
+
+## Gets the Alpha Command tile if it exists on the board
+func _get_alpha_command_tile() -> Tile:
+	if not board or not board.grid:
+		return null
+
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile: Tile = board.grid.get_tile(row, col)
+			if tile and tile.tile_data:
+				if tile.tile_data.tile_type == TileTypes.Type.ALPHA_COMMAND:
+					return tile
+
+	return null
 
 
 # --- Helper Methods ---
