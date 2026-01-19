@@ -74,8 +74,6 @@ func process_initiating_matches(tile_types: Array[int]) -> void:
 	if tile_types.is_empty():
 		return
 
-	print("SEQUENCE: Processing initiating matches: %s" % _types_to_string(tile_types))
-
 	# Step 1: Process existing trees (iterate over copy to allow removal)
 	var trees_to_remove: Array[ComboTree] = []
 	var completed_patterns: Array[SequencePattern] = []
@@ -86,11 +84,6 @@ func process_initiating_matches(tile_types: Array[int]) -> void:
 		if next_required in tile_types:
 			# Tree advances
 			tree.advance(next_required)
-			print("SEQUENCE: Tree '%s' advanced to %d/%d" % [
-				tree.pattern.display_name,
-				tree.progress,
-				tree.pattern.pattern.size()
-			])
 			tree_progressed.emit(
 				tree.pattern.display_name,
 				tree.progress,
@@ -99,16 +92,10 @@ func process_initiating_matches(tile_types: Array[int]) -> void:
 
 			# Check for completion
 			if tree.is_complete():
-				print("SEQUENCE: === TREE COMPLETED: %s ===" % tree.pattern.display_name)
 				completed_patterns.append(tree.pattern)
 				trees_to_remove.append(tree)
 		else:
 			# Tree dies - required tile not in matches
-			print("SEQUENCE: Tree '%s' died (needed %s, got %s)" % [
-				tree.pattern.display_name,
-				_get_type_name(next_required),
-				_types_to_string(tile_types)
-			])
 			tree_died.emit(tree.pattern.display_name)
 			trees_to_remove.append(tree)
 
@@ -143,16 +130,11 @@ func process_initiating_matches(tile_types: Array[int]) -> void:
 					new_tree.advance(tile_type)
 					_active_trees.append(new_tree)
 
-					print("SEQUENCE: Started new tree '%s' (progress 1/%d)" % [
-						pattern.display_name,
-						pattern.pattern.size()
-					])
 					tree_started.emit(pattern.display_name)
 					tree_progressed.emit(pattern.display_name, 1, pattern.pattern.size())
 
 					# Check for immediate completion (single-tile patterns)
 					if new_tree.is_complete():
-						print("SEQUENCE: === IMMEDIATE COMPLETION: %s ===" % pattern.display_name)
 						_emit_sequence_completed(pattern)
 						var idx := _active_trees.find(new_tree)
 						if idx >= 0:
@@ -290,8 +272,6 @@ func reset() -> void:
 	for state in _sequence_states.values():
 		if state is SequenceState:
 			state.reset()
-
-	print("SEQUENCE: Reset - all trees cleared")
 
 
 ## Returns all valid patterns this tracker is watching

@@ -384,10 +384,10 @@ func activate_ultimate(fighter: Fighter) -> bool:
 
 
 ## Shows visual feedback when ultimate is activated
-func _show_ultimate_activation(_fighter: Fighter, ability: AbilityData) -> void:
+func _show_ultimate_activation(_fighter: Fighter, _ability: AbilityData) -> void:
 	# Emit signal for UI to display
 	# Could add screen flash, sound, etc.
-	print("Ultimate activated: %s" % ability.display_name)
+	pass
 
 
 # --- Status Effect API ---

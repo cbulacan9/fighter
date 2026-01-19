@@ -79,7 +79,6 @@ func _initialize_character_registry() -> void:
 	# DEBUG: Force Hunter for testing (remove after testing)
 	selected_player_character = character_registry.get_character("hunter")
 	selected_enemy_character = character_registry.get_character("hunter")
-	print("DEBUG: Forced Hunter character for both player and enemy")
 
 
 func _process(delta: float) -> void:
@@ -296,12 +295,9 @@ func _process_state(delta: float) -> void:
 		GameState.BATTLE:
 			match_timer += delta
 
-			# Tick combat for stun timers
+			# Tick combat for stun timers and status effects
 			if combat_manager:
 				combat_manager.tick(delta)
-
-			# Update board stun states
-			_update_board_stun_states()
 
 
 func _setup_match() -> void:
@@ -411,22 +407,6 @@ func _disable_gameplay() -> void:
 		player_ai_controller.set_enabled(false)
 
 
-func _update_board_stun_states() -> void:
-	if combat_manager and player_board:
-		var player_stunned := combat_manager.player_fighter.is_stunned()
-		if player_stunned and player_board.state != BoardManager.BoardState.STUNNED:
-			player_board.apply_stun(combat_manager.player_fighter.stun_remaining)
-		elif not player_stunned and player_board.state == BoardManager.BoardState.STUNNED:
-			player_board.set_state(BoardManager.BoardState.IDLE)
-
-	if combat_manager and enemy_board:
-		var enemy_stunned := combat_manager.enemy_fighter.is_stunned()
-		if enemy_stunned and enemy_board.state != BoardManager.BoardState.STUNNED:
-			enemy_board.apply_stun(combat_manager.enemy_fighter.stun_remaining)
-		elif not enemy_stunned and enemy_board.state == BoardManager.BoardState.STUNNED:
-			enemy_board.set_state(BoardManager.BoardState.IDLE)
-
-
 func reset_match() -> void:
 	match_timer = 0.0
 	winner_id = 0
@@ -486,10 +466,6 @@ func _on_mode_selected(mode: int, difficulty: int) -> void:
 	# Convert the ints to our enums
 	current_mode = mode as GameMode
 	current_difficulty = difficulty as Difficulty
-	var mode_name: String = "Player vs AI" if current_mode == GameMode.PLAYER_VS_AI else "AI vs AI"
-	var diff_names: Array[String] = ["Easy", "Medium", "Hard"]
-	var diff_name: String = diff_names[current_difficulty]
-	print("Game mode selected: %s (%s)" % [mode_name, diff_name])
 	change_state(GameState.INIT)
 
 
@@ -581,18 +557,31 @@ func _on_stun_applied(target: Fighter, duration: float) -> void:
 	if combat_manager and target == combat_manager.enemy_fighter:
 		_stats_tracker.record_stun(duration)
 
-	# Show stun overlay
-	if target == combat_manager.player_fighter and player_stun_overlay:
-		player_stun_overlay.show_stun(duration)
-	elif target == combat_manager.enemy_fighter and enemy_stun_overlay:
-		enemy_stun_overlay.show_stun(duration)
+	# Apply stun to the appropriate board
+	if target == combat_manager.player_fighter:
+		if player_board and player_board.state != BoardManager.BoardState.STUNNED:
+			player_board.apply_stun(duration)
+		if player_stun_overlay:
+			player_stun_overlay.show_stun(duration)
+	elif target == combat_manager.enemy_fighter:
+		if enemy_board and enemy_board.state != BoardManager.BoardState.STUNNED:
+			enemy_board.apply_stun(duration)
+		if enemy_stun_overlay:
+			enemy_stun_overlay.show_stun(duration)
 
 
 func _on_stun_ended(fighter: Fighter) -> void:
-	if fighter == combat_manager.player_fighter and player_stun_overlay:
-		player_stun_overlay.hide_stun()
-	elif fighter == combat_manager.enemy_fighter and enemy_stun_overlay:
-		enemy_stun_overlay.hide_stun()
+	# Remove stun from the appropriate board
+	if fighter == combat_manager.player_fighter:
+		if player_board and player_board.state == BoardManager.BoardState.STUNNED:
+			player_board.set_state(BoardManager.BoardState.IDLE)
+		if player_stun_overlay:
+			player_stun_overlay.hide_stun()
+	elif fighter == combat_manager.enemy_fighter:
+		if enemy_board and enemy_board.state == BoardManager.BoardState.STUNNED:
+			enemy_board.set_state(BoardManager.BoardState.IDLE)
+		if enemy_stun_overlay:
+			enemy_stun_overlay.hide_stun()
 
 
 func _on_damage_dodged(_target: Fighter, _source: Fighter) -> void:

@@ -23,6 +23,20 @@ func _ready() -> void:
 	_update_visual()
 
 
+func _notification(what: int) -> void:
+	# Kill all tweens when the node is being freed to prevent orphaned tweens
+	if what == NOTIFICATION_PREDELETE:
+		if _highlight_tween:
+			_highlight_tween.kill()
+			_highlight_tween = null
+		if _activation_tween:
+			_activation_tween.kill()
+			_activation_tween = null
+		if _hidden_tween:
+			_hidden_tween.kill()
+			_hidden_tween = null
+
+
 func setup(data: PuzzleTileData, pos: Vector2i) -> void:
 	tile_data = data
 	grid_position = pos

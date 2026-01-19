@@ -73,6 +73,9 @@ var _drag_index: int = -1
 var _original_positions: Dictionary = {}
 var _snap_back_tween: Tween
 
+# Clickable highlight optimization - dirty flag pattern
+var _clickable_dirty: bool = true
+
 
 func _ready() -> void:
 	# Add to board_managers group for effect processor to find boards
@@ -100,8 +103,10 @@ func _process(delta: float) -> void:
 	# Process hidden tile timers
 	_process_hidden_tiles(delta)
 
-	# Update clickable tile highlights
-	_update_clickable_highlights()
+	# Update clickable tile highlights only when dirty
+	if _clickable_dirty:
+		_update_clickable_highlights()
+		_clickable_dirty = false
 
 
 func _setup_systems() -> void:
@@ -164,13 +169,11 @@ func _setup_pet_spawner(patterns: Array[SequencePattern]) -> void:
 	# Check if any pattern has a pet_type (Hunter-style combos)
 	var has_pet_patterns := false
 	for pattern in patterns:
-		print("BoardManager: Checking pattern '%s' pet_type=%d" % [pattern.display_name, pattern.pet_type])
 		if pattern.pet_type >= 0:
 			has_pet_patterns = true
 			break
 
 	if not has_pet_patterns:
-		print("BoardManager: No pet patterns found, using legacy mode")
 		pet_spawner = null
 		# Connect legacy sequence_completed signal for non-pet patterns
 		if sequence_tracker and not sequence_tracker.sequence_completed.is_connected(_on_sequence_completed):
@@ -178,18 +181,15 @@ func _setup_pet_spawner(patterns: Array[SequencePattern]) -> void:
 		return
 
 	# Create PetSpawner
-	print("BoardManager: Creating PetSpawner for Hunter combo system")
 	pet_spawner = PetSpawner.new()
 	pet_spawner.name = "PetSpawner"
 	add_child(pet_spawner)
 
 	# Connect SequenceTracker.sequence_completed -> PetSpawner.on_sequence_completed
 	if sequence_tracker:
-		print("BoardManager: Connecting sequence_tracker.sequence_completed -> pet_spawner.on_sequence_completed")
 		sequence_tracker.sequence_completed.connect(pet_spawner.on_sequence_completed)
 
 	# Connect PetSpawner.pet_spawned -> BoardManager to spawn the tile
-	print("BoardManager: Connecting pet_spawner.pet_spawned -> _on_pet_spawned")
 	pet_spawner.pet_spawned.connect(_on_pet_spawned)
 
 
@@ -276,6 +276,9 @@ func generate_initial_board() -> void:
 
 func reset() -> void:
 	"""Fully reset the board for a new match."""
+	# Disconnect signals from previous fighter to prevent memory leaks
+	_disconnect_fighter_signals()
+
 	# Reset board state
 	state = BoardState.IDLE
 
@@ -293,12 +296,21 @@ func reset() -> void:
 	# Clear hidden tiles
 	_hidden_tiles.clear()
 
+	# Reset dirty flag to ensure highlights update
+	_clickable_dirty = true
+
 	# Re-enable input for player boards
 	if _input_handler:
 		_input_handler.set_enabled(is_player_controlled)
 
 	# Generate fresh board
 	generate_initial_board()
+
+
+func _disconnect_fighter_signals() -> void:
+	"""Disconnect signals from the owner fighter to prevent memory leaks."""
+	if _owner_fighter and _owner_fighter.mana_changed.is_connected(_on_fighter_mana_changed):
+		_owner_fighter.mana_changed.disconnect(_on_fighter_mana_changed)
 
 
 func get_state() -> BoardState:
@@ -309,6 +321,7 @@ func set_state(new_state: BoardState) -> void:
 	if state != new_state:
 		state = new_state
 		state_changed.emit(new_state)
+		_clickable_dirty = true
 
 		match new_state:
 			BoardState.IDLE:
@@ -445,10 +458,6 @@ func _on_matches_processed(matches: Array[MatchDetector.MatchResult]) -> void:
 
 	# Process only PLAYER_INITIATED matches for sequence tracking
 	# CASCADE matches should not advance combo trees
-	print("BoardManager: _on_matches_processed called with %d matches" % matches.size())
-	for m in matches:
-		print("  - Match type=%d origin=%d" % [m.tile_type, m.origin])
-
 	if sequence_tracker:
 		var initiating_types: Array[int] = []
 		for match_result in matches:
@@ -457,11 +466,8 @@ func _on_matches_processed(matches: Array[MatchDetector.MatchResult]) -> void:
 				if tile_type not in initiating_types:
 					initiating_types.append(tile_type)
 
-		print("BoardManager: Initiating types for sequence tracker: %s" % str(initiating_types))
 		if initiating_types.size() > 0:
 			sequence_tracker.process_initiating_matches(initiating_types)
-	else:
-		print("BoardManager: No sequence_tracker available")
 
 
 func _on_cascade_complete(result: CascadeHandler.CascadeResult) -> void:
@@ -484,24 +490,27 @@ func _on_cascade_complete(result: CascadeHandler.CascadeResult) -> void:
 
 func _on_sequence_progressed(current: Array, possible: Array) -> void:
 	sequence_progressed.emit(current, possible)
+	_clickable_dirty = true
 
 
 func _on_sequence_completed(pattern: SequencePattern) -> void:
 	sequence_completed.emit(pattern)
-	# Update Pet tile clickability when sequence is completed
-	_update_clickable_highlights()
+	_clickable_dirty = true
 
 
 func _on_sequence_banked(pattern: SequencePattern, stacks: int) -> void:
 	sequence_banked.emit(pattern, stacks)
+	_clickable_dirty = true
 
 
 func _on_sequence_broken() -> void:
 	sequence_broken.emit()
+	_clickable_dirty = true
 
 
 func _on_sequence_activated(pattern: SequencePattern, stacks: int) -> void:
 	sequence_activated.emit(pattern, stacks)
+	_clickable_dirty = true
 
 
 # --- Pet Spawner Signal Handlers ---
@@ -509,7 +518,6 @@ func _on_sequence_activated(pattern: SequencePattern, stacks: int) -> void:
 func _on_pet_spawned(pet_type: int, column: int) -> void:
 	## Queues a pet tile spawn. The actual spawn happens after the cascade completes
 	## to ensure there's space on the board.
-	print("BoardManager: Queueing pet spawn for pet_type=%d, column=%d" % [pet_type, column])
 	_pending_pet_spawns.append({"pet_type": pet_type, "column": column})
 
 
@@ -517,8 +525,6 @@ func _on_pet_spawned(pet_type: int, column: int) -> void:
 func _process_pending_pet_spawns() -> void:
 	if _pending_pet_spawns.is_empty():
 		return
-
-	print("BoardManager: Processing %d pending pet spawns" % _pending_pet_spawns.size())
 
 	# Track columns that have already been used for pet spawns this cycle
 	# to avoid one pet replacing another
@@ -602,7 +608,6 @@ func _spawn_pet_tile(pet_type: int, preferred_column: int) -> void:
 
 	# Place the tile
 	_place_tile(tile, target_row, target_column)
-	print("PET SPAWNED: %s at row %d, column %d (replaced existing tile)" % [tile_data.display_name, target_row, target_column])
 
 	# Confirm the spawn so PetSpawner updates its count
 	if pet_spawner:
@@ -940,6 +945,15 @@ func set_owner_fighter(fighter: Fighter) -> void:
 			_click_condition_checker.set_sequence_tracker(sequence_tracker)
 		if fighter and fighter.mana_system:
 			_click_condition_checker.set_mana_system(fighter.mana_system)
+
+	# Connect to mana changes to mark highlights dirty
+	if fighter:
+		if not fighter.mana_changed.is_connected(_on_fighter_mana_changed):
+			fighter.mana_changed.connect(_on_fighter_mana_changed)
+
+
+func _on_fighter_mana_changed(_bar_index: int, _current: int, _max_value: int) -> void:
+	_clickable_dirty = true
 
 
 func _update_clickable_highlights() -> void:

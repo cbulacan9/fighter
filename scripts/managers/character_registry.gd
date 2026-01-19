@@ -39,8 +39,6 @@ func load_all() -> void:
 
 	dir.list_dir_end()
 
-	print("CharacterRegistry: Loaded %d characters" % _characters.size())
-
 
 ## Returns the CharacterData for the given character ID, or null if not found.
 func get_character(id: String) -> CharacterData:
