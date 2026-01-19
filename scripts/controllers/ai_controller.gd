@@ -98,14 +98,14 @@ func _process(delta: float) -> void:
 
 		# Priority 1: Check for Pet click (sequence completion)
 		if _should_click_pet() and _pet_click_timer <= 0:
-			_click_pet()
-			_pet_click_timer = _pet_click_delay
-			return
+			if _click_pet():
+				_pet_click_timer = _pet_click_delay
+				return  # Successfully clicked, wait for next cycle
 
 		# Priority 2: Check for ultimate activation
 		if _should_use_ultimate():
-			_activate_ultimate()
-			return
+			if _activate_ultimate():
+				return  # Successfully clicked, wait for next cycle
 
 		# Priority 3: Normal move evaluation
 		_make_decision()
@@ -526,7 +526,11 @@ func _should_click_pet() -> bool:
 
 
 ## Clicks the Pet tile to activate a banked sequence (legacy or Hunter-style)
-func _click_pet() -> void:
+## Returns true if a pet was successfully clicked
+func _click_pet() -> bool:
+	if not board or board.get_state() != BoardManager.BoardState.IDLE:
+		return false
+
 	# First, try to click Hunter-style pet tiles
 	var hunter_pets := _get_clickable_hunter_pet_tiles()
 	if not hunter_pets.is_empty():
@@ -535,13 +539,16 @@ func _click_pet() -> void:
 			var pet_type: int = pet_tile.tile_data.tile_type
 			if _should_click_hunter_pet(pet_type):
 				board._on_tile_clicked(pet_tile)
-				return
+				return true
 
 	# Legacy path: click classic Pet tile
 	var pet_tiles := _get_tiles_of_type(TileTypes.Type.PET)
 	if pet_tiles.size() > 0:
 		# Simulate a click on the Pet tile through BoardManager
 		board._on_tile_clicked(pet_tiles[0])
+		return true
+
+	return false
 
 
 ## Checks if any Hunter pet tiles should be clicked this turn.
@@ -697,13 +704,24 @@ func _should_use_ultimate() -> bool:
 
 
 ## Activates the ultimate ability by clicking the Alpha Command tile
-func _activate_ultimate() -> void:
+## Returns true if the click was successful (tile was consumed)
+func _activate_ultimate() -> bool:
 	if not board:
-		return
+		return false
+
+	# Can only click when board is IDLE
+	if board.get_state() != BoardManager.BoardState.IDLE:
+		return false
 
 	var alpha_tile := _get_alpha_command_tile()
-	if alpha_tile:
-		board._on_tile_clicked(alpha_tile)
+	if not alpha_tile:
+		return false
+
+	board._on_tile_clicked(alpha_tile)
+
+	# Check if the tile was actually consumed (click succeeded)
+	var tile_after := _get_alpha_command_tile()
+	return tile_after == null  # True if tile was consumed
 
 
 ## Gets the Alpha Command tile if it exists on the board
