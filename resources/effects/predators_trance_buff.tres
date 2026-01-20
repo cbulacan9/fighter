@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=3 format=3 uid="uid://cpr3d4t0rbuf"]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1"]
+[ext_resource type="Resource" uid="uid://cpr3d4t0r5tr" path="res://resources/status_effects/predators_trance.tres" id="2_status"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "predators_trance_buff"
+display_name = "Predator's Trance"
+effect_type = 4
+target = 1
+duration = 10.0
+status_effect = ExtResource("2_status")
+description = "Enter a trance state for 10 seconds. All spawned tiles become swords. Sword matches trigger auto-chains."

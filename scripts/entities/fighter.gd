@@ -243,7 +243,8 @@ func get_ultimate_cooldown_remaining() -> float:
 
 func uses_health_ultimate() -> bool:
 	## Returns true if this character uses health-based ultimate instead of mana
-	return character_id == "assassin"
+	## Note: Assassin now uses mana-based ultimate (Predator's Trance spawns when both bars full)
+	return false
 
 
 func check_health_ultimate() -> bool:

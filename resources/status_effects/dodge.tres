@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3 uid="uid://cd0dg3st4tus"]
+
+[ext_resource type="Script" uid="uid://solsx176iov7" path="res://scripts/data/status_effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "dodge"
+display_name = "Dodge"
+effect_type = 2
+duration = 5.0
+max_stacks = 75
+stack_behavior = 3
+base_value = 0.01
+value_per_stack = 0.01

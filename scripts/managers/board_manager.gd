@@ -305,6 +305,10 @@ func reset() -> void:
 	if pet_spawner:
 		pet_spawner.reset()
 
+	# Reset Predator's Trance cascade counter
+	if _tile_spawner:
+		_tile_spawner.reset_predators_trance()
+
 	# Clear pending pet spawns from previous game
 	_pending_pet_spawns.clear()
 
@@ -977,6 +981,10 @@ func _activate_predators_trance(tile: Tile) -> void:
 		tile_click_failed.emit(tile, "ultimate_activation_failed")
 		return
 
+	# Signal that trance has started (for UI tracking)
+	if _tile_spawner:
+		_tile_spawner.start_predators_trance()
+
 	# Visual feedback
 	tile.play_activation_animation()
 
@@ -1283,40 +1291,25 @@ func _get_pattern_for_pet_type(pet_type: TileTypes.Type) -> SequencePattern:
 	return null
 
 
-## Cache for pet tile data resources
-var _pet_tile_data_cache: Dictionary = {}
+## Static preloads for pet tile data - required for Android export compatibility
+const PET_TILE_DATA := {
+	TileTypes.Type.BEAR_PET: preload("res://resources/tiles/bear_pet.tres"),
+	TileTypes.Type.HAWK_PET: preload("res://resources/tiles/hawk_pet.tres"),
+	TileTypes.Type.SNAKE_PET: preload("res://resources/tiles/snake_pet.tres"),
+}
 
 func _get_pet_tile_data(pet_type: int) -> PuzzleTileData:
 	## Gets the PuzzleTileData for a Hunter pet type.
-	## Loads from resources and caches for future use.
-
-	# Check cache first
-	if _pet_tile_data_cache.has(pet_type):
-		return _pet_tile_data_cache[pet_type]
+	## Uses static preloads for Android export compatibility.
 
 	# Try to get from tile spawner first
 	var tile_data := _tile_spawner.get_tile_data(pet_type)
 	if tile_data:
-		_pet_tile_data_cache[pet_type] = tile_data
 		return tile_data
 
-	# Load the pet tile resource directly
-	var resource_path := ""
-	match pet_type:
-		TileTypes.Type.BEAR_PET:
-			resource_path = "res://resources/tiles/bear_pet.tres"
-		TileTypes.Type.HAWK_PET:
-			resource_path = "res://resources/tiles/hawk_pet.tres"
-		TileTypes.Type.SNAKE_PET:
-			resource_path = "res://resources/tiles/snake_pet.tres"
-		_:
-			return null
-
-	if ResourceLoader.exists(resource_path):
-		tile_data = load(resource_path) as PuzzleTileData
-		if tile_data:
-			_pet_tile_data_cache[pet_type] = tile_data
-			return tile_data
+	# Fall back to static preloads
+	if PET_TILE_DATA.has(pet_type):
+		return PET_TILE_DATA[pet_type]
 
 	return null
 
@@ -1689,8 +1682,26 @@ func _get_combat_manager() -> CombatManager:
 	return _combat_manager
 
 
+func get_tile_spawner() -> TileSpawner:
+	## Returns the TileSpawner for this board (used for Predator's Trance tracking)
+	return _tile_spawner
+
+
 func set_combat_manager(combat_manager: CombatManager) -> void:
 	_combat_manager = combat_manager
+
+	# Connect Predator's Trance signal for sword-only cascades
+	if combat_manager and _tile_spawner:
+		if not combat_manager.predators_trance_triggered.is_connected(_on_predators_trance_triggered):
+			combat_manager.predators_trance_triggered.connect(_on_predators_trance_triggered)
+
+
+func _on_predators_trance_triggered(fighter: Fighter, match_count: int) -> void:
+	## Handle Predator's Trance sword match - queue bonus sword-only cascades.
+	## Only respond if this is our owner fighter's board.
+	if fighter != _owner_fighter:
+		return
+	_tile_spawner.trigger_predators_trance_chains(match_count)
 
 
 # --- Tile Hiding Methods (for Smoke Bomb effects) ---

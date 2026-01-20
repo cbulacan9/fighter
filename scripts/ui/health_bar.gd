@@ -7,7 +7,6 @@ const LOW_HP_THRESHOLD: float = 0.25
 @onready var background: ColorRect = $Background
 @onready var armor_fill: ColorRect = $ArmorFill
 @onready var health_fill: ColorRect = $HealthFill
-@onready var label: Label = $Label
 
 var max_value: int = 100
 var current_hp: int = 100
@@ -55,9 +54,6 @@ func _update_display(animate: bool) -> void:
 	else:
 		health_fill.size.x = target_hp_width
 		armor_fill.size.x = target_armor_width
-
-	if label:
-		label.text = "%d/%d" % [current_hp, max_value]
 
 
 func _animate_change(hp_width: float, armor_width: float) -> void:

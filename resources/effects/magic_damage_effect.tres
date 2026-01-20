@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=2 format=3 uid="uid://dgqjytn3wryu1"]
+
+[ext_resource type="Script" uid="uid://dnhpvmpj0050n" path="res://scripts/data/effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "magic_damage"
+display_name = "Magic Damage"
+effect_type = 1
+target = 2
+base_value = 15
+values_by_match_size = {
+3: 15,
+4: 35,
+5: 70
+}
+description = "Deals magic damage to the enemy."

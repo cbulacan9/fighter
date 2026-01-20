@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://cpr3d4t0r5ab"]
+
+[ext_resource type="Script" path="res://scripts/data/ability_data.gd" id="1"]
+[ext_resource type="Resource" uid="uid://cpr3d4t0rbuf" path="res://resources/effects/predators_trance_buff.tres" id="2_effect"]
+
+[resource]
+script = ExtResource("1")
+ability_id = "predators_trance"
+display_name = "Predator's Trance"
+description = "Enter a deadly trance for 10 seconds. All new tiles become swords. Sword matches during the trance trigger auto-chains: 3-match = 1 chain, 4-match = 2 chains, 5-match = 3 chains."
+requires_full_mana = true
+drains_all_mana = true
+mana_cost = 0
+cooldown = 0.0
+effects = [ExtResource("2_effect")]
+duration = 10.0

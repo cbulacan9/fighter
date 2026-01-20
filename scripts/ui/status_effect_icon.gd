@@ -122,6 +122,17 @@ func _get_placeholder_color(type: StatusTypes.StatusType) -> Color:
 			return Color(0.6, 0.6, 0.6)  # Gray
 		StatusTypes.StatusType.MANA_BLOCK:
 			return Color(0.6, 0.2, 0.8)  # Purple
+		# Defensive queue status colors (Mirror Warden)
+		StatusTypes.StatusType.REFLECTION_QUEUED:
+			return Color(0.8, 0.3, 1.0)  # Purple
+		StatusTypes.StatusType.CANCEL_QUEUED:
+			return Color(0.4, 1.0, 0.4)  # Green
+		StatusTypes.StatusType.ABSORB_QUEUED:
+			return Color(0.3, 0.7, 1.0)  # Blue
+		StatusTypes.StatusType.ABSORB_STORED:
+			return Color(0.3, 0.7, 1.0)  # Blue
+		StatusTypes.StatusType.INVINCIBILITY:
+			return Color(1.0, 0.9, 0.3)  # Gold
 		_:
 			return Color(0.5, 0.5, 0.5)  # Default gray
 
@@ -141,5 +152,16 @@ func _get_type_symbol(type: StatusTypes.StatusType) -> String:
 			return "E"
 		StatusTypes.StatusType.MANA_BLOCK:
 			return "M"
+		# Defensive queue status symbols (Mirror Warden)
+		StatusTypes.StatusType.REFLECTION_QUEUED:
+			return "R"
+		StatusTypes.StatusType.CANCEL_QUEUED:
+			return "C"
+		StatusTypes.StatusType.ABSORB_QUEUED:
+			return "A"
+		StatusTypes.StatusType.ABSORB_STORED:
+			return "S"
+		StatusTypes.StatusType.INVINCIBILITY:
+			return "I"
 		_:
 			return "?"

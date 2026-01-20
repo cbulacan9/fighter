@@ -2,42 +2,35 @@ class_name CharacterRegistry
 extends RefCounted
 
 ## Registry for loading and accessing character data resources.
-## Scans the characters directory and provides access to CharacterData by ID.
-
-const CHARACTERS_PATH := "res://resources/characters/"
+## Uses static preloads to ensure characters are included in Android/mobile exports.
+## NOTE: When adding new characters, add them to CHARACTER_RESOURCES below.
 
 var _characters: Dictionary = {}  # {character_id: CharacterData}
 
+## Static list of all character resources - required for Android export compatibility.
+## DirAccess scanning doesn't work in packaged APK builds.
+const CHARACTER_RESOURCES: Array[Resource] = [
+	preload("res://resources/characters/basic.tres"),
+	preload("res://resources/characters/hunter.tres"),
+	preload("res://resources/characters/assassin.tres"),
+	preload("res://resources/characters/mirror_warden.tres"),
+	# Add new characters here when created
+]
 
-## Loads all character resources from the characters directory.
+
+## Loads all character resources from the static list.
 func load_all() -> void:
 	_characters.clear()
 
-	var dir := DirAccess.open(CHARACTERS_PATH)
-	if not dir:
-		push_error("CharacterRegistry: Failed to open characters directory: %s" % CHARACTERS_PATH)
-		return
-
-	dir.list_dir_begin()
-	var file_name := dir.get_next()
-
-	while file_name != "":
-		if not dir.current_is_dir() and file_name.ends_with(".tres"):
-			var resource_path := CHARACTERS_PATH + file_name
-			var resource := load(resource_path)
-
-			if resource is CharacterData:
-				var char_data: CharacterData = resource
-				if char_data.validate():
-					_characters[char_data.character_id] = char_data
-				else:
-					push_warning("CharacterRegistry: Invalid character data in file: %s" % file_name)
+	for resource in CHARACTER_RESOURCES:
+		if resource is CharacterData:
+			var char_data: CharacterData = resource
+			if char_data.validate():
+				_characters[char_data.character_id] = char_data
 			else:
-				push_warning("CharacterRegistry: File is not CharacterData: %s" % file_name)
-
-		file_name = dir.get_next()
-
-	dir.list_dir_end()
+				push_warning("CharacterRegistry: Invalid character data: %s" % char_data.character_id)
+		else:
+			push_warning("CharacterRegistry: Resource is not CharacterData")
 
 
 ## Returns the CharacterData for the given character ID, or null if not found.

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=6 format=3 uid="uid://csm0k3b0mb111"]
+
+[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Resource" uid="uid://csm0k3p4ss1v3" path="res://resources/effects/smoke_passive.tres" id="3_passive"]
+[ext_resource type="Resource" uid="uid://csm0k34ct1v3" path="res://resources/effects/smoke_active.tres" id="4_active"]
+[ext_resource type="Texture2D" uid="uid://30kwhxfj58f5" path="res://assets/sprites/spritesheet_assassin_2.png" id="4_gohpm"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vk03i"]
+atlas = ExtResource("4_gohpm")
+region = Rect2(487, 104, 64, 64)
+
+[resource]
+script = ExtResource("1")
+tile_type = 12
+display_name = "Smoke Bomb"
+sprite = SubResource("AtlasTexture_vk03i")
+color = Color(0.5, 0.3, 0.7, 1)
+match_3_value = 1
+match_4_value = 2
+match_5_value = 3
+is_clickable = true
+click_condition = 3
+click_effect = ExtResource("4_active")
+mana_bar_index = 0
+passive_effect = ExtResource("3_passive")
+clickable_highlight_color = Color(1.0, 0.5, 1.2, 1.0)

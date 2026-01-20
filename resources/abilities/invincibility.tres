@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://mw4rd3n_1nv1nc_4b1l"]
+
+[ext_resource type="Script" path="res://scripts/data/ability_data.gd" id="1"]
+[ext_resource type="Resource" uid="uid://mw4rd3n_1nv1nc_buff" path="res://resources/effects/invincibility_buff.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+ability_id = "invincibility"
+display_name = "Invincibility"
+description = "The Mirror Warden becomes completely immune to all damage for 8 seconds. During this time, all incoming attacks are negated."
+requires_full_mana = true
+drains_all_mana = true
+mana_cost = 0
+cooldown = 0.0
+effects = [ExtResource("2")]
+duration = 8.0

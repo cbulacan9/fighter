@@ -10,6 +10,12 @@ enum StatusType {
 	MANA_BLOCK,     # Prevent mana generation
 	ALPHA_COMMAND,  # Hunter ultimate - 2x multiplier on animal companion abilities
 	FOCUS,          # Hunter - 20% attack bonus per stack, consumed on attack
+	PREDATORS_TRANCE,  # Assassin ultimate - all spawned tiles are swords, enables auto-chains
+	REFLECTION_QUEUED,  # Warden - defense queued, reflects next attack
+	CANCEL_QUEUED,  # Warden - defense queued, cancels attack effect
+	ABSORB_QUEUED,  # Warden - defense queued, absorbs damage
+	ABSORB_STORED,  # Warden - storing absorbed damage for release
+	INVINCIBILITY,  # Warden ultimate - complete damage immunity
 }
 
 enum StackBehavior {

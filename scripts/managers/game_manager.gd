@@ -1,5 +1,8 @@
 extends Node
 
+## Preloaded scenes for Android export compatibility
+const UNLOCK_NOTIFICATION_SCENE := preload("res://scenes/ui/unlock_notification.tscn")
+
 signal state_changed(new_state: GameState)
 
 enum GameState {
@@ -413,6 +416,24 @@ func _setup_match() -> void:
 		if damage_spawner:
 			damage_spawner.setup_defensive_queue(combat_manager.defensive_queue_manager)
 
+	# Setup Assassin status display with tile spawners for trance tracking
+	if combat_manager and hud:
+		var player_tile_spawner: TileSpawner = null
+		var enemy_tile_spawner: TileSpawner = null
+		if player_board:
+			player_tile_spawner = player_board.get_tile_spawner()
+		if enemy_board:
+			enemy_tile_spawner = enemy_board.get_tile_spawner()
+
+		hud.setup_assassin_ui(
+			combat_manager.player_fighter,
+			combat_manager.enemy_fighter,
+			combat_manager.mana_system,
+			combat_manager.status_effect_manager,
+			player_tile_spawner,
+			enemy_tile_spawner
+		)
+
 
 ## Prepares fighter data from selected characters or loads default files.
 func _prepare_fighter_data() -> void:
@@ -525,6 +546,13 @@ func reset_match() -> void:
 		var enemy_warden = hud.get_enemy_warden_display()
 		if enemy_warden:
 			enemy_warden.reset()
+		# Reset Assassin status displays
+		var player_assassin = hud.get_player_assassin_display()
+		if player_assassin:
+			player_assassin.reset()
+		var enemy_assassin = hud.get_enemy_assassin_display()
+		if enemy_assassin:
+			enemy_assassin.reset()
 
 	_stats_tracker.reset()
 
@@ -795,6 +823,7 @@ func _create_fighter_data(char_data: CharacterData) -> FighterData:
 	fighter.max_hp = char_data.base_hp
 	fighter.max_armor = char_data.max_armor
 	fighter.strength = char_data.base_strength
+	fighter.agility = char_data.base_agility
 	fighter.portrait = PlaceholderTextures.get_or_generate_portrait(char_data, false)
 
 	# Convert spawn weights from CharacterData format to FighterData format
@@ -843,9 +872,8 @@ func _on_character_unlocked(character_id: String) -> void:
 func _show_unlock_notification(char_data: CharacterData) -> void:
 	# Create notification if it doesn't exist
 	if not _unlock_notification:
-		var notification_scene := load("res://scenes/ui/unlock_notification.tscn")
-		if notification_scene:
-			_unlock_notification = notification_scene.instantiate()
+		if UNLOCK_NOTIFICATION_SCENE:
+			_unlock_notification = UNLOCK_NOTIFICATION_SCENE.instantiate()
 			get_tree().root.add_child(_unlock_notification)
 		else:
 			push_warning("GameManager: Could not load unlock_notification.tscn")

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=2 format=3 uid="uid://mw4rd3n_4bs0rb_p4ss"]
+
+[ext_resource type="Script" uid="uid://dnhpvmpj0050n" path="res://scripts/data/effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "absorb_passive"
+display_name = "Absorb"
+effect_type = 12
+target = 1
+base_value = 1
+values_by_match_size = {
+3: 1,
+4: 2,
+5: 3
+}
+duration = 5.0
+custom_effect_id = "absorb_passive"
+description = "Queues absorb defense. Stores incoming damage to release on next Magic Attack."

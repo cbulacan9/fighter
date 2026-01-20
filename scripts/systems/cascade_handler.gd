@@ -82,6 +82,9 @@ func _run_cascade_loop(result: CascadeResult, initial_matches: Array[MatchDetect
 		if new_tiles.size() > 0:
 			await _animate_spawns(new_tiles)
 
+		# Consume Predator's Trance cascade (if active) after spawning tiles
+		tile_spawner.consume_predators_trance_cascade()
+
 		# Check for new matches - these are CASCADE matches
 		current_matches = match_detector.find_matches(grid)
 		is_first_round = false
@@ -107,6 +110,9 @@ func process_single_removal(_row: int, _col: int) -> CascadeResult:
 	var new_tiles := _fill_empty_spaces()
 	if new_tiles.size() > 0:
 		await _animate_spawns(new_tiles)
+
+	# Consume Predator's Trance cascade (if active) after spawning tiles
+	tile_spawner.consume_predators_trance_cascade()
 
 	# Check for new matches caused by the refill and run cascade loop
 	# All matches are tagged as CASCADE since they result from gravity/removal

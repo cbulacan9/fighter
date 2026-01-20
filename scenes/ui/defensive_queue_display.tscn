@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://defensive_queue_display_scene"]
+
+[ext_resource type="Script" path="res://scripts/ui/defensive_queue_display.gd" id="1"]
+
+[node name="DefensiveQueueDisplay" type="HBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+offset_right = 100.0
+offset_bottom = 40.0
+theme_override_constants/separation = 4
+script = ExtResource("1")

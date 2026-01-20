@@ -227,6 +227,37 @@ Weights are normalized to sum to 1.0 at runtime. Example:
 - After generation, scan for pre-existing matches
 - If matches exist, regenerate affected tiles until clean
 
+### Predator's Trance Integration
+The Tile Spawner supports the Assassin's Predator's Trance ultimate ability:
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `PREDATORS_TRANCE_MAX_MATCHES` | 4 | Maximum sword matches before trance ends early |
+
+| Signal | Parameters | Description |
+|--------|------------|-------------|
+| `predators_trance_started` | none | Emitted when trance activates |
+| `predators_trance_match_used` | current, max_matches | Emitted after each sword match |
+| `predators_trance_ended` | none | Emitted when trance ends (expired or exhausted) |
+
+| Method | Description |
+|--------|-------------|
+| `start_predators_trance()` | Resets match counter and emits started signal |
+| `trigger_predators_trance_chains(match_count)` | Increments match counter, queues bonus cascades, ends trance at 4 matches |
+| `consume_predators_trance_cascade()` | Decrements the cascade counter after each cascade iteration |
+| `reset_predators_trance()` | Resets both cascade and match counters |
+| `get_predators_trance_matches_remaining()` | Returns remaining matches before limit (4 - used) |
+
+**Flow:**
+1. BoardManager calls `start_predators_trance()` when ultimate tile is activated
+2. CombatManager emits `predators_trance_triggered` signal when sword match occurs during active Predator's Trance status
+3. BoardManager receives signal and calls `trigger_predators_trance_chains(match_count)`
+4. TileSpawner increments match counter, emits `predators_trance_match_used` for UI
+5. If match counter reaches 4, `_end_predators_trance()` removes status effect and emits `predators_trance_ended`
+6. During `_select_random_tile_data()`, if cascade counter > 0, sword tile data is returned instead of random selection
+7. CascadeHandler calls `consume_predators_trance_cascade()` after each `_fill_empty_spaces()` completes
+8. Normal tile spawning resumes when cascade counter reaches 0
+
 ---
 
 ## 6. Combat Manager
@@ -287,6 +318,7 @@ This centralizes the "can afford pet?" check that was previously duplicated in B
 | `armor_gained` | target, amount | Shield added |
 | `stun_applied` | target, duration | Stun started/extended |
 | `fighter_defeated` | fighter | HP reached 0 |
+| `predators_trance_triggered` | fighter, match_count | Sword match during Predator's Trance (for cascades) |
 
 ---
 
@@ -624,6 +656,7 @@ Different characters display unique UI components based on their mechanics. Thes
 | Character | UI Component | Description |
 |-----------|--------------|-------------|
 | **Hunter** | Combo Tree Display | Shows Bear/Hawk/Snake sequences with progress indicators and pet population counts |
+| **Assassin** | Assassin Status Display | Shows Smoke Bomb/Shadow Step readiness and current dodge percentage |
 | **Mirror Warden** | Warden Defense Display | Shows queued defensive abilities (Reflect/Cancel/Absorb) with timers |
 | **Other Characters** | Sequence Indicator | Standard sequence display (if character uses sequences) |
 
@@ -631,6 +664,7 @@ Different characters display unique UI components based on their mechanics. Thes
 
 | Function | Purpose |
 |----------|---------|
+| `_is_assassin(char_data)` | Returns true if `character_id == "assassin"` |
 | `_is_mirror_warden(char_data)` | Returns true if `character_id == "mirror_warden"` |
 | `_board_uses_hunter_pets(board)` | Returns true if board has sequence patterns with `pet_type >= 0` |
 
@@ -640,6 +674,12 @@ Different characters display unique UI components based on their mechanics. Thes
 1. `_setup_sequence_ui_for_board()` calls `_board_uses_hunter_pets()`
 2. If true, hides standard SequenceIndicator
 3. `_create_hunter_ui()` instantiates ComboTreeDisplay at `(char_ui_x, ui_y)`
+
+**Assassin UI:**
+1. `setup_assassin_ui()` is called with fighters, mana system, and status manager
+2. `_is_assassin()` checks each fighter's character data
+3. `_create_assassin_ui()` instantiates AssassinStatusDisplay for Assassin characters
+4. Display connects to mana_changed and status effect signals for live updates
 
 **Warden UI:**
 1. `setup_defensive_queue()` is called with fighters and queue manager
@@ -652,6 +692,8 @@ Character-specific UI positions update in `_update_layout()`:
 var char_ui_x := UI_X + CHAR_UI_OFFSET_X
 # Hunter
 _player_combo_tree_display.position = Vector2(char_ui_x, player_ui_y)
+# Assassin
+_player_assassin_display.position = Vector2(char_ui_x, player_ui_y)
 # Warden
 _player_warden_display.position = Vector2(char_ui_x, player_ui_y)
 ```
@@ -722,3 +764,44 @@ if not character_data.validate():
 ```
 
 Validation warnings appear in the Godot output panel during development.
+
+---
+
+## 16. Android Export Compatibility
+
+### Purpose
+Ensures resources load correctly when exported to Android APK packages.
+
+### Problem
+`DirAccess.open()` and directory scanning don't work reliably in packaged Android builds because resources are bundled differently than on desktop.
+
+### Solution: Static Preloads
+All resources that would otherwise be loaded dynamically must use `preload()` at compile time.
+
+### Character Registry
+Characters are registered via static preload list instead of directory scanning:
+
+```gdscript
+# character_registry.gd
+const CHARACTER_RESOURCES: Array[Resource] = [
+    preload("res://resources/characters/basic.tres"),
+    preload("res://resources/characters/hunter.tres"),
+    preload("res://resources/characters/assassin.tres"),
+    preload("res://resources/characters/mirror_warden.tres"),
+    # Add new characters here when created
+]
+```
+
+**Adding New Characters:** When creating a new character, add its `.tres` file path to `CHARACTER_RESOURCES` in `character_registry.gd`.
+
+### Other Static Preloads
+| Location | Resources |
+|----------|-----------|
+| `board_manager.gd` | Pet tile data (BEAR_PET, HAWK_PET, SNAKE_PET) |
+| `combat_manager.gd` | Tile data cache, status effects |
+| `game_manager.gd` | Unlock notification scene |
+
+### Guidelines
+- Use `preload()` for resources with known paths at compile time
+- Use `load()` only for paths provided via exported variables (user-configurable)
+- Never use `DirAccess` for resource discovery in production code

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=2 format=3 uid="uid://csm0k34ct1v3"]
+
+[ext_resource type="Script" uid="uid://dnhpvmpj0050n" path="res://scripts/data/effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "smoke_bomb_active"
+display_name = "Smoke Screen"
+effect_type = 12
+target = 5
+base_value = 1
+duration = 3.0
+custom_effect_id = "smoke_bomb_active"
+description = "Hides a random row and column on enemy board for 3 seconds."

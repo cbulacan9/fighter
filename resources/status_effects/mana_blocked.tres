@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3 uid="uid://cm4n4bl0ck3d"]
+
+[ext_resource type="Script" uid="uid://solsx176iov7" path="res://scripts/data/status_effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "mana_blocked"
+display_name = "Mana Blocked"
+effect_type = 5
+duration = 5.0
+max_stacks = 1
+stack_behavior = 1

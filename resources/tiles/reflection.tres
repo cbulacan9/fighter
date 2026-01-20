@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=5 format=3 uid="uid://d1o4iys8qvfey"]
+
+[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/effects/reflection_passive.tres" id="3"]
+[ext_resource type="Texture2D" uid="uid://clvq3rn4je22c" path="res://assets/sprites/spritesheet_warden.png" id="3_rw4rt"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rw4rt"]
+atlas = ExtResource("3_rw4rt")
+region = Rect2(57, 91, 64, 64)
+
+[resource]
+script = ExtResource("1")
+tile_type = 16
+display_name = "Reflection"
+sprite = SubResource("AtlasTexture_rw4rt")
+color = Color(0.8, 0.8, 0.9, 1)
+match_3_value = 1
+match_4_value = 2
+match_5_value = 3
+passive_effect = ExtResource("3")

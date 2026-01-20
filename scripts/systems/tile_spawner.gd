@@ -1,6 +1,12 @@
 class_name TileSpawner
 extends Node
 
+signal predators_trance_started()
+signal predators_trance_match_used(current: int, max_matches: int)
+signal predators_trance_ended()
+
+const PREDATORS_TRANCE_MAX_MATCHES := 4
+
 @export var tile_scene: PackedScene
 @export var tile_resources: Array[PuzzleTileData] = []
 
@@ -21,6 +27,10 @@ var _counts_valid: bool = false
 # Pre-allocated arrays for _select_random_tile_data() (avoids GC pressure)
 var _available_resources: Array[PuzzleTileData] = []
 var _available_weights: Array[float] = []
+
+# Fighter reference for status checks (Predator's Trance)
+var _owner_fighter: Fighter
+var _status_manager: StatusEffectManager
 
 
 func _ready() -> void:
@@ -49,6 +59,77 @@ func reset_to_defaults() -> void:
 	weights.clear()
 	_load_default_resources()
 	_rebuild_cumulative_weights()
+
+
+## Sets the owner fighter and status manager for status checks (e.g., Predator's Trance)
+func set_fighter_references(fighter: Fighter, status_manager: StatusEffectManager) -> void:
+	_owner_fighter = fighter
+	_status_manager = status_manager
+
+
+## Tracks remaining sword-only cascades from Predator's Trance
+var _predators_trance_cascades_remaining: int = 0
+
+## Tracks how many player-initiated sword matches have been used during trance
+var _predators_trance_matches_used: int = 0
+
+
+## Checks if we should spawn swords only (during Predator's Trance bonus cascades)
+func _is_in_predators_trance() -> bool:
+	return _predators_trance_cascades_remaining > 0
+
+
+## Called when Predator's Trance status is first applied to reset counter and emit signal
+func start_predators_trance() -> void:
+	_predators_trance_matches_used = 0
+	predators_trance_started.emit()
+
+
+## Called when a sword match occurs during Predator's Trance to queue bonus cascades
+func trigger_predators_trance_chains(match_count: int) -> void:
+	_predators_trance_matches_used += 1
+	predators_trance_match_used.emit(_predators_trance_matches_used, PREDATORS_TRANCE_MAX_MATCHES)
+
+	# End trance if limit reached
+	if _predators_trance_matches_used >= PREDATORS_TRANCE_MAX_MATCHES:
+		_end_predators_trance()
+		return
+
+	# Queue bonus cascades (3-match = 1 chain, 4-match = 2 chains, 5-match = 3 chains)
+	var bonus_chains := match_count - 2  # 3->1, 4->2, 5->3
+	_predators_trance_cascades_remaining += bonus_chains
+
+
+## Ends Predator's Trance early by removing the status effect
+func _end_predators_trance() -> void:
+	if _owner_fighter and _status_manager:
+		_status_manager.remove(_owner_fighter, StatusTypes.StatusType.PREDATORS_TRANCE)
+	_predators_trance_cascades_remaining = 0
+	predators_trance_ended.emit()
+
+
+## Called after each cascade to decrement the sword-only counter
+func consume_predators_trance_cascade() -> void:
+	if _predators_trance_cascades_remaining > 0:
+		_predators_trance_cascades_remaining -= 1
+
+
+## Checks if the owner has Predator's Trance status active
+func has_predators_trance_status() -> bool:
+	if not _owner_fighter or not _status_manager:
+		return false
+	return _status_manager.has_effect(_owner_fighter, StatusTypes.StatusType.PREDATORS_TRANCE)
+
+
+## Reset the cascade counter (called on match reset)
+func reset_predators_trance() -> void:
+	_predators_trance_cascades_remaining = 0
+	_predators_trance_matches_used = 0
+
+
+## Returns how many trance matches remain before limit is reached
+func get_predators_trance_matches_remaining() -> int:
+	return PREDATORS_TRANCE_MAX_MATCHES - _predators_trance_matches_used
 
 
 func spawn_tile() -> Tile:
@@ -149,6 +230,12 @@ func _get_weight_for_type(type: TileTypes.Type) -> float:
 func _select_random_tile_data() -> PuzzleTileData:
 	if tile_resources.is_empty() or _total_weight <= 0:
 		return null
+
+	# During Predator's Trance, always spawn sword tiles
+	if _is_in_predators_trance():
+		var sword_data := get_tile_data(TileTypes.Type.SWORD)
+		if sword_data:
+			return sword_data
 
 	# First check if any tile type is below minimum
 	var forced_type := _get_type_below_minimum()

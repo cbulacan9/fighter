@@ -39,6 +39,9 @@ func can_click(tile: Tile, fighter: Fighter) -> bool:
 
 		TileTypes.ClickCondition.MANA_FULL:
 			if _mana_system and fighter:
+				# Check specific bar if mana_bar_index is set, otherwise check all bars
+				if data.mana_bar_index >= 0:
+					return _mana_system.is_full(fighter, data.mana_bar_index)
 				return _mana_system.are_all_bars_full(fighter)
 			return false
 

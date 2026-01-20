@@ -15,6 +15,14 @@ enum Type {
 	SNAKE_PET,  # Hunter combo pet - click for healing
 	FOCUS,      # Hunter - builds stacks consumed on next attack
 	ALPHA_COMMAND,  # Hunter ultimate - spawns when mana full, click to activate
+	SMOKE_BOMB = 12,  # Assassin - hides enemy tiles
+	SHADOW_STEP = 13,  # Assassin - grants dodge chance
+	PREDATORS_TRANCE = 14,  # Assassin ultimate - spawns when both mana bars full, click to activate
+	MAGIC_ATTACK = 15,  # Warden - deals magic damage
+	REFLECTION = 16,  # Warden - queues reflection defense
+	CANCEL = 17,  # Warden - queues cancel defense
+	ABSORB = 18,  # Warden - queues absorb defense
+	INVINCIBILITY_TILE = 19,  # Warden ultimate - spawns when mana full, click to activate
 }
 
 enum ClickCondition {

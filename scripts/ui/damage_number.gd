@@ -6,7 +6,11 @@ enum EffectType {
 	HEAL,
 	ARMOR,
 	STUN,
-	MISS
+	MISS,
+	REFLECT,   # Shows "REFLECTED!"
+	ABSORB,    # Shows "+X ABSORBED"
+	RELEASE,   # Shows "RELEASE x1.5"
+	CANCEL,    # Shows "CANCELED!"
 }
 
 const COLORS := {
@@ -14,7 +18,11 @@ const COLORS := {
 	EffectType.HEAL: Color(0.27, 1.0, 0.27),     # Green
 	EffectType.ARMOR: Color(0.27, 0.27, 1.0),    # Blue
 	EffectType.STUN: Color(1.0, 1.0, 0.27),      # Yellow
-	EffectType.MISS: Color(0.7, 0.7, 0.7)        # Gray
+	EffectType.MISS: Color(0.7, 0.7, 0.7),       # Gray
+	EffectType.REFLECT: Color(0.8, 0.3, 1.0),    # Purple
+	EffectType.ABSORB: Color(0.3, 0.7, 1.0),     # Blue
+	EffectType.RELEASE: Color(1.0, 0.6, 0.2),    # Orange
+	EffectType.CANCEL: Color(0.4, 1.0, 0.4),     # Green
 }
 
 const PREFIXES := {
@@ -22,7 +30,11 @@ const PREFIXES := {
 	EffectType.HEAL: "+",
 	EffectType.ARMOR: "+",
 	EffectType.STUN: "",
-	EffectType.MISS: ""
+	EffectType.MISS: "",
+	EffectType.REFLECT: "",
+	EffectType.ABSORB: "+",
+	EffectType.RELEASE: "",
+	EffectType.CANCEL: "",
 }
 
 const ANIMATION_DURATION: float = 1.0
@@ -40,14 +52,22 @@ func setup(value: float, type: EffectType, pos: Vector2) -> void:
 	var prefix: String = PREFIXES.get(type, "")
 	var color: Color = COLORS.get(type, Color.WHITE)
 
-	if type == EffectType.MISS:
-		label.text = "MISS"
-	elif type == EffectType.STUN:
-		label.text = "%.1fs" % value
-	elif type == EffectType.ARMOR:
-		label.text = "%s%d" % [prefix, int(value)]
-	else:
-		label.text = "%s%d" % [prefix, int(value)]
+	match type:
+		EffectType.MISS:
+			label.text = "MISS"
+		EffectType.STUN:
+			label.text = "%.1fs" % value
+		EffectType.REFLECT:
+			label.text = "REFLECTED!"
+		EffectType.CANCEL:
+			label.text = "CANCELED!"
+		EffectType.ABSORB:
+			label.text = "%s%d ABSORBED" % [prefix, int(value)]
+		EffectType.RELEASE:
+			# Value is the multiplier (e.g., 1.5)
+			label.text = "RELEASE x%.1f" % value
+		_:
+			label.text = "%s%d" % [prefix, int(value)]
 
 	label.add_theme_color_override("font_color", color)
 

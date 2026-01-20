@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=5 format=3 uid="uid://c7p4xihwm5ay2"]
+
+[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Resource" uid="uid://dgqjytn3wryu1" path="res://resources/effects/magic_damage_effect.tres" id="3"]
+[ext_resource type="Texture2D" uid="uid://clvq3rn4je22c" path="res://assets/sprites/spritesheet_warden.png" id="3_cnxmh"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wa0bc"]
+atlas = ExtResource("3_cnxmh")
+region = Rect2(699, 138, 64, 64)
+
+[resource]
+script = ExtResource("1")
+tile_type = 15
+display_name = "Magic Attack"
+sprite = SubResource("AtlasTexture_wa0bc")
+color = Color(0.6, 0.3, 0.8, 1)
+match_3_value = 15
+match_4_value = 35
+match_5_value = 70
+match_effect = ExtResource("3")

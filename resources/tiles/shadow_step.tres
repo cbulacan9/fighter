@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=6 format=3 uid="uid://csh4d0wst3p22"]
+
+[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Resource" uid="uid://csh4d0wp4ss1v" path="res://resources/effects/shadow_passive.tres" id="3_passive"]
+[ext_resource type="Resource" uid="uid://csh4d0w4ct1v3" path="res://resources/effects/shadow_active.tres" id="4_active"]
+[ext_resource type="Texture2D" uid="uid://30kwhxfj58f5" path="res://assets/sprites/spritesheet_assassin_2.png" id="4_d5fti"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1k5ui"]
+atlas = ExtResource("4_d5fti")
+region = Rect2(11, 104, 64, 64)
+
+[resource]
+script = ExtResource("1")
+tile_type = 13
+display_name = "Shadow Step"
+sprite = SubResource("AtlasTexture_1k5ui")
+color = Color(0.2, 0.3, 0.6, 1)
+match_3_value = 1
+match_4_value = 2
+match_5_value = 3
+is_clickable = true
+click_condition = 3
+click_effect = ExtResource("4_active")
+mana_bar_index = 1
+passive_effect = ExtResource("3_passive")
+clickable_highlight_color = Color(0.5, 0.7, 1.3, 1.0)

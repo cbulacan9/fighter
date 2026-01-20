@@ -121,6 +121,12 @@ func _show_clickable_highlight() -> void:
 	if _highlight_tween:
 		_highlight_tween.kill()
 
+	# Check if this is an Assassin mana ability tile (needs more prominent blinking)
+	var is_assassin_ability := tile_data and (
+		tile_data.tile_type == TileTypes.Type.SMOKE_BOMB or
+		tile_data.tile_type == TileTypes.Type.SHADOW_STEP
+	)
+
 	# Bright highlight color for more visibility
 	var highlight_color := Color(1.5, 1.5, 0.5)  # Bright yellow-white
 	if tile_data and tile_data.clickable_highlight_color != Color.TRANSPARENT:
@@ -131,18 +137,28 @@ func _show_clickable_highlight() -> void:
 	const BASE_SPRITE_SIZE := 64.0
 	var base_scale_factor := Grid.CELL_SIZE.x / BASE_SPRITE_SIZE
 	var base_scale := Vector2(base_scale_factor, base_scale_factor)
-	var enlarged_scale := base_scale * 1.15  # 15% larger when highlighted
+
+	# Assassin ability tiles get a more dramatic effect
+	var enlarged_scale: Vector2
+	var pulse_duration: float
+	if is_assassin_ability:
+		enlarged_scale = base_scale * 1.2  # 20% larger for more visibility
+		pulse_duration = 0.35  # Faster pulse for urgency
+	else:
+		enlarged_scale = base_scale * 1.15  # 15% larger when highlighted
+		pulse_duration = 0.5
 
 	# Pulsing glow + scale effect for more visibility
 	_highlight_tween = create_tween()
 	_highlight_tween.set_loops()
+	_highlight_tween.set_ease(Tween.EASE_IN_OUT)
 	_highlight_tween.set_parallel(true)
-	_highlight_tween.tween_property(self, "modulate", highlight_color, 0.5)
-	_highlight_tween.tween_property(sprite, "scale", enlarged_scale, 0.5)
+	_highlight_tween.tween_property(self, "modulate", highlight_color, pulse_duration)
+	_highlight_tween.tween_property(sprite, "scale", enlarged_scale, pulse_duration)
 	_highlight_tween.set_parallel(false)
 	_highlight_tween.set_parallel(true)
-	_highlight_tween.tween_property(self, "modulate", Color.WHITE, 0.5)
-	_highlight_tween.tween_property(sprite, "scale", base_scale, 0.5)
+	_highlight_tween.tween_property(self, "modulate", Color.WHITE, pulse_duration)
+	_highlight_tween.tween_property(sprite, "scale", base_scale, pulse_duration)
 
 
 func _hide_clickable_highlight() -> void:

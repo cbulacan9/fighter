@@ -44,19 +44,38 @@ Each ability costs 50 mana (full bar) to activate via click.
 | Smoke Bomb | Hides 1/2/3 enemy tiles in smoke for 3 seconds. **Matches containing hidden tiles have no effect.** | Hides random enemy row + column for 3 seconds |
 | Shadow Step | Grants dodge chance: 3x = 20%, 4x = 40%, 5x = 75% | **Shadow Veil:** Evade all attacks for 5 seconds |
 
+### Assassin Status Display UI
+
+A dedicated UI panel shows Assassin-specific information:
+
+```
++------------------------------------------+
+| [#] SMOKE BOMB    READY       DODGE: 35% |
+| [#] SHADOW STEP   --                     |
+| [#] TRANCE        2/4                    |
++------------------------------------------+
+```
+
+- **Smoke Bomb readiness:** Shows "READY" when mana bar 0 is full
+- **Shadow Step readiness:** Shows "READY" when mana bar 1 is full
+- **Dodge percentage:** Top right corner, displays total dodge chance (base agility + dodge status stacks)
+- **Trance counter:** Shows matches used (X/4) during Predator's Trance, "--" when inactive
+
 ### Ultimate Ability
 
 **Predator's Trance**
 
-**Trigger:** Spawns when HP drops below 50% (not mana-based). Can re-trigger after cooldown expires if healed above 50% and damaged below again.
+**Trigger:** Spawns when both mana bars are full (similar to other character ultimates). The Predator's Trance tile appears on the board and must be clicked to activate.
 
-During Predator's Trance, all new tiles that drop are swords. When swords are matched, subsequent tile drops also become swords and auto-match:
+**Effect:** Applies the Predator's Trance status effect. While active, sword matches trigger bonus sword-only cascades:
 
-- 3x sword match: Next drop is swords, auto-chains
-- 4x sword match: Next 2 drops are swords, auto-chain
-- 5x sword match: Next 3 drops are swords, auto-chain
+- 3x sword match: Next cascade spawns only sword tiles (1 bonus cascade)
+- 4x sword match: Next 2 cascades spawn only sword tiles (2 bonus cascades)
+- 5x sword match: Next 3 cascades spawn only sword tiles (3 bonus cascades)
 
-*Auto-chained tiles are marked as special and cannot continue the combo indefinitely.*
+The bonus cascades counter decrements after each cascade iteration. Once depleted, normal tile spawning resumes.
+
+**4-Match Limit:** Trance ends early after 4 player-initiated sword matches. The UI counter shows progress (0/4 → 1/4 → 2/4 → 3/4 → 4/4). This prevents infinite cascade abuse while still allowing powerful burst damage windows.
 
 **Cooldown:** 20 seconds after activation before another Predator's Trance tile can spawn.
 

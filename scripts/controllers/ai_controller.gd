@@ -96,18 +96,26 @@ func _process(delta: float) -> void:
 	if _decision_timer <= 0:
 		_decision_timer = decision_delay
 
-		# Priority 1: Check for Pet click (sequence completion)
+		# Priority 1: Check for Pet click (sequence completion) - Hunter
 		if _should_click_pet() and _pet_click_timer <= 0:
 			if _click_pet():
 				_pet_click_timer = _pet_click_delay
 				return  # Successfully clicked, wait for next cycle
 
-		# Priority 2: Check for ultimate activation
+		# Priority 2: Check for ultimate activation (Alpha Command or Predator's Trance)
 		if _should_use_ultimate():
 			if _activate_ultimate():
 				return  # Successfully clicked, wait for next cycle
 
-		# Priority 3: Normal move evaluation
+		# Priority 3: Check for Assassin ability clicks
+		if _should_use_smoke_bomb():
+			if _click_smoke_bomb():
+				return  # Successfully clicked, wait for next cycle
+		if _should_use_shadow_step():
+			if _click_shadow_step():
+				return  # Successfully clicked, wait for next cycle
+
+		# Priority 4: Normal move evaluation
 		_make_decision()
 
 
@@ -349,10 +357,29 @@ func evaluate_move(move: Move) -> float:
 		# Sword bonus - prioritize damage
 		if match_result.tile_type == TileTypes.Type.SWORD:
 			value *= 1.5
+			# During Predator's Trance, swords are EXTREMELY valuable
+			if _is_in_predators_trance():
+				value *= 100.0
 
 		# Lightning bonus - stun is valuable
 		if match_result.tile_type == TileTypes.Type.LIGHTNING:
 			value *= 1.3
+
+		# Assassin mana-aware scoring
+		if match_result.tile_type == TileTypes.Type.SMOKE_BOMB:
+			value *= _get_assassin_mana_multiplier(0)  # Mana bar 0
+		if match_result.tile_type == TileTypes.Type.SHADOW_STEP:
+			value *= _get_assassin_mana_multiplier(1)  # Mana bar 1
+
+		# Mirror Warden defensive tile scoring
+		if match_result.tile_type == TileTypes.Type.MAGIC_ATTACK:
+			value *= _get_warden_offensive_multiplier()
+		if match_result.tile_type == TileTypes.Type.REFLECTION:
+			value *= _get_warden_defensive_multiplier()
+		if match_result.tile_type == TileTypes.Type.CANCEL:
+			value *= _get_warden_defensive_multiplier()
+		if match_result.tile_type == TileTypes.Type.ABSORB:
+			value *= _get_warden_absorb_multiplier()
 
 		score += value
 
@@ -529,6 +556,14 @@ func _load_tile_data() -> void:
 	_tile_data_cache[TileTypes.Type.POTION] = preload("res://resources/tiles/potion.tres")
 	_tile_data_cache[TileTypes.Type.LIGHTNING] = preload("res://resources/tiles/lightning.tres")
 	_tile_data_cache[TileTypes.Type.FILLER] = preload("res://resources/tiles/filler.tres")
+	_tile_data_cache[TileTypes.Type.SMOKE_BOMB] = preload("res://resources/tiles/smoke_bomb.tres")
+	_tile_data_cache[TileTypes.Type.SHADOW_STEP] = preload("res://resources/tiles/shadow_step.tres")
+	_tile_data_cache[TileTypes.Type.PREDATORS_TRANCE] = preload("res://resources/tiles/predators_trance.tres")
+	_tile_data_cache[TileTypes.Type.MAGIC_ATTACK] = preload("res://resources/tiles/magic_attack.tres")
+	_tile_data_cache[TileTypes.Type.REFLECTION] = preload("res://resources/tiles/reflection.tres")
+	_tile_data_cache[TileTypes.Type.CANCEL] = preload("res://resources/tiles/cancel.tres")
+	_tile_data_cache[TileTypes.Type.ABSORB] = preload("res://resources/tiles/absorb.tres")
+	_tile_data_cache[TileTypes.Type.INVINCIBILITY_TILE] = preload("res://resources/tiles/invincibility_tile.tres")
 
 
 func _get_effect_value(tile_type: TileTypes.Type, count: int) -> int:
@@ -733,30 +768,69 @@ func _get_enemy_fighter() -> Fighter:
 
 # --- Ultimate Activation Decision Logic ---
 
-## Determines if the AI should activate their ultimate ability (click Alpha Command tile)
+## Determines if the AI should activate their ultimate ability
+## Supports Alpha Command (Hunter), Predator's Trance (Assassin), and Invincibility (Warden)
 func _should_use_ultimate() -> bool:
 	if not board:
 		return false
 
-	# Check if Alpha Command tile is on the board
+	# Check for Hunter's Alpha Command tile
 	var alpha_tile := _get_alpha_command_tile()
-	if not alpha_tile:
-		return false
+	if alpha_tile:
+		# Use ultimate when we have pet tiles to boost (maximize Hunter potential)
+		var pet_tiles := _get_clickable_hunter_pet_tiles()
+		if not pet_tiles.is_empty():
+			return true
 
-	# Use ultimate when we have pet tiles to boost (maximize Hunter potential)
-	var pet_tiles := _get_clickable_hunter_pet_tiles()
-	if not pet_tiles.is_empty():
+		# Consider using ultimate when low on health for self-preservation
+		if _owner_fighter and _owner_fighter.get_hp_percent() < 0.3:
+			return true
+
+		# Default: use it when available (it's powerful!)
 		return true
 
-	# Consider using ultimate when low on health for self-preservation
-	if _owner_fighter and _owner_fighter.get_hp_percent() < 0.3:
-		return true
+	# Check for Assassin's Predator's Trance tile
+	var trance_tile := _get_predators_trance_tile()
+	if trance_tile:
+		return _should_use_predators_trance()
 
-	# Default: use it when available (it's powerful!)
+	# Check for Mirror Warden's Invincibility tile
+	var invincibility_tile := _get_invincibility_tile()
+	if invincibility_tile:
+		return _should_use_invincibility()
+
+	return false
+
+
+## Determines if the AI should activate Predator's Trance
+func _should_use_predators_trance() -> bool:
+	match _difficulty:
+		Difficulty.EASY:
+			# Randomly use when available
+			return randf() < 0.5
+
+		Difficulty.MEDIUM:
+			# Use when we have some swords on board to capitalize on
+			var sword_count := _get_tiles_of_type(TileTypes.Type.SWORD).size()
+			return sword_count >= 2 or randf() < 0.7
+
+		Difficulty.HARD:
+			# Strategic: use when board has swords and potential for cascades
+			var sword_count := _get_tiles_of_type(TileTypes.Type.SWORD).size()
+			# Always use if we have swords to work with
+			if sword_count >= 3:
+				return true
+			# Use when low health for offensive push
+			if _owner_fighter and _owner_fighter.get_hp_percent() < 0.4:
+				return true
+			# Otherwise use with some probability
+			return sword_count >= 1 and randf() < 0.8
+
 	return true
 
 
-## Activates the ultimate ability by clicking the Alpha Command tile
+## Activates the ultimate ability by clicking the appropriate tile
+## Supports Alpha Command (Hunter), Predator's Trance (Assassin), and Invincibility (Warden)
 ## Returns true if the click was successful (tile was consumed)
 func _activate_ultimate() -> bool:
 	if not board:
@@ -766,15 +840,31 @@ func _activate_ultimate() -> bool:
 	if board.get_state() != BoardManager.BoardState.IDLE:
 		return false
 
+	# Try Hunter's Alpha Command first
 	var alpha_tile := _get_alpha_command_tile()
-	if not alpha_tile:
-		return false
+	if alpha_tile:
+		board._on_tile_clicked(alpha_tile)
+		# Check if the tile was actually consumed (click succeeded)
+		var tile_after := _get_alpha_command_tile()
+		return tile_after == null  # True if tile was consumed
 
-	board._on_tile_clicked(alpha_tile)
+	# Try Assassin's Predator's Trance
+	var trance_tile := _get_predators_trance_tile()
+	if trance_tile:
+		board._on_tile_clicked(trance_tile)
+		# Check if the tile was actually consumed (click succeeded)
+		var tile_after := _get_predators_trance_tile()
+		return tile_after == null  # True if tile was consumed
 
-	# Check if the tile was actually consumed (click succeeded)
-	var tile_after := _get_alpha_command_tile()
-	return tile_after == null  # True if tile was consumed
+	# Try Mirror Warden's Invincibility
+	var invincibility_tile := _get_invincibility_tile()
+	if invincibility_tile:
+		board._on_tile_clicked(invincibility_tile)
+		# Check if the tile was actually consumed (click succeeded)
+		var tile_after := _get_invincibility_tile()
+		return tile_after == null  # True if tile was consumed
+
+	return false
 
 
 ## Gets the Alpha Command tile if it exists on the board
@@ -841,3 +931,321 @@ func get_sequence_awareness() -> float:
 ## Sets the sequence awareness level (0.0-1.0)
 func set_sequence_awareness(awareness: float) -> void:
 	_sequence_awareness = clampf(awareness, 0.0, 1.0)
+
+
+# --- Assassin-Specific AI Support ---
+
+## Checks if the AI's fighter is currently in Predator's Trance
+func _is_in_predators_trance() -> bool:
+	var fighter := _get_owner_fighter()
+	if not fighter:
+		return false
+	return fighter.has_status(StatusTypes.StatusType.PREDATORS_TRANCE)
+
+
+## Returns a multiplier for Assassin mana tiles based on mana bar fill level.
+## Higher multiplier when bar is not full (wants to fill it), lower when full (already have ability).
+func _get_assassin_mana_multiplier(bar_index: int) -> float:
+	var fighter := _get_owner_fighter()
+	if not fighter or not fighter.mana_system:
+		return 1.0
+
+	var current := fighter.mana_system.get_mana(fighter, bar_index)
+	var max_mana := fighter.mana_system.get_max_mana(fighter, bar_index)
+
+	if max_mana <= 0:
+		return 1.0
+
+	var fill_percent := float(current) / float(max_mana)
+
+	# Prioritize filling mana when not full
+	# When empty (0%): 1.5x multiplier
+	# When half (50%): 1.25x multiplier
+	# When full (100%): 0.5x multiplier (ability ready, less urgent to match more)
+	if fill_percent >= 1.0:
+		return 0.5  # Already full, lower priority
+	else:
+		return 1.5 - (fill_percent * 0.5)
+
+
+## Gets the Predator's Trance tile if it exists on the board
+func _get_predators_trance_tile() -> Tile:
+	if not board or not board.grid:
+		return null
+
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile: Tile = board.grid.get_tile(row, col)
+			if tile and tile.tile_data:
+				if tile.tile_data.tile_type == TileTypes.Type.PREDATORS_TRANCE:
+					return tile
+
+	return null
+
+
+## Gets clickable Smoke Bomb tiles (when mana bar 0 is full)
+func _get_clickable_smoke_bomb_tiles() -> Array[Tile]:
+	var tiles: Array[Tile] = []
+
+	var fighter := _get_owner_fighter()
+	if not fighter or not fighter.mana_system:
+		return tiles
+
+	# Check if mana bar 0 is full
+	if not fighter.mana_system.is_full(fighter, 0):
+		return tiles
+
+	# Find Smoke Bomb tiles on board
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile: Tile = board.grid.get_tile(row, col)
+			if tile and tile.tile_data:
+				if tile.tile_data.tile_type == TileTypes.Type.SMOKE_BOMB:
+					if tile.tile_data.is_clickable:
+						tiles.append(tile)
+
+	return tiles
+
+
+## Gets clickable Shadow Step tiles (when mana bar 1 is full)
+func _get_clickable_shadow_step_tiles() -> Array[Tile]:
+	var tiles: Array[Tile] = []
+
+	var fighter := _get_owner_fighter()
+	if not fighter or not fighter.mana_system:
+		return tiles
+
+	# Check if mana bar 1 is full
+	if not fighter.mana_system.is_full(fighter, 1):
+		return tiles
+
+	# Find Shadow Step tiles on board
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile: Tile = board.grid.get_tile(row, col)
+			if tile and tile.tile_data:
+				if tile.tile_data.tile_type == TileTypes.Type.SHADOW_STEP:
+					if tile.tile_data.is_clickable:
+						tiles.append(tile)
+
+	return tiles
+
+
+## Checks if the AI should use Smoke Bomb's active ability
+func _should_use_smoke_bomb() -> bool:
+	var smoke_tiles := _get_clickable_smoke_bomb_tiles()
+	if smoke_tiles.is_empty():
+		return false
+
+	var enemy := _get_enemy_fighter()
+
+	match _difficulty:
+		Difficulty.EASY:
+			# Randomly use when available
+			return randf() < 0.3
+
+		Difficulty.MEDIUM:
+			# Use when available
+			return true
+
+		Difficulty.HARD:
+			# Strategic: use when enemy has good board state
+			# For now, use when enemy mana is building up
+			if enemy and enemy.mana_system:
+				var enemy_mana := enemy.mana_system.get_mana(enemy, 0)
+				var enemy_max := enemy.mana_system.get_max_mana(enemy, 0)
+				if enemy_max > 0 and float(enemy_mana) / float(enemy_max) > 0.5:
+					return true
+			return randf() < 0.7
+
+	return true
+
+
+## Checks if the AI should use Shadow Step's active ability (mana block)
+func _should_use_shadow_step() -> bool:
+	var shadow_tiles := _get_clickable_shadow_step_tiles()
+	if shadow_tiles.is_empty():
+		return false
+
+	var enemy := _get_enemy_fighter()
+
+	match _difficulty:
+		Difficulty.EASY:
+			# Randomly use when available
+			return randf() < 0.3
+
+		Difficulty.MEDIUM:
+			# Use when enemy mana is building
+			if enemy and enemy.mana_system:
+				var enemy_mana := enemy.mana_system.get_mana(enemy, 0)
+				var enemy_max := enemy.mana_system.get_max_mana(enemy, 0)
+				if enemy_max > 0 and float(enemy_mana) / float(enemy_max) > 0.5:
+					return true
+			return randf() < 0.5
+
+		Difficulty.HARD:
+			# Strategic: use when enemy mana > 70%
+			if enemy and enemy.mana_system:
+				var enemy_mana := enemy.mana_system.get_mana(enemy, 0)
+				var enemy_max := enemy.mana_system.get_max_mana(enemy, 0)
+				if enemy_max > 0 and float(enemy_mana) / float(enemy_max) > 0.7:
+					return true
+			return false
+
+	return true
+
+
+## Clicks Smoke Bomb tile to activate the ability
+func _click_smoke_bomb() -> bool:
+	if not board or board.get_state() != BoardManager.BoardState.IDLE:
+		return false
+
+	var smoke_tiles := _get_clickable_smoke_bomb_tiles()
+	if smoke_tiles.is_empty():
+		return false
+
+	board._on_tile_clicked(smoke_tiles[0])
+	return true
+
+
+## Clicks Shadow Step tile to activate the ability
+func _click_shadow_step() -> bool:
+	if not board or board.get_state() != BoardManager.BoardState.IDLE:
+		return false
+
+	var shadow_tiles := _get_clickable_shadow_step_tiles()
+	if shadow_tiles.is_empty():
+		return false
+
+	board._on_tile_clicked(shadow_tiles[0])
+	return true
+
+
+# --- Mirror Warden-Specific AI Support ---
+
+## Gets the Invincibility tile if it exists on the board
+func _get_invincibility_tile() -> Tile:
+	if not board or not board.grid:
+		return null
+
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			var tile: Tile = board.grid.get_tile(row, col)
+			if tile and tile.tile_data:
+				if tile.tile_data.tile_type == TileTypes.Type.INVINCIBILITY_TILE:
+					return tile
+
+	return null
+
+
+## Determines if the AI should activate Invincibility
+func _should_use_invincibility() -> bool:
+	var fighter := _get_owner_fighter()
+
+	match _difficulty:
+		Difficulty.EASY:
+			# Randomly use when available
+			return randf() < 0.4
+
+		Difficulty.MEDIUM:
+			# Use when low health
+			if fighter and fighter.get_hp_percent() < 0.4:
+				return true
+			return randf() < 0.6
+
+		Difficulty.HARD:
+			# Strategic: use when low health or about to die
+			if fighter:
+				# Use immediately when critical health
+				if fighter.get_hp_percent() < 0.25:
+					return true
+				# Use when low health and no armor
+				if fighter.get_hp_percent() < 0.4 and fighter.armor <= 10:
+					return true
+			return false
+
+	return true
+
+
+## Returns a multiplier for defensive tiles (Reflection, Cancel) based on HP
+## Higher multiplier when HP is low (wants defense), lower when healthy
+func _get_warden_defensive_multiplier() -> float:
+	var fighter := _get_owner_fighter()
+	if not fighter:
+		return 1.0
+
+	var hp_percent := fighter.get_hp_percent()
+
+	# Prioritize defense when HP is low
+	# HP 100%: 1.0x multiplier
+	# HP 50%: 1.5x multiplier
+	# HP 25%: 2.0x multiplier
+	if hp_percent <= 0.25:
+		return 2.0
+	elif hp_percent <= 0.5:
+		return 1.5
+	elif hp_percent <= 0.75:
+		return 1.2
+	return 1.0
+
+
+## Returns a multiplier for Magic Attack tile based on stored absorb damage
+## Higher multiplier when we have stored damage to release
+func _get_warden_offensive_multiplier() -> float:
+	var fighter := _get_owner_fighter()
+	if not fighter:
+		return 1.2  # Base multiplier for damage tile
+
+	var combat_mgr := _get_combat_manager()
+	if not combat_mgr or not combat_mgr.defensive_queue_manager:
+		return 1.2
+
+	# Check for stored absorb damage
+	var stored_damage := combat_mgr.defensive_queue_manager.get_stored_damage(fighter)
+	if stored_damage > 0:
+		# Highly prioritize Magic Attack when we have damage to release
+		return 2.5 + float(stored_damage) * 0.05  # Up to 3.5x for 20 stored damage
+
+	return 1.2  # Base damage multiplier
+
+
+## Returns a multiplier for Absorb tile based on combat state
+## Higher multiplier when expecting incoming damage
+func _get_warden_absorb_multiplier() -> float:
+	var fighter := _get_owner_fighter()
+	var enemy := _get_enemy_fighter()
+
+	if not fighter:
+		return 1.0
+
+	# Base multiplier is good since absorb can save us
+	var multiplier := 1.3
+
+	# Check if we already have absorb queued
+	var combat_mgr := _get_combat_manager()
+	if combat_mgr and combat_mgr.defensive_queue_manager:
+		if combat_mgr.defensive_queue_manager.has_queued_defense(fighter, StatusTypes.StatusType.ABSORB_QUEUED):
+			multiplier = 0.5  # Already have absorb, lower priority
+
+	# Higher priority when armor is low (next hit will hurt)
+	if fighter.armor <= 5:
+		multiplier *= 1.3
+
+	# Higher priority when enemy has attack up
+	if enemy and enemy.has_status(StatusTypes.StatusType.ATTACK_UP):
+		multiplier *= 1.5
+
+	return multiplier
+
+
+## Checks if the AI is currently in defensive posture (has queued defenses)
+func _is_in_defensive_posture() -> bool:
+	var fighter := _get_owner_fighter()
+	if not fighter:
+		return false
+
+	var combat_mgr := _get_combat_manager()
+	if not combat_mgr or not combat_mgr.defensive_queue_manager:
+		return false
+
+	return combat_mgr.defensive_queue_manager.is_in_defensive_posture(fighter)

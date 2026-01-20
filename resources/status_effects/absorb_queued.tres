@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3 uid="uid://mw4rd3n_4bs0rb_st4t"]
+
+[ext_resource type="Script" uid="uid://solsx176iov7" path="res://scripts/data/status_effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "absorb_queued"
+display_name = "Absorb Ready"
+effect_type = 11
+duration = 5.0
+max_stacks = 3
+stack_behavior = 1
+base_value = 1.0
+value_per_stack = 0.0

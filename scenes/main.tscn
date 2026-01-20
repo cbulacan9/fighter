@@ -34,10 +34,10 @@ script = ExtResource("2")
 [node name="Boards" type="Node2D" parent="."]
 
 [node name="EnemyBoard" parent="Boards" instance=ExtResource("3")]
-position = Vector2(104, 105)
+position = Vector2(104, 20)
 
 [node name="PlayerBoard" parent="Boards" instance=ExtResource("3")]
-position = Vector2(104, 680)
+position = Vector2(104, 596)
 
 [node name="AIController" type="Node" parent="."]
 script = ExtResource("4")
@@ -51,15 +51,15 @@ script = ExtResource("4")
 
 [node name="PlayerStunOverlay" parent="UI" instance=ExtResource("10")]
 offset_left = 104.0
-offset_top = 680.0
+offset_top = 596.0
 offset_right = 616.0
-offset_bottom = 1064.0
+offset_bottom = 980.0
 
 [node name="EnemyStunOverlay" parent="UI" instance=ExtResource("10")]
 offset_left = 104.0
-offset_top = 105.0
+offset_top = 20.0
 offset_right = 616.0
-offset_bottom = 489.0
+offset_bottom = 404.0
 
 [node name="DamageNumbers" type="Node2D" parent="UI"]
 script = ExtResource("8")

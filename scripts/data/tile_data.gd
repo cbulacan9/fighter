@@ -18,6 +18,7 @@ extends Resource
 @export var click_condition: TileTypes.ClickCondition = TileTypes.ClickCondition.NONE
 @export var click_effect: EffectData
 @export var click_cooldown: float = 0.0  # For COOLDOWN condition
+@export var mana_bar_index: int = -1  # Which mana bar to check for MANA_FULL (-1 = all bars)
 
 # Passive effect (triggered on match, separate from main effect)
 @export var passive_effect: EffectData

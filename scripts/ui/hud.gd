@@ -31,10 +31,15 @@ var _combat_log_debugger: CombatLogDebugger
 var _player_warden_display  # WardenDefenseDisplay
 var _enemy_warden_display  # WardenDefenseDisplay
 
+# Assassin-specific UI components (created dynamically)
+var _player_assassin_display  # AssassinStatusDisplay
+var _enemy_assassin_display  # AssassinStatusDisplay
+
 # Scene references for dynamic instantiation
 const COMBO_TREE_DISPLAY_SCENE := preload("res://scenes/ui/combo_tree_display.tscn")
 const PET_POPULATION_DISPLAY_SCENE := preload("res://scenes/ui/pet_population_display.tscn")
 const WARDEN_DEFENSE_DISPLAY_SCENE := preload("res://scenes/ui/warden_defense_display.tscn")
+const ASSASSIN_STATUS_DISPLAY_SCENE := preload("res://scenes/ui/assassin_status_display.tscn")
 
 ## Layout constants - single source of truth for positioning
 ## Layout: Player UI above player board, Enemy UI below enemy board
@@ -229,6 +234,10 @@ func _update_layout() -> void:
 		_player_warden_display.position = Vector2(char_ui_x, player_ui_y)
 	if _enemy_warden_display:
 		_enemy_warden_display.position = Vector2(char_ui_x, enemy_ui_y)
+	if _player_assassin_display:
+		_player_assassin_display.position = Vector2(char_ui_x, player_ui_y)
+	if _enemy_assassin_display:
+		_enemy_assassin_display.position = Vector2(char_ui_x, enemy_ui_y)
 
 
 func _setup_player_portrait() -> void:
@@ -277,8 +286,10 @@ func setup(player_fighter: Fighter, enemy_fighter: Fighter, player_char_data: Ch
 	# Setup health bars, name labels, and portraits
 	if player_fighter:
 		player_health_bar.setup(player_fighter.max_hp)
-		player_fighter.hp_changed.connect(_on_player_hp_changed)
-		player_fighter.armor_changed.connect(_on_player_armor_changed)
+		if not player_fighter.hp_changed.is_connected(_on_player_hp_changed):
+			player_fighter.hp_changed.connect(_on_player_hp_changed)
+		if not player_fighter.armor_changed.is_connected(_on_player_armor_changed):
+			player_fighter.armor_changed.connect(_on_player_armor_changed)
 
 		# Set player name label
 		if player_fighter.fighter_data and player_name_label:
@@ -297,8 +308,10 @@ func setup(player_fighter: Fighter, enemy_fighter: Fighter, player_char_data: Ch
 
 	if enemy_fighter:
 		enemy_health_bar.setup(enemy_fighter.max_hp)
-		enemy_fighter.hp_changed.connect(_on_enemy_hp_changed)
-		enemy_fighter.armor_changed.connect(_on_enemy_armor_changed)
+		if not enemy_fighter.hp_changed.is_connected(_on_enemy_hp_changed):
+			enemy_fighter.hp_changed.connect(_on_enemy_hp_changed)
+		if not enemy_fighter.armor_changed.is_connected(_on_enemy_armor_changed):
+			enemy_fighter.armor_changed.connect(_on_enemy_armor_changed)
 
 		# Set enemy name label
 		if enemy_fighter.fighter_data and enemy_name_label:
@@ -868,6 +881,94 @@ func is_player_using_warden_ui() -> bool:
 ## Returns true if the enemy is using Warden-style UI
 func is_enemy_using_warden_ui() -> bool:
 	return _enemy_warden_display != null
+
+
+# --- Assassin Status Display ---
+
+func setup_assassin_ui(player_fighter: Fighter, enemy_fighter: Fighter,
+		mana_system: ManaSystem, status_manager: StatusEffectManager,
+		player_tile_spawner: TileSpawner = null, enemy_tile_spawner: TileSpawner = null) -> void:
+	"""Setup Assassin status displays only for Assassin characters."""
+	# Clean up any existing displays
+	_cleanup_assassin_ui()
+
+	if not mana_system:
+		return
+
+	# Create player Assassin display only if player is Assassin
+	if player_fighter and _is_assassin(_player_character_data):
+		_create_assassin_ui(player_fighter, mana_system, status_manager, true, player_tile_spawner)
+
+	# Create enemy Assassin display only if enemy is Assassin
+	if enemy_fighter and _is_assassin(_enemy_character_data):
+		_create_assassin_ui(enemy_fighter, mana_system, status_manager, false, enemy_tile_spawner)
+
+
+func _is_assassin(char_data: CharacterData) -> bool:
+	"""Check if the character is an Assassin."""
+	if not char_data:
+		return false
+	return char_data.character_id == "assassin"
+
+
+func _create_assassin_ui(fighter: Fighter, mana_system: ManaSystem,
+		status_manager: StatusEffectManager, is_player: bool, tile_spawner: TileSpawner = null) -> void:
+	"""Create Assassin status display positioned to the right of panel [Portrait][Panel][CharUI]."""
+	if not fighter or not mana_system:
+		return
+
+	# Position to the right of panel (same as Hunter ComboTreeDisplay and Warden)
+	var char_ui_x := UI_X + CHAR_UI_OFFSET_X
+	var display_pos: Vector2
+	if is_player:
+		display_pos = Vector2(char_ui_x, get_player_ui_y())
+	else:
+		display_pos = Vector2(char_ui_x, get_enemy_ui_y())
+
+	# Create AssassinStatusDisplay
+	var display = ASSASSIN_STATUS_DISPLAY_SCENE.instantiate()
+	display.position = display_pos
+	add_child(display)
+	display.setup(fighter, mana_system, status_manager, tile_spawner)
+
+	# Store reference
+	if is_player:
+		_player_assassin_display = display
+	else:
+		_enemy_assassin_display = display
+
+
+func _cleanup_assassin_ui() -> void:
+	"""Clean up Assassin status displays."""
+	if _player_assassin_display:
+		_player_assassin_display.clear()
+		_player_assassin_display.queue_free()
+		_player_assassin_display = null
+
+	if _enemy_assassin_display:
+		_enemy_assassin_display.clear()
+		_enemy_assassin_display.queue_free()
+		_enemy_assassin_display = null
+
+
+func get_player_assassin_display():
+	"""Returns the player's AssassinStatusDisplay if active."""
+	return _player_assassin_display
+
+
+func get_enemy_assassin_display():
+	"""Returns the enemy's AssassinStatusDisplay if active."""
+	return _enemy_assassin_display
+
+
+## Returns true if the player is using Assassin-style UI
+func is_player_using_assassin_ui() -> bool:
+	return _player_assassin_display != null
+
+
+## Returns true if the enemy is using Assassin-style UI
+func is_enemy_using_assassin_ui() -> bool:
+	return _enemy_assassin_display != null
 
 
 # --- Alpha Command Portrait Swap ---

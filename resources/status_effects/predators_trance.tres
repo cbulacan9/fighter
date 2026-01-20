@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3 uid="uid://cpr3d4t0r5tr"]
+
+[ext_resource type="Script" uid="uid://solsx176iov7" path="res://scripts/data/status_effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "predators_trance"
+display_name = "Predator's Trance"
+effect_type = 8
+duration = 10.0
+max_stacks = 1
+stack_behavior = 1

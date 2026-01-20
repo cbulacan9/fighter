@@ -60,12 +60,16 @@ var _fighter: Fighter
 var _defensive_queue: DefensiveQueueManager
 var _defense_rows: Dictionary = {}  # {StatusType: {row: HBoxContainer, icon: ColorRect, timer_bar: ProgressBar, stack_label: Label, absorb_label: Label, glow: ColorRect}}
 var _active_tweens: Dictionary = {}  # {StatusType: Array[Tween]}
+var _active_defense_count: int = 0  # Track active defenses to skip processing when zero
 
 @onready var _background: ColorRect = $Background
 @onready var _vbox: VBoxContainer = $VBox
 
 
 func _ready() -> void:
+	# Disable processing until we have active defenses to update
+	set_process(false)
+
 	# Ensure VBox exists
 	if not _vbox:
 		_vbox = $VBox
@@ -115,6 +119,10 @@ func setup(fighter: Fighter, defensive_queue: DefensiveQueueManager) -> void:
 
 func clear() -> void:
 	"""Remove all UI elements and disconnect signals."""
+	# Reset active defense count and disable processing
+	_active_defense_count = 0
+	set_process(false)
+
 	# Kill all active tweens
 	for defense_type in _active_tweens:
 		_kill_defense_tweens(defense_type)
@@ -144,6 +152,11 @@ func clear() -> void:
 func _process(_delta: float) -> void:
 	"""Update timer bars for all active defenses."""
 	if not _defensive_queue or not _fighter:
+		return
+
+	# Early exit if no active defenses - disable processing
+	if _active_defense_count <= 0:
+		set_process(false)
 		return
 
 	for defense_type in DEFENSE_TYPES:
@@ -357,6 +370,11 @@ func _track_tween(defense_type: StatusTypes.StatusType, tween: Tween) -> void:
 	"""Track a tween for a defense type."""
 	if defense_type not in _active_tweens:
 		_active_tweens[defense_type] = []
+	else:
+		# Clean up completed tweens to prevent unbounded growth
+		_active_tweens[defense_type] = _active_tweens[defense_type].filter(
+			func(t: Tween) -> bool: return t and t.is_valid()
+		)
 	_active_tweens[defense_type].append(tween)
 
 
@@ -369,6 +387,10 @@ func _on_defense_queued(fighter: Fighter, defense_type: StatusTypes.StatusType) 
 
 	if not _defense_rows.has(defense_type):
 		return
+
+	# Track active defense count and enable processing
+	_active_defense_count += 1
+	set_process(true)
 
 	# Get enhanced state
 	var is_enhanced := _defensive_queue.is_enhanced(fighter, defense_type)
@@ -395,6 +417,9 @@ func _on_defense_triggered(fighter: Fighter, defense_type: StatusTypes.StatusTyp
 	if not _defense_rows.has(defense_type):
 		return
 
+	# Decrement active defense count
+	_active_defense_count = max(0, _active_defense_count - 1)
+
 	# Flash white then dim
 	_kill_defense_tweens(defense_type)
 	var row_data: Dictionary = _defense_rows[defense_type]
@@ -414,6 +439,9 @@ func _on_defense_expired(fighter: Fighter, defense_type: StatusTypes.StatusType)
 
 	if not _defense_rows.has(defense_type):
 		return
+
+	# Decrement active defense count
+	_active_defense_count = max(0, _active_defense_count - 1)
 
 	# Flash red then dim
 	_kill_defense_tweens(defense_type)
@@ -451,6 +479,10 @@ func _on_absorb_damage_stored(fighter: Fighter, _amount: int, total: int) -> voi
 ## Reset the display for a new match.
 func reset() -> void:
 	"""Reset the display state for a new match."""
+	# Reset active defense count and disable processing
+	_active_defense_count = 0
+	set_process(false)
+
 	# Kill all tweens
 	for defense_type in _active_tweens:
 		_kill_defense_tweens(defense_type)

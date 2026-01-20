@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=3 format=3 uid="uid://csh4d0wp4ss1v"]
+
+[ext_resource type="Script" uid="uid://dnhpvmpj0050n" path="res://scripts/data/effect_data.gd" id="1"]
+[ext_resource type="Resource" uid="uid://cd0dg3st4tus" path="res://resources/status_effects/dodge.tres" id="2_dodge"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "shadow_step_passive"
+display_name = "Shadow Form"
+effect_type = 12
+target = 1
+base_value = 20
+values_by_match_size = {
+3: 20,
+4: 40,
+5: 75
+}
+status_effect = ExtResource("2_dodge")
+custom_effect_id = "shadow_step_passive"
+description = "Grants dodge chance (20%/40%/75% based on match size)."
