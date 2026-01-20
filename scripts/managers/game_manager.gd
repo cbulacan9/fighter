@@ -70,6 +70,9 @@ func _ready() -> void:
 	_load_fighter_data()
 	call_deferred("_initialize_systems")
 
+	# Connect to viewport size changes for responsive layout
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
+
 
 ## Initializes the character registry and loads all available characters.
 func _initialize_character_registry() -> void:
@@ -178,6 +181,27 @@ func _position_boards() -> void:
 			player_stun_overlay.offset_top = player_board_y
 			player_stun_overlay.offset_right = BOARD_X + BOARD_WIDTH
 			player_stun_overlay.offset_bottom = player_board_y + BOARD_HEIGHT
+
+
+## Handle viewport resize - update positions for new screen size
+func _on_viewport_size_changed() -> void:
+	HUD.update_screen_size(get_viewport())
+	_position_boards()
+	_update_spawner_positions()
+
+
+## Update spawner positions after viewport resize
+func _update_spawner_positions() -> void:
+	if damage_spawner:
+		damage_spawner.update_positions(
+			HUD.get_player_damage_pos(),
+			HUD.get_enemy_damage_pos()
+		)
+	if ability_announcement_spawner:
+		ability_announcement_spawner.update_positions(
+			HUD.get_player_announcement_pos(),
+			HUD.get_enemy_announcement_pos()
+		)
 
 
 func _connect_signals() -> void:
@@ -366,16 +390,16 @@ func _setup_match() -> void:
 	if hud and combat_manager:
 		hud.setup(combat_manager.player_fighter, combat_manager.enemy_fighter, selected_player_character, selected_enemy_character)
 
-	# Setup damage number spawner
+	# Setup damage number spawner (using reactive positions from HUD)
 	if damage_spawner and combat_manager:
-		var player_pos := Vector2(360, 750)  # Center of player board area
-		var enemy_pos := Vector2(360, 300)   # Center of enemy board area
+		var player_pos := HUD.get_player_damage_pos()
+		var enemy_pos := HUD.get_enemy_damage_pos()
 		damage_spawner.setup(combat_manager, player_pos, enemy_pos)
 
-	# Setup ability announcement spawner
+	# Setup ability announcement spawner (using reactive positions from HUD)
 	if ability_announcement_spawner:
-		var player_announce_pos := Vector2(360, 850)  # Below player board
-		var enemy_announce_pos := Vector2(360, 250)   # Center of enemy board area
+		var player_announce_pos := HUD.get_player_announcement_pos()
+		var enemy_announce_pos := HUD.get_enemy_announcement_pos()
 		ability_announcement_spawner.setup(player_announce_pos, enemy_announce_pos)
 
 	# Setup defensive queue displays and damage number integration
@@ -495,10 +519,10 @@ func reset_match() -> void:
 		if combat_log:
 			combat_log.reset()
 		# Reset Warden defense displays
-		var player_warden := hud.get_player_warden_display()
+		var player_warden = hud.get_player_warden_display()
 		if player_warden:
 			player_warden.reset()
-		var enemy_warden := hud.get_enemy_warden_display()
+		var enemy_warden = hud.get_enemy_warden_display()
 		if enemy_warden:
 			enemy_warden.reset()
 

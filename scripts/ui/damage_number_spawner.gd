@@ -7,10 +7,13 @@ const POOL_SIZE := 15  # Covers worst-case cascade damage burst
 const MAX_POOL_SIZE := 30  # Hard cap to prevent unbounded growth
 
 var _combat_manager: CombatManager
+var _defensive_queue: DefensiveQueueManager
 var _player_position: Vector2
 var _enemy_position: Vector2
 var _pool: Array[DamageNumber] = []
 var _pool_index: int = 0  # For round-robin reuse when pool is exhausted
+var _player_fighter: Fighter
+var _enemy_fighter: Fighter
 
 
 func _ready() -> void:
@@ -75,6 +78,9 @@ func setup(combat_manager: CombatManager, player_pos: Vector2, enemy_pos: Vector
 	_enemy_position = enemy_pos
 
 	if combat_manager:
+		_player_fighter = combat_manager.player_fighter
+		_enemy_fighter = combat_manager.enemy_fighter
+
 		if not combat_manager.damage_dealt.is_connected(_on_damage_dealt):
 			combat_manager.damage_dealt.connect(_on_damage_dealt)
 		if not combat_manager.healing_done.is_connected(_on_healing_done):
@@ -87,6 +93,11 @@ func setup(combat_manager: CombatManager, player_pos: Vector2, enemy_pos: Vector
 			combat_manager.damage_dodged.connect(_on_damage_dodged)
 		if not combat_manager.status_damage_dealt.is_connected(_on_status_damage_dealt):
 			combat_manager.status_damage_dealt.connect(_on_status_damage_dealt)
+
+
+func update_positions(player_pos: Vector2, enemy_pos: Vector2) -> void:
+	_player_position = player_pos
+	_enemy_position = enemy_pos
 
 
 func _disconnect_signals() -> void:
@@ -103,6 +114,8 @@ func _disconnect_signals() -> void:
 			_combat_manager.damage_dodged.disconnect(_on_damage_dodged)
 		if _combat_manager.status_damage_dealt.is_connected(_on_status_damage_dealt):
 			_combat_manager.status_damage_dealt.disconnect(_on_status_damage_dealt)
+
+	_disconnect_defensive_queue_signals()
 
 
 func spawn(value: float, type: DamageNumber.EffectType, world_pos: Vector2) -> void:
@@ -158,3 +171,54 @@ func _on_status_damage_dealt(target: Fighter, damage: float, _effect_type: Statu
 	if damage > 0:
 		var pos := _get_fighter_position(target)
 		spawn(damage, DamageNumber.EffectType.DAMAGE, pos)
+
+
+# --- Defensive Queue Integration ---
+
+func setup_defensive_queue(defensive_queue: DefensiveQueueManager) -> void:
+	"""Connect to DefensiveQueueManager signals for visual feedback."""
+	_disconnect_defensive_queue_signals()
+
+	_defensive_queue = defensive_queue
+	if not defensive_queue:
+		return
+
+	if not defensive_queue.defense_triggered.is_connected(_on_defense_triggered):
+		defensive_queue.defense_triggered.connect(_on_defense_triggered)
+	if not defensive_queue.absorb_damage_stored.is_connected(_on_absorb_stored):
+		defensive_queue.absorb_damage_stored.connect(_on_absorb_stored)
+	if not defensive_queue.absorb_damage_released.is_connected(_on_absorb_released):
+		defensive_queue.absorb_damage_released.connect(_on_absorb_released)
+
+
+func _disconnect_defensive_queue_signals() -> void:
+	if _defensive_queue:
+		if _defensive_queue.defense_triggered.is_connected(_on_defense_triggered):
+			_defensive_queue.defense_triggered.disconnect(_on_defense_triggered)
+		if _defensive_queue.absorb_damage_stored.is_connected(_on_absorb_stored):
+			_defensive_queue.absorb_damage_stored.disconnect(_on_absorb_stored)
+		if _defensive_queue.absorb_damage_released.is_connected(_on_absorb_released):
+			_defensive_queue.absorb_damage_released.disconnect(_on_absorb_released)
+
+
+func _on_defense_triggered(fighter: Fighter, defense_type: StatusTypes.StatusType) -> void:
+	var pos := _get_fighter_position(fighter)
+
+	match defense_type:
+		StatusTypes.StatusType.REFLECTION_QUEUED:
+			spawn(0, DamageNumber.EffectType.REFLECT, pos)
+		StatusTypes.StatusType.CANCEL_QUEUED:
+			spawn(0, DamageNumber.EffectType.CANCEL, pos)
+
+
+func _on_absorb_stored(fighter: Fighter, amount: int, _total: int) -> void:
+	if amount > 0:
+		var pos := _get_fighter_position(fighter)
+		spawn(amount, DamageNumber.EffectType.ABSORB, pos)
+
+
+func _on_absorb_released(fighter: Fighter, amount: int, multiplier: float) -> void:
+	if amount > 0:
+		# Show release on the fighter who released it
+		var pos := _get_fighter_position(fighter)
+		spawn(multiplier, DamageNumber.EffectType.RELEASE, pos)

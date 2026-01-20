@@ -14,6 +14,11 @@ func setup(player_pos: Vector2, enemy_pos: Vector2) -> void:
 	_enemy_position = enemy_pos
 
 
+func update_positions(player_pos: Vector2, enemy_pos: Vector2) -> void:
+	_player_position = player_pos
+	_enemy_position = enemy_pos
+
+
 func spawn_player_announcement(ability_name: String, effect_desc: String, color: Color = Color.YELLOW) -> void:
 	_spawn_at(_player_position, ability_name, effect_desc, color)
 
