@@ -37,23 +37,21 @@ const PET_POPULATION_DISPLAY_SCENE := preload("res://scenes/ui/pet_population_di
 const WARDEN_DEFENSE_DISPLAY_SCENE := preload("res://scenes/ui/warden_defense_display.tscn")
 
 ## Layout constants - single source of truth for positioning
-## New layout: Both player/enemy UIs in the middle (between boards)
-## Player UI on left, Enemy UI on right, portraits face each other
+## Layout: Player UI above player board, Enemy UI below enemy board
+## Each UI strip: [Portrait] [Panel] [Character-Specific UI]
 
 ## Board dimensions
 const BOARD_HEIGHT := 384.0     # Height of game boards
 const BOARD_X := 104.0          # X position for both boards
 
 ## Board positioning using offsets from edges (adjust these to move boards)
-const ENEMY_TOP_OFFSET := 20.0      # Enemy board distance from TOP of screen
-const PLAYER_BOTTOM_OFFSET := 100.0 # Player board distance from BOTTOM of screen
+const ENEMY_TOP_OFFSET := 45.0      # Enemy board distance from TOP of screen
+const PLAYER_BOTTOM_OFFSET := 150.0 # Player board distance from BOTTOM of screen
 
-## Middle UI positions (between boards)
-const PLAYER_UI_X := 10.0       # Player UI on left side
-const ENEMY_UI_X := 400.0       # Enemy UI on right side (mirror position)
-
-## Character-specific UI (combo tree, warden display) - right of boards
-const CHAR_UI_X := 620.0        # X position for character-specific UI (right of board)
+## UI positioning relative to boards
+const UI_X := 10.0                  # Left edge for all UI elements
+const UI_BELOW_BOARD := 5.0         # Gap between board bottom and UI
+const CHAR_UI_OFFSET_X := 400.0     # Horizontal offset for character-specific UI from portrait
 
 ## Portrait settings
 const PORTRAIT_SIZE := 96.0
@@ -78,16 +76,13 @@ static func get_enemy_board_y() -> float:
 static func get_player_board_y() -> float:
 	return _screen_height - PLAYER_BOTTOM_OFFSET - BOARD_HEIGHT
 
-## Calculated middle UI position (between the two boards)
-static func get_middle_ui_y() -> float:
-	return get_enemy_board_y() + BOARD_HEIGHT
+## Player UI Y position (above player board)
+static func get_player_ui_y() -> float:
+	return get_player_board_y() - PORTRAIT_SIZE - UI_BELOW_BOARD
 
-## Calculated character UI positions (aligned with their boards)
-static func get_player_char_ui_y() -> float:
-	return get_player_board_y()
-
-static func get_enemy_char_ui_y() -> float:
-	return get_enemy_board_y()
+## Enemy UI Y position (below enemy board)
+static func get_enemy_ui_y() -> float:
+	return get_enemy_board_y() + BOARD_HEIGHT + UI_BELOW_BOARD
 
 ## Damage number positions (centered on boards)
 static func get_player_damage_pos() -> Vector2:
@@ -121,20 +116,23 @@ var _player_ui_background: ColorRect
 
 
 func _create_ui_backgrounds() -> void:
-	# Create background for middle UI area (between boards)
-	# This covers the gap where both player and enemy UIs are displayed
-	var middle_y := get_middle_ui_y()
-	var player_board_y := get_player_board_y()
-
+	# Create background for player UI area (above player board)
+	var player_ui_y := get_player_ui_y()
 	_player_ui_background = ColorRect.new()
 	_player_ui_background.color = Color(0, 0, 0, 1)
-	_player_ui_background.position = Vector2(0, middle_y)
-	_player_ui_background.size = Vector2(720, player_board_y - middle_y)
+	_player_ui_background.position = Vector2(0, player_ui_y)
+	_player_ui_background.size = Vector2(720, PORTRAIT_SIZE + 10)  # Slightly taller than portrait
 	add_child(_player_ui_background)
 	move_child(_player_ui_background, 0)  # Move to back
 
-	# Enemy background no longer needed (was for top area)
-	_enemy_ui_background = null
+	# Create background for enemy UI area (below enemy board)
+	var enemy_ui_y := get_enemy_ui_y()
+	_enemy_ui_background = ColorRect.new()
+	_enemy_ui_background.color = Color(0, 0, 0, 1)
+	_enemy_ui_background.position = Vector2(0, enemy_ui_y)
+	_enemy_ui_background.size = Vector2(720, PORTRAIT_SIZE + 10)  # Slightly taller than portrait
+	add_child(_enemy_ui_background)
+	move_child(_enemy_ui_background, 0)  # Move to back
 
 
 func _ready() -> void:
@@ -165,67 +163,72 @@ func _on_viewport_size_changed() -> void:
 func _update_ui_background() -> void:
 	"""Update UI background size/position after viewport change."""
 	if _player_ui_background:
-		var middle_y := get_middle_ui_y()
-		var player_board_y := get_player_board_y()
-		_player_ui_background.position = Vector2(0, middle_y)
-		_player_ui_background.size = Vector2(720, player_board_y - middle_y)
+		var player_ui_y := get_player_ui_y()
+		_player_ui_background.position = Vector2(0, player_ui_y)
+		_player_ui_background.size = Vector2(720, PORTRAIT_SIZE + 10)
+
+	if _enemy_ui_background:
+		var enemy_ui_y := get_enemy_ui_y()
+		_enemy_ui_background.position = Vector2(0, enemy_ui_y)
+		_enemy_ui_background.size = Vector2(720, PORTRAIT_SIZE + 10)
 
 
 func _update_layout() -> void:
 	"""Position all UI elements based on current screen size."""
-	var middle_y := get_middle_ui_y()
+	var player_ui_y := get_player_ui_y()
+	var enemy_ui_y := get_enemy_ui_y()
+	var char_ui_x := UI_X + CHAR_UI_OFFSET_X
 
-	# Position PlayerPanel on LEFT side of middle area
+	# Position PlayerPanel above player board: [Portrait][Panel][CharUI]
 	if _player_panel:
 		var panel_width := _player_panel.offset_right - _player_panel.offset_left
 		var panel_height := _player_panel.offset_bottom - _player_panel.offset_top
-		_player_panel.offset_left = PLAYER_UI_X + PORTRAIT_SIZE + PORTRAIT_MARGIN
-		_player_panel.offset_top = middle_y
+		_player_panel.offset_left = UI_X + PORTRAIT_SIZE + PORTRAIT_MARGIN
+		_player_panel.offset_top = player_ui_y
 		_player_panel.offset_right = _player_panel.offset_left + panel_width
 		_player_panel.offset_bottom = _player_panel.offset_top + panel_height
 
-	# Position EnemyPanel on RIGHT side of middle area
+	# Position EnemyPanel below enemy board: [Portrait][Panel][CharUI]
 	if _enemy_panel:
 		var panel_width := _enemy_panel.offset_right - _enemy_panel.offset_left
 		var panel_height := _enemy_panel.offset_bottom - _enemy_panel.offset_top
-		_enemy_panel.offset_left = ENEMY_UI_X
-		_enemy_panel.offset_top = middle_y
+		_enemy_panel.offset_left = UI_X + PORTRAIT_SIZE + PORTRAIT_MARGIN
+		_enemy_panel.offset_top = enemy_ui_y
 		_enemy_panel.offset_right = _enemy_panel.offset_left + panel_width
 		_enemy_panel.offset_bottom = _enemy_panel.offset_top + panel_height
 
-	# Position SequenceIndicators (for non-Hunter characters) - right of boards
+	# Position SequenceIndicators (for non-Hunter characters) - right of panel
 	if player_sequence_indicator:
 		var indicator_width := player_sequence_indicator.offset_right - player_sequence_indicator.offset_left
 		var indicator_height := player_sequence_indicator.offset_bottom - player_sequence_indicator.offset_top
-		player_sequence_indicator.offset_left = CHAR_UI_X
-		player_sequence_indicator.offset_top = get_player_char_ui_y()
+		player_sequence_indicator.offset_left = char_ui_x
+		player_sequence_indicator.offset_top = player_ui_y
 		player_sequence_indicator.offset_right = player_sequence_indicator.offset_left + indicator_width
 		player_sequence_indicator.offset_bottom = player_sequence_indicator.offset_top + indicator_height
 
 	if enemy_sequence_indicator:
 		var indicator_width := enemy_sequence_indicator.offset_right - enemy_sequence_indicator.offset_left
 		var indicator_height := enemy_sequence_indicator.offset_bottom - enemy_sequence_indicator.offset_top
-		enemy_sequence_indicator.offset_left = CHAR_UI_X
-		enemy_sequence_indicator.offset_top = get_enemy_char_ui_y()
+		enemy_sequence_indicator.offset_left = char_ui_x
+		enemy_sequence_indicator.offset_top = enemy_ui_y
 		enemy_sequence_indicator.offset_right = enemy_sequence_indicator.offset_left + indicator_width
 		enemy_sequence_indicator.offset_bottom = enemy_sequence_indicator.offset_top + indicator_height
 
-	# Update portrait positions
+	# Update portrait positions (both at left edge, facing right toward their panels)
 	if player_portrait:
-		player_portrait.position = Vector2(PLAYER_UI_X, middle_y)
+		player_portrait.position = Vector2(UI_X, player_ui_y)
 	if enemy_portrait:
-		var enemy_portrait_x := ENEMY_UI_X + 190.0
-		enemy_portrait.position = Vector2(enemy_portrait_x, middle_y)
+		enemy_portrait.position = Vector2(UI_X, enemy_ui_y)
 
-	# Update dynamic UI positions (Hunter combo tree, Warden display)
+	# Update dynamic UI positions (Hunter combo tree, Warden display) - right of panel
 	if _player_combo_tree_display:
-		_player_combo_tree_display.position = Vector2(CHAR_UI_X, get_player_char_ui_y())
+		_player_combo_tree_display.position = Vector2(char_ui_x, player_ui_y)
 	if _enemy_combo_tree_display:
-		_enemy_combo_tree_display.position = Vector2(CHAR_UI_X, get_enemy_char_ui_y())
+		_enemy_combo_tree_display.position = Vector2(char_ui_x, enemy_ui_y)
 	if _player_warden_display:
-		_player_warden_display.position = Vector2(CHAR_UI_X, get_player_char_ui_y())
+		_player_warden_display.position = Vector2(char_ui_x, player_ui_y)
 	if _enemy_warden_display:
-		_enemy_warden_display.position = Vector2(CHAR_UI_X, get_enemy_char_ui_y())
+		_enemy_warden_display.position = Vector2(char_ui_x, enemy_ui_y)
 
 
 func _setup_player_portrait() -> void:
@@ -257,7 +260,7 @@ func _setup_enemy_portrait() -> void:
 		add_child(enemy_portrait)
 
 	# Configure portrait settings
-	enemy_portrait.flip_h = true  # Face left (toward player)
+	enemy_portrait.flip_h = false  # Face right (toward UI panel)
 	enemy_portrait.custom_minimum_size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
 	enemy_portrait.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
 
@@ -409,12 +412,13 @@ func _create_hunter_ui(board: BoardManager, is_player: bool) -> void:
 	if not board:
 		return
 
-	# Position combo tree to the right of boards
+	# Position combo tree to the right of panel [Portrait][Panel][CharUI]
+	var char_ui_x := UI_X + CHAR_UI_OFFSET_X
 	var combo_tree_pos: Vector2
 	if is_player:
-		combo_tree_pos = Vector2(CHAR_UI_X, get_player_char_ui_y())
+		combo_tree_pos = Vector2(char_ui_x, get_player_ui_y())
 	else:
-		combo_tree_pos = Vector2(CHAR_UI_X, get_enemy_char_ui_y())
+		combo_tree_pos = Vector2(char_ui_x, get_enemy_ui_y())
 
 	# Create ComboTreeDisplay (now includes pet population counts)
 	var combo_tree: ComboTreeDisplay = COMBO_TREE_DISPLAY_SCENE.instantiate()
@@ -784,33 +788,41 @@ func get_enemy_status_display() -> StatusEffectDisplay:
 
 func setup_defensive_queue(player_fighter: Fighter, enemy_fighter: Fighter,
 		defensive_queue: DefensiveQueueManager) -> void:
-	"""Setup Warden defense displays positioned on the right side of the board (same as Hunter UI)."""
+	"""Setup Warden defense displays only for Mirror Warden characters."""
 	# Clean up any existing displays
 	_cleanup_warden_ui()
 
 	if not defensive_queue:
 		return
 
-	# Create player Warden display if player fighter exists
-	if player_fighter:
+	# Create player Warden display only if player is Mirror Warden
+	if player_fighter and _is_mirror_warden(_player_character_data):
 		_create_warden_ui(player_fighter, defensive_queue, true)
 
-	# Create enemy Warden display if enemy fighter exists
-	if enemy_fighter:
+	# Create enemy Warden display only if enemy is Mirror Warden
+	if enemy_fighter and _is_mirror_warden(_enemy_character_data):
 		_create_warden_ui(enemy_fighter, defensive_queue, false)
 
 
+func _is_mirror_warden(char_data: CharacterData) -> bool:
+	"""Check if the character is a Mirror Warden."""
+	if not char_data:
+		return false
+	return char_data.character_id == "mirror_warden"
+
+
 func _create_warden_ui(fighter: Fighter, defensive_queue: DefensiveQueueManager, is_player: bool) -> void:
-	"""Create Warden defense display positioned to the right of boards (same as Hunter UI)."""
+	"""Create Warden defense display positioned to the right of panel [Portrait][Panel][CharUI]."""
 	if not fighter or not defensive_queue:
 		return
 
-	# Position to the right of boards (same as Hunter ComboTreeDisplay)
+	# Position to the right of panel (same as Hunter ComboTreeDisplay)
+	var char_ui_x := UI_X + CHAR_UI_OFFSET_X
 	var display_pos: Vector2
 	if is_player:
-		display_pos = Vector2(CHAR_UI_X, get_player_char_ui_y())
+		display_pos = Vector2(char_ui_x, get_player_ui_y())
 	else:
-		display_pos = Vector2(CHAR_UI_X, get_enemy_char_ui_y())
+		display_pos = Vector2(char_ui_x, get_enemy_ui_y())
 
 	# Create WardenDefenseDisplay
 	var display = WARDEN_DEFENSE_DISPLAY_SCENE.instantiate()

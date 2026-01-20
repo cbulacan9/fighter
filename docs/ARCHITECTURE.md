@@ -69,13 +69,15 @@
 ### UI Components (Distributed Pattern)
 | Component | Responsibility |
 |-----------|----------------|
-| **HUD** | Health bars, armor display, fighter portraits, mana bars, status effects |
+| **HUD** | Health bars, armor display, fighter portraits, mana bars, status effects, character-specific UI |
 | **DamageNumberSpawner** | Spawns floating damage/heal/armor/stun/miss numbers |
 | **StunOverlay** | Grey overlay on stunned board with timer display |
 | **GameOverlay** | Countdown, pause menu, victory/defeat splash |
 | **StatsScreen** | End-of-match statistics display |
 | **StatusEffectDisplay** | Shows active status effects with icons and duration |
 | **AbilityAnnouncementSpawner** | Spawns floating announcements for PET ability activations |
+| **ComboTreeDisplay** | Hunter-specific: shows combo sequences and pet population (Hunter only) |
+| **WardenDefenseDisplay** | Mirror Warden-specific: shows queued defensive abilities (Warden only) |
 
 ## Data Flow
 
@@ -158,8 +160,12 @@ Main (Node)
 ├── AIController (Node)
 └── UI (CanvasLayer)
 	├── HUD (Control)
-	│   ├── PlayerPanel (HealthBar, Portrait)
-	│   └── EnemyPanel (HealthBar, Portrait)
+	│   ├── PlayerPanel (HealthBar, ManaContainer, StatusDisplay)
+	│   ├── EnemyPanel (HealthBar, ManaContainer, StatusDisplay)
+	│   ├── PlayerPortrait (reparented to HUD root)
+	│   ├── EnemyPortrait (reparented to HUD root)
+	│   ├── ComboTreeDisplay (Hunter only, dynamic)
+	│   └── WardenDefenseDisplay (Mirror Warden only, dynamic)
 	├── PlayerStunOverlay (StunOverlay)
 	├── EnemyStunOverlay (StunOverlay)
 	├── DamageNumbers (DamageNumberSpawner)
@@ -312,7 +318,10 @@ project/
 │   │   ├── status_effect_display.gd
 │   │   ├── status_effect_icon.gd
 │   │   ├── ability_announcement.gd
-│   │   └── ability_announcement_spawner.gd
+│   │   ├── ability_announcement_spawner.gd
+│   │   ├── combo_tree_display.gd         # Hunter-specific combo UI
+│   │   ├── warden_defense_display.gd     # Mirror Warden defensive queue UI
+│   │   └── defensive_queue_display.gd    # Defensive ability icons
 │   ├── utils/
 │   │   └── tile_type_helper.gd    # Static tile type utilities
 │   └── data/

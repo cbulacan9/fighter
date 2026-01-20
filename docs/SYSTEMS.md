@@ -554,36 +554,107 @@ cascade_complete emits → Stats recorded
 ## 13. HUD Layout System
 
 ### Purpose
-Centralized layout constants for positioning UI elements (panels, portraits, combo trees) and boards. Allows easy adjustment of screen layout from a single location.
+Centralized layout constants for positioning UI elements (panels, portraits, character-specific UI) and boards. Each player's UI strip is positioned relative to their board.
+
+### Visual Layout
+```
+┌─────────────────────────────────┐
+│  ENEMY BOARD                    │
+│                                 │
+│ [Portrait][EnemyUI][CharUI]     │  ← Below enemy board
+├─────────────────────────────────┤
+│         (gap area)              │
+├─────────────────────────────────┤
+│ [Portrait][PlayerUI][CharUI]    │  ← Above player board
+│  PLAYER BOARD                   │
+│                                 │
+└─────────────────────────────────┘
+```
+
+Each UI strip follows the same horizontal layout: `[Portrait] [Panel] [Character-Specific UI]`
 
 ### Layout Constants (hud.gd)
 | Constant | Default | Description |
 |----------|---------|-------------|
-| `PLAYER_X_OFFSET` | 50.0 | Horizontal shift for all player UI elements |
-| `ENEMY_X_OFFSET` | 50.0 | Horizontal shift for all enemy UI elements |
-| `PANEL_BASE_X` | 10.0 | Base X position for health/mana panels |
-| `COMBO_TREE_BASE_X` | 290.0 | Base X position for combo tree display |
-| `PLAYER_UI_Y` | 550.0 | Y position for player UI elements |
-| `ENEMY_UI_Y` | 5.0 | Y position for enemy UI elements |
-| `PLAYER_BOARD_OFFSET` | 120.0 | Gap between player UI and board |
-| `ENEMY_BOARD_OFFSET` | 120.0 | Gap between enemy UI and board |
+| `BOARD_HEIGHT` | 384.0 | Height of game boards |
+| `BOARD_X` | 104.0 | X position for both boards |
+| `ENEMY_TOP_OFFSET` | 45.0 | Enemy board distance from top of screen |
+| `PLAYER_BOTTOM_OFFSET` | 150.0 | Player board distance from bottom of screen |
+| `UI_X` | 10.0 | Left edge for all UI elements |
+| `UI_BELOW_BOARD` | 5.0 | Gap between board edge and UI strip |
+| `CHAR_UI_OFFSET_X` | 400.0 | Horizontal offset for character-specific UI from left edge |
+| `PORTRAIT_SIZE` | 96.0 | Size of character portraits |
+| `PORTRAIT_MARGIN` | 10.0 | Gap between portrait and health/mana bars |
 
-### Calculated Positions
+### Calculated Positions (Static Functions)
 | Function | Returns | Description |
 |----------|---------|-------------|
-| `HUD.get_player_board_y()` | float | PLAYER_UI_Y + PLAYER_BOARD_OFFSET |
-| `HUD.get_enemy_board_y()` | float | ENEMY_UI_Y + ENEMY_BOARD_OFFSET |
+| `HUD.get_enemy_board_y()` | float | ENEMY_TOP_OFFSET |
+| `HUD.get_player_board_y()` | float | screen_height - PLAYER_BOTTOM_OFFSET - BOARD_HEIGHT |
+| `HUD.get_enemy_ui_y()` | float | Enemy board Y + BOARD_HEIGHT + UI_BELOW_BOARD (below enemy board) |
+| `HUD.get_player_ui_y()` | float | Player board Y - PORTRAIT_SIZE - UI_BELOW_BOARD (above player board) |
 
-### Elements Affected by X Offset
-- Health/Mana Panel (portrait + bars)
-- Combo Tree Display
-- Sequence Indicator (for non-Hunter characters)
+### UI Strip Components
+Each player's UI strip contains (left to right):
+1. **Portrait** - Character portrait at `UI_X`
+2. **Panel** - Health bar, mana bars, status effects at `UI_X + PORTRAIT_SIZE + PORTRAIT_MARGIN`
+3. **Character-Specific UI** - At `UI_X + CHAR_UI_OFFSET_X` (see section 13.1)
 
 ### Board Positioning
 GameManager calls `_position_boards()` which:
 1. Positions enemy board at `(BOARD_X, HUD.get_enemy_board_y())`
 2. Positions player board at `(BOARD_X, HUD.get_player_board_y())`
 3. Updates stun overlays to match board positions
+
+### Viewport Resize Handling
+The layout responds to viewport size changes:
+- `update_screen_size()` caches new screen height
+- `_update_layout()` repositions all UI elements
+- `_update_ui_background()` resizes background rectangles
+
+---
+
+## 13.1 Character-Specific UI
+
+### Purpose
+Different characters display unique UI components based on their mechanics. These appear to the right of the health/mana panel in each player's UI strip.
+
+### UI Components by Character
+
+| Character | UI Component | Description |
+|-----------|--------------|-------------|
+| **Hunter** | Combo Tree Display | Shows Bear/Hawk/Snake sequences with progress indicators and pet population counts |
+| **Mirror Warden** | Warden Defense Display | Shows queued defensive abilities (Reflect/Cancel/Absorb) with timers |
+| **Other Characters** | Sequence Indicator | Standard sequence display (if character uses sequences) |
+
+### Character Detection
+
+| Function | Purpose |
+|----------|---------|
+| `_is_mirror_warden(char_data)` | Returns true if `character_id == "mirror_warden"` |
+| `_board_uses_hunter_pets(board)` | Returns true if board has sequence patterns with `pet_type >= 0` |
+
+### UI Creation Flow
+
+**Hunter UI:**
+1. `_setup_sequence_ui_for_board()` calls `_board_uses_hunter_pets()`
+2. If true, hides standard SequenceIndicator
+3. `_create_hunter_ui()` instantiates ComboTreeDisplay at `(char_ui_x, ui_y)`
+
+**Warden UI:**
+1. `setup_defensive_queue()` is called with fighters and queue manager
+2. `_is_mirror_warden()` checks each fighter's character data
+3. `_create_warden_ui()` only called for Mirror Warden characters
+
+### Position Updates
+Character-specific UI positions update in `_update_layout()`:
+```gdscript
+var char_ui_x := UI_X + CHAR_UI_OFFSET_X
+# Hunter
+_player_combo_tree_display.position = Vector2(char_ui_x, player_ui_y)
+# Warden
+_player_warden_display.position = Vector2(char_ui_x, player_ui_y)
+```
 
 ---
 
