@@ -22,6 +22,7 @@ var current_hp: int = 0
 var max_hp: int = 100
 var max_armor: int = 0  ## 0 = use max_hp as cap
 var strength: int = 10  ## Scales sword damage (10 = baseline, 15 = +50%)
+var agility: int = 0  ## Base dodge chance (15 = 15%)
 var armor: int = 0
 var stun_remaining: float = 0.0
 var is_defeated: bool = false
@@ -30,8 +31,11 @@ var status_manager: StatusEffectManager  # Set by CombatManager
 var _mana_blocked: bool = false  # Direct mana block flag (for simple blocking without status effects)
 var _ultimate_cooldown_end_time: float = 0.0  # Time.get_ticks_msec() when ultimate cooldown ends
 var alpha_command_free_activations: int = 0  # Free pet activations remaining from Alpha Command
+var character_id: String = ""  # Character identifier (set by CombatManager)
+var _health_ultimate_triggered: bool = false  # Tracks if health-based ultimate was triggered
 
 const MIN_STUN_DURATION: float = 0.25
+const HEALTH_ULTIMATE_THRESHOLD: float = 0.5  # 50% HP threshold for health-based ultimates
 const STUN_DIMINISHING_FACTOR: float = 0.5
 
 
@@ -48,6 +52,7 @@ func initialize(data: FighterData) -> void:
 	max_hp = data.max_hp if data else 100
 	max_armor = data.max_armor if data else 0
 	strength = data.strength if data else 10
+	agility = data.agility if data else 0
 	current_hp = max_hp
 	armor = 0
 	stun_remaining = 0.0
@@ -131,6 +136,7 @@ func reset() -> void:
 	is_defeated = false
 	_mana_blocked = false
 	_ultimate_cooldown_end_time = 0.0
+	_health_ultimate_triggered = false
 
 	# Reset Alpha Command state
 	if alpha_command_free_activations > 0:
@@ -231,6 +237,39 @@ func start_ultimate_cooldown(duration_seconds: float) -> void:
 func get_ultimate_cooldown_remaining() -> float:
 	var remaining_ms := _ultimate_cooldown_end_time - Time.get_ticks_msec()
 	return maxf(0.0, remaining_ms / 1000.0)
+
+
+# Health-based ultimate methods (for Assassin)
+
+func uses_health_ultimate() -> bool:
+	## Returns true if this character uses health-based ultimate instead of mana
+	return character_id == "assassin"
+
+
+func check_health_ultimate() -> bool:
+	## Checks if health dropped below threshold and triggers ultimate if conditions met.
+	## Returns true if ultimate was triggered.
+	if not uses_health_ultimate():
+		return false
+
+	if _health_ultimate_triggered:
+		return false
+
+	if is_ultimate_on_cooldown():
+		return false
+
+	if get_hp_percent() < HEALTH_ULTIMATE_THRESHOLD:
+		_health_ultimate_triggered = true
+		ultimate_ready.emit()
+		return true
+
+	return false
+
+
+func reset_health_ultimate_trigger() -> void:
+	## Resets the health ultimate trigger when health goes back above threshold
+	if _health_ultimate_triggered and get_hp_percent() >= HEALTH_ULTIMATE_THRESHOLD:
+		_health_ultimate_triggered = false
 
 
 # Alpha Command free activation methods

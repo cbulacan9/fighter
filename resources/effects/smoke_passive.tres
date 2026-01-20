@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=2 format=3 uid="uid://csm0k3p4ss1v3"]
+
+[ext_resource type="Script" uid="uid://dnhpvmpj0050n" path="res://scripts/data/effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "smoke_bomb_passive"
+display_name = "Smoke Cloud"
+effect_type = 12
+target = 5
+base_value = 1
+values_by_match_size = {
+3: 1,
+4: 2,
+5: 3
+}
+duration = 3.0
+custom_effect_id = "smoke_bomb_passive"
+description = "Hides 1/2/3 random enemy tiles for 3 seconds. Matches containing hidden tiles have no effect."

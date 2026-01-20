@@ -8,6 +8,7 @@ class MatchResult:
 	var tile_type: TileTypes.Type
 	var positions: Array[Vector2i]
 	var origin: int = TileTypes.MatchOrigin.PLAYER_INITIATED
+	var contains_hidden_tile: bool = false  ## True if any tile in match was smoke-obscured
 	var count: int:
 		get:
 			return mini(positions.size(), MAX_MATCH_COUNT)

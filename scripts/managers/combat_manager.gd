@@ -28,6 +28,7 @@ var enemy_fighter: Fighter
 var mana_system: ManaSystem
 var status_effect_manager: StatusEffectManager
 var effect_processor: EffectProcessor
+var defensive_queue_manager: DefensiveQueueManager
 
 var _tile_data_cache: Dictionary = {}
 var _player_was_stunned: bool = false
@@ -40,6 +41,7 @@ func _ready() -> void:
 	_setup_mana_system()
 	_setup_status_effects()
 	_setup_effect_processor()
+	_setup_defensive_queue()
 
 
 func _setup_mana_system() -> void:
@@ -60,6 +62,10 @@ func _setup_status_effects() -> void:
 func _setup_effect_processor() -> void:
 	effect_processor = EffectProcessor.new()
 	effect_processor.setup(self)
+
+
+func _setup_defensive_queue() -> void:
+	defensive_queue_manager = DefensiveQueueManager.new()
 
 
 func initialize(player_data: FighterData, enemy_data: FighterData) -> void:
@@ -181,6 +187,10 @@ func _process_mana_from_matches(fighter: Fighter, result: CascadeHandler.Cascade
 
 
 func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult) -> void:
+	# Skip effects for matches containing smoke-obscured tiles
+	if match_result.contains_hidden_tile:
+		return
+
 	var effect_value := _get_effect_value(match_result.tile_type, match_result.count)
 	var target: Fighter
 
@@ -198,6 +208,7 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 		TileTypes.Type.POTION:
 			var actual := source.heal(effect_value)
 			healing_done.emit(source, actual)
+			source.reset_health_ultimate_trigger()  # Allow re-trigger if healed above threshold
 
 		TileTypes.Type.LIGHTNING:
 			target = get_opponent(source)
@@ -210,7 +221,11 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 		TileTypes.Type.MANA:
 			var mana_value: int = _tile_data_cache[TileTypes.Type.MANA].get_value(match_result.count)
 			if mana_system and not source.is_mana_blocked():
-				mana_system.add_mana(source, mana_value)
+				# Fill all mana bars for characters with multiple bars (like Assassin)
+				if mana_system.get_bar_count(source) > 1:
+					mana_system.add_mana_all_bars(source, mana_value)
+				else:
+					mana_system.add_mana(source, mana_value)
 
 		TileTypes.Type.FOCUS:
 			# Stacks based on match count: 3=1, 4=2, 5=3
@@ -219,10 +234,79 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 				var focus_effect := preload("res://resources/status_effects/focus.tres")
 				status_effect_manager.apply(source, focus_effect, source, stacks)
 
+		TileTypes.Type.SMOKE_BOMB:
+			# Fill mana bar 0
+			if mana_system and not source.is_mana_blocked():
+				mana_system.add_mana_from_match(source, match_result.count, 0)
+			# Trigger passive effect: hide tiles on enemy board
+			var smoke_tile_data := _tile_data_cache.get(TileTypes.Type.SMOKE_BOMB) as PuzzleTileData
+			if smoke_tile_data and smoke_tile_data.passive_effect and effect_processor:
+				effect_processor.process_effect(smoke_tile_data.passive_effect, source, match_result.count)
+
+		TileTypes.Type.SHADOW_STEP:
+			# Fill mana bar 1
+			if mana_system and not source.is_mana_blocked():
+				mana_system.add_mana_from_match(source, match_result.count, 1)
+			# Trigger passive effect: grant dodge chance to self
+			var shadow_tile_data := _tile_data_cache.get(TileTypes.Type.SHADOW_STEP) as PuzzleTileData
+			if shadow_tile_data and shadow_tile_data.passive_effect and effect_processor:
+				effect_processor.process_effect(shadow_tile_data.passive_effect, source, match_result.count)
+
+		TileTypes.Type.MAGIC_ATTACK:
+			target = get_opponent(source)
+			var base_damage := effect_value
+			# Check for stored absorb damage to release
+			if defensive_queue_manager:
+				var release_damage := defensive_queue_manager.release_stored_damage(source, match_result.count)
+				base_damage += release_damage
+			# Scale magic damage by strength
+			var strength_scaled := int(float(base_damage) * (float(source.strength) / 10.0))
+			_apply_damage(target, source, strength_scaled)
+			# Generate mana
+			if mana_system and not source.is_mana_blocked():
+				mana_system.add_mana_from_match(source, match_result.count)
+
+		TileTypes.Type.REFLECTION:
+			# Queue reflection defense
+			if defensive_queue_manager:
+				defensive_queue_manager.queue_defense(source, StatusTypes.StatusType.REFLECTION_QUEUED, match_result.count)
+			# Generate mana
+			if mana_system and not source.is_mana_blocked():
+				mana_system.add_mana_from_match(source, match_result.count)
+
+		TileTypes.Type.CANCEL:
+			# Queue cancel defense
+			if defensive_queue_manager:
+				defensive_queue_manager.queue_defense(source, StatusTypes.StatusType.CANCEL_QUEUED, match_result.count)
+			# Generate mana
+			if mana_system and not source.is_mana_blocked():
+				mana_system.add_mana_from_match(source, match_result.count)
+
+		TileTypes.Type.ABSORB:
+			# Queue absorb defense
+			if defensive_queue_manager:
+				defensive_queue_manager.queue_defense(source, StatusTypes.StatusType.ABSORB_QUEUED, match_result.count)
+			# Generate mana
+			if mana_system and not source.is_mana_blocked():
+				mana_system.add_mana_from_match(source, match_result.count)
+
 
 func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 	var final_damage := base_damage
 	var focus_stacks_used := 0
+
+	# Check Invincibility (complete damage immunity)
+	if status_effect_manager and status_effect_manager.has_effect(target, StatusTypes.StatusType.INVINCIBILITY):
+		damage_dodged.emit(target, source)  # Visual feedback
+		return
+
+	# Check Reflection (reflects damage back to attacker)
+	if defensive_queue_manager and defensive_queue_manager.check_and_consume_reflection(target):
+		# Reflect damage back to the source
+		if source and source != target:
+			var reflect_result := source.take_damage(base_damage)
+			damage_dealt.emit(source, reflect_result)
+		return
 
 	if status_effect_manager:
 		# Apply attacker's damage modifiers (ATTACK_UP)
@@ -246,17 +330,41 @@ func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 			damage_dodged.emit(target, source)
 			return
 
-		# Check target's DODGE (chance to avoid)
+		# Combined dodge check: base agility + DODGE status effect
+		var total_dodge_chance := float(target.agility) / 100.0
 		if status_effect_manager.has_effect(target, StatusTypes.StatusType.DODGE):
-			var dodge_chance := status_effect_manager.get_modifier(target, StatusTypes.StatusType.DODGE)
-			if randf() < dodge_chance:
-				damage_dodged.emit(target, source)
-				return
+			total_dodge_chance += status_effect_manager.get_modifier(target, StatusTypes.StatusType.DODGE)
+
+		if total_dodge_chance > 0 and randf() < total_dodge_chance:
+			damage_dodged.emit(target, source)
+			return
+
+	# Check Absorb (stores damage instead of taking it)
+	if defensive_queue_manager:
+		var absorbed := defensive_queue_manager.process_absorb(target, final_damage)
+		final_damage -= absorbed
+		if final_damage <= 0:
+			return  # All damage absorbed
 
 	# Apply damage normally
 	var result := target.take_damage(final_damage)
 	result.focus_stacks_consumed = focus_stacks_used
 	damage_dealt.emit(target, result)
+
+	# Check for health-based ultimate trigger (Assassin)
+	target.check_health_ultimate()
+
+	# Record damage for Cancel window
+	if defensive_queue_manager:
+		defensive_queue_manager.record_damage_taken(target, result.hp_damage, [])
+		# Check if cancel should trigger immediately (if already queued)
+		var cancel_result := defensive_queue_manager.check_and_trigger_cancel(target)
+		if not cancel_result.is_empty():
+			# Heal back the damage
+			var healed := target.heal(cancel_result.healed)
+			if healed > 0:
+				healing_done.emit(target, healed)
+				target.reset_health_ultimate_trigger()  # Allow re-trigger if healed above threshold
 
 
 func get_fighter(is_player: bool) -> Fighter:
@@ -289,6 +397,10 @@ func tick(delta: float) -> void:
 	# Tick status effects
 	if status_effect_manager:
 		status_effect_manager.tick(delta)
+
+	# Tick defensive queue windows
+	if defensive_queue_manager:
+		defensive_queue_manager.tick(delta)
 
 
 func check_victory() -> int:
@@ -341,6 +453,14 @@ func _load_tile_data() -> void:
 	_tile_data_cache[TileTypes.Type.FILLER] = preload("res://resources/tiles/filler.tres")
 	_tile_data_cache[TileTypes.Type.FOCUS] = preload("res://resources/tiles/focus.tres")
 	_tile_data_cache[TileTypes.Type.MANA] = preload("res://resources/tiles/mana.tres")
+	_tile_data_cache[TileTypes.Type.SMOKE_BOMB] = preload("res://resources/tiles/smoke_bomb.tres")
+	_tile_data_cache[TileTypes.Type.SHADOW_STEP] = preload("res://resources/tiles/shadow_step.tres")
+	_tile_data_cache[TileTypes.Type.PREDATORS_TRANCE] = preload("res://resources/tiles/predators_trance.tres")
+	_tile_data_cache[TileTypes.Type.MAGIC_ATTACK] = preload("res://resources/tiles/magic_attack.tres")
+	_tile_data_cache[TileTypes.Type.REFLECTION] = preload("res://resources/tiles/reflection.tres")
+	_tile_data_cache[TileTypes.Type.CANCEL] = preload("res://resources/tiles/cancel.tres")
+	_tile_data_cache[TileTypes.Type.ABSORB] = preload("res://resources/tiles/absorb.tres")
+	_tile_data_cache[TileTypes.Type.INVINCIBILITY_TILE] = preload("res://resources/tiles/invincibility_tile.tres")
 
 
 func _get_effect_value(tile_type: TileTypes.Type, count: int) -> int:
@@ -357,6 +477,10 @@ func _on_mana_changed(fighter: Fighter, bar_index: int, current: int, max_value:
 
 
 func _on_all_bars_full(fighter: Fighter) -> void:
+	# Skip mana-based ultimate for characters with health-based ultimates (Assassin)
+	if fighter.uses_health_ultimate():
+		return
+
 	ultimate_ready.emit(fighter)
 	fighter.ultimate_ready.emit()
 
@@ -367,6 +491,7 @@ func _on_all_bars_full(fighter: Fighter) -> void:
 func set_character_data(fighter: Fighter, char_data: CharacterData) -> void:
 	if fighter and char_data:
 		_character_data[fighter] = char_data
+		fighter.character_id = char_data.character_id
 
 
 ## Gets the character data for a fighter
@@ -406,10 +531,26 @@ func activate_ultimate(fighter: Fighter) -> bool:
 	if armor_restored > 0:
 		armor_gained.emit(fighter, armor_restored)
 
-	# Grant 3 free pet activations for Alpha Command
-	# This replaces the time-based status effect
-	fighter.alpha_command_free_activations = 3
-	fighter.alpha_command_activated.emit()
+	# Process ability effects (status buffs, etc.)
+	if effect_processor and ability.has_effects():
+		for effect in ability.get_effects():
+			if effect:
+				effect_processor.process_effect(effect, fighter, 0)
+
+	# Character-specific ultimate behavior
+	match ability.ability_id:
+		"alpha_command":
+			# Hunter: Grant 3 free pet activations
+			fighter.alpha_command_free_activations = 3
+			fighter.alpha_command_activated.emit()
+		"predators_trance":
+			# Assassin: The status effect handles sword-only spawns
+			# Any additional trance-specific behavior goes here
+			pass
+		"invincibility":
+			# Mirror Warden: Apply invincibility status effect for 8 seconds
+			# The effect is already applied via ability.effects, but we can add visual feedback
+			pass
 
 	# Visual feedback
 	_show_ultimate_activation(fighter, ability)
@@ -482,6 +623,15 @@ func process_tile_activation(tile: Tile, source: Fighter) -> void:
 	var tile_data := tile.tile_data as PuzzleTileData
 	if not tile_data:
 		return
+
+	# Drain mana for tiles with MANA_FULL condition
+	if tile_data.click_condition == TileTypes.ClickCondition.MANA_FULL and mana_system:
+		if tile_data.mana_bar_index >= 0:
+			# Drain specific mana bar (Smoke Bomb/Shadow Step)
+			mana_system.drain(source, mana_system.get_mana(source, tile_data.mana_bar_index), tile_data.mana_bar_index)
+		else:
+			# Drain all mana bars (ultimate)
+			mana_system.drain_all(source)
 
 	var effect := tile_data.click_effect
 	if effect and effect_processor:

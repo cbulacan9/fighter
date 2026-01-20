@@ -61,6 +61,9 @@ extends Resource
 ## Strength stat - scales sword damage (10 = baseline, 15 = +50% damage)
 @export var base_strength: int = 10
 
+## Agility stat - provides base dodge chance (15 = 15% dodge)
+@export var base_agility: int = 0
+
 # Unlock
 ## Whether this character is available from the start
 @export var is_starter: bool = false

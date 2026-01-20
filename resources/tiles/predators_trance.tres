@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=4 format=3 uid="uid://cpr3d4t0rt1l3"]
+
+[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://30kwhxfj58f5" path="res://assets/sprites/spritesheet_assassin_2.png" id="2_y28hp"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_680rx"]
+atlas = ExtResource("2_y28hp")
+region = Rect2(248, 22, 64, 64)
+
+[resource]
+script = ExtResource("1")
+tile_type = 14
+display_name = "Predator's Trance"
+sprite = SubResource("AtlasTexture_680rx")
+color = Color(0.7, 0.2, 0.2, 1)
+is_matchable = false
+is_clickable = true
+click_condition = 1
+clickable_highlight_color = Color(0.9, 0.3, 0.3, 0.6)

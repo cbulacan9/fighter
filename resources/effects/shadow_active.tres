@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EffectData" load_steps=3 format=3 uid="uid://csh4d0w4ct1v3"]
+
+[ext_resource type="Script" uid="uid://dnhpvmpj0050n" path="res://scripts/data/effect_data.gd" id="1"]
+[ext_resource type="Resource" uid="uid://bsh4d0wev4s10n" path="res://resources/status_effects/shadow_evasion.tres" id="2_shadow_evasion"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "shadow_step_active"
+display_name = "Shadow Veil"
+effect_type = 12
+target = 1
+base_value = 99
+duration = 5.0
+status_effect = ExtResource("2_shadow_evasion")
+custom_effect_id = "shadow_step_active"
+description = "Evade all attacks for 5 seconds."

@@ -178,21 +178,24 @@ func _process_tile_hide(effect: EffectData, source: Fighter, value: int) -> void
 func _process_custom_effect(effect: EffectData, source: Fighter, multiplier: int = 1) -> void:
 	match effect.custom_effect_id:
 		SMOKE_BOMB_PASSIVE:
-			_smoke_bomb_passive(source)
-			effect_processed.emit(effect, source, null, 1)
+			# Use match count to determine how many tiles to hide AND evasion stacks (1 for 3-match, 2 for 4, 3 for 5)
+			var count := effect.get_value_for_match(multiplier) if multiplier >= 3 else effect.base_value
+			_smoke_bomb_passive(source, effect, count)
+			effect_processed.emit(effect, source, null, count)
 
 		SMOKE_BOMB_ACTIVE:
 			_smoke_bomb_active(source)
 			effect_processed.emit(effect, source, null, 1)
 
 		SHADOW_STEP_PASSIVE:
-			_shadow_step_passive(source, effect)
-			effect_processed.emit(effect, source, source, 1)
+			# Use match count to determine dodge percentage (20 for 3-match, 40 for 4, 75 for 5)
+			var dodge_percent := effect.get_value_for_match(multiplier) if multiplier >= 3 else effect.base_value
+			_shadow_step_passive(source, effect, dodge_percent)
+			effect_processed.emit(effect, source, source, dodge_percent)
 
 		SHADOW_STEP_ACTIVE:
-			var target := _get_enemy_of(source)
-			_shadow_step_active(target, effect)
-			effect_processed.emit(effect, source, target, 1)
+			_shadow_step_active(source, effect)
+			effect_processed.emit(effect, source, source, 1)
 
 		HAWK_TILE_REPLACE:
 			var scaled_value := effect.base_value * multiplier  # Scale by multiplier
@@ -302,11 +305,13 @@ func _drain_mana(target: Fighter, value: int) -> int:
 
 # --- Custom Effect Handlers ---
 
-## Smoke Bomb Passive: Hide 1 random enemy tile for 3 seconds
-func _smoke_bomb_passive(source: Fighter) -> void:
+## Smoke Bomb Passive: Hide random enemy tiles for 3 seconds
+## Matches containing hidden tiles have no effect (handled in BoardManager)
+func _smoke_bomb_passive(source: Fighter, _effect: EffectData, count: int = 1) -> void:
+	# Hide enemy tiles
 	var enemy_board := _get_enemy_board(source)
 	if enemy_board:
-		enemy_board.hide_random_tiles(1, 3.0)
+		enemy_board.hide_random_tiles(count, 3.0)
 
 
 ## Smoke Bomb Active: Hide a random row AND column on enemy board for 3 seconds
@@ -317,27 +322,27 @@ func _smoke_bomb_active(source: Fighter) -> void:
 
 
 ## Shadow Step Passive: Grant dodge chance to source
-func _shadow_step_passive(source: Fighter, effect: EffectData) -> void:
+## dodge_percent: 20 = 20% dodge, 40 = 40% dodge, etc.
+func _shadow_step_passive(source: Fighter, effect: EffectData, dodge_percent: int = 20) -> void:
 	if not _status_manager:
 		return
 
-	# Apply DODGE status effect if the effect has status_effect data
+	# Apply DODGE status effect with stacks representing percentage
+	# Each stack = 1% dodge (base_value=0.01, value_per_stack=0.01)
 	var status_data := effect.status_effect as StatusEffectData
 	if status_data:
-		_status_manager.apply(source, status_data, source, 1)
-	else:
-		# Create a temporary dodge effect if no status data provided
-		# Use base_value as dodge percentage (e.g., 20 = 20% dodge)
-		pass  # Status data should be configured in the effect resource
+		_status_manager.apply(source, status_data, source, dodge_percent)
 
 
-## Shadow Step Active: Block enemy mana generation for 5 seconds
-func _shadow_step_active(target: Fighter, _effect: EffectData) -> void:
-	if not _mana_system or not target:
+## Shadow Step Active: Grant Shadow Evasion - evade all attacks for 5 seconds
+func _shadow_step_active(source: Fighter, effect: EffectData) -> void:
+	if not _status_manager or not source:
 		return
 
-	# Block all mana bars for 5 seconds
-	_mana_system.block_mana(target, 5.0)
+	# Apply shadow evasion status (99 stacks with 5 second duration)
+	var status_data := effect.status_effect as StatusEffectData
+	if status_data:
+		_status_manager.apply(source, status_data, source, 99)
 
 
 ## Hawk Tile Replace: Replace random matchable tiles on enemy board with filler tiles

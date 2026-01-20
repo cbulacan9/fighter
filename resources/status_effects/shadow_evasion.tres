@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3 uid="uid://b8s2c6gmr6n5p"]
+
+[ext_resource type="Script" path="res://scripts/data/status_effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "shadow_evasion"
+display_name = "Shadow Evasion"
+effect_type = 4
+duration = 5.0
+tick_interval = 1.0
+max_stacks = 99
+stack_behavior = 0
+tick_behavior = 0
+base_value = 1.0
+value_per_stack = 0.0

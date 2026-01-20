@@ -81,6 +81,15 @@ var _alpha_command_on_board: bool = false
 var _alpha_command_tile_data: PuzzleTileData
 const ULTIMATE_COOLDOWN_DURATION: float = 60.0  # 1 minute cooldown after using ultimate
 
+# Predator's Trance tile tracking (Assassin ultimate)
+var _predators_trance_on_board: bool = false
+var _predators_trance_tile_data: PuzzleTileData
+const PREDATORS_TRANCE_COOLDOWN: float = 20.0  # 20 second cooldown for Assassin ultimate
+
+# Invincibility tile tracking (Mirror Warden ultimate)
+var _invincibility_on_board: bool = false
+var _invincibility_tile_data: PuzzleTileData
+
 
 func _ready() -> void:
 	# Add to board_managers group for effect processor to find boards
@@ -123,6 +132,7 @@ func _setup_systems() -> void:
 	_cascade_handler.setup(grid, _tile_spawner, _match_detector, _tiles_container)
 	_cascade_handler.cascade_complete.connect(_on_cascade_complete)
 	_cascade_handler.matches_processed.connect(_on_matches_processed)
+	_cascade_handler.tiles_fell.connect(_on_tiles_fell)
 
 	# Set grid reference on tile spawner for spawn rules
 	_tile_spawner.set_grid(grid)
@@ -307,6 +317,12 @@ func reset() -> void:
 	# Reset Alpha Command state
 	_alpha_command_on_board = false
 
+	# Reset Predator's Trance state
+	_predators_trance_on_board = false
+
+	# Reset Invincibility state
+	_invincibility_on_board = false
+
 	# Reset dirty flag to ensure highlights update
 	_clickable_dirty = true
 
@@ -467,6 +483,12 @@ func _on_snap_back_finished() -> void:
 
 
 func _on_matches_processed(matches: Array[MatchDetector.MatchResult]) -> void:
+	# Tag matches that contain hidden (smoke-obscured) tiles
+	_tag_hidden_tile_matches(matches)
+
+	# Clean up hidden tile tracking for matched positions
+	_clear_hidden_tiles_at_matches(matches)
+
 	# Emit immediately for combat effects (damage applied before animations)
 	immediate_matches.emit(matches)
 
@@ -498,6 +520,29 @@ func _on_cascade_complete(result: CascadeHandler.CascadeResult) -> void:
 
 	matches_resolved.emit(result)
 	set_state(BoardState.IDLE)
+
+
+func _on_tiles_fell(moves: Array[CascadeHandler.TileMove]) -> void:
+	## Update hidden tile tracking when tiles move due to gravity.
+	## This ensures smoke-obscured tiles stay hidden even after cascading.
+	if _hidden_tiles.is_empty():
+		return
+
+	var updates: Dictionary = {}  # {old_pos: new_pos}
+
+	for move in moves:
+		var old_pos := Vector2i(move.from_row, move.col)
+		var new_pos := Vector2i(move.to_row, move.col)
+
+		if _hidden_tiles.has(old_pos):
+			# This hidden tile moved - track the update
+			updates[old_pos] = {"new_pos": new_pos, "time": _hidden_tiles[old_pos]}
+
+	# Apply the position updates
+	for old_pos in updates.keys():
+		var update: Dictionary = updates[old_pos]
+		_hidden_tiles.erase(old_pos)
+		_hidden_tiles[update.new_pos] = update.time
 
 
 # --- Sequence Signal Handlers ---
@@ -691,11 +736,11 @@ func _on_drag_ended(_final_offset: float) -> void:
 # --- Click Handlers ---
 
 func _on_tile_clicked(tile: Tile) -> void:
-	# During RESOLVING state, only allow pet tile and Alpha Command clicks
+	# During RESOLVING state, only allow pet tile, Alpha Command, and ultimate tile clicks
 	if state == BoardState.RESOLVING:
 		if tile and tile.tile_data:
 			var tile_type: TileTypes.Type = tile.tile_data.tile_type
-			if TileTypeHelper.is_hunter_pet_type(tile_type) or tile_type == TileTypes.Type.ALPHA_COMMAND:
+			if TileTypeHelper.is_hunter_pet_type(tile_type) or tile_type == TileTypes.Type.ALPHA_COMMAND or tile_type == TileTypes.Type.PREDATORS_TRANCE or tile_type == TileTypes.Type.INVINCIBILITY_TILE:
 				if _can_click_tile(tile):
 					_activate_tile(tile)
 					_input_handler.tile_click_attempted.emit(tile, true)
@@ -742,6 +787,16 @@ func _activate_tile(tile: Tile) -> void:
 	# Check if this is the Alpha Command tile (Hunter ultimate)
 	if data.tile_type == TileTypes.Type.ALPHA_COMMAND:
 		_activate_alpha_command(tile)
+		return
+
+	# Check if this is the Predator's Trance tile (Assassin ultimate)
+	if data.tile_type == TileTypes.Type.PREDATORS_TRANCE:
+		_activate_predators_trance(tile)
+		return
+
+	# Check if this is the Invincibility tile (Mirror Warden ultimate)
+	if data.tile_type == TileTypes.Type.INVINCIBILITY_TILE:
+		_activate_invincibility(tile)
 		return
 
 	# Check if this is a Hunter-style pet tile (BEAR_PET, HAWK_PET, SNAKE_PET)
@@ -904,6 +959,68 @@ func _process_alpha_command_tile_removal(row: int, col: int) -> void:
 	set_state(BoardState.IDLE)
 
 
+# --- Predator's Trance (Assassin Ultimate) Methods ---
+
+func _activate_predators_trance(tile: Tile) -> void:
+	## Activates the Predator's Trance tile (Assassin ultimate).
+	## Calls CombatManager.activate_ultimate() and consumes the tile.
+	var fighter := _get_owner_fighter()
+	var combat_mgr := _get_combat_manager()
+
+	if not combat_mgr or not fighter:
+		tile_click_failed.emit(tile, "no_combat_manager")
+		return
+
+	# Activate the ultimate ability
+	var success := combat_mgr.activate_ultimate(fighter)
+	if not success:
+		tile_click_failed.emit(tile, "ultimate_activation_failed")
+		return
+
+	# Visual feedback
+	tile.play_activation_animation()
+
+	# Start cooldown on the fighter before spawning another ultimate
+	fighter.start_ultimate_cooldown(PREDATORS_TRANCE_COOLDOWN)
+
+	# Consume the Predator's Trance tile
+	_consume_predators_trance_tile(tile)
+
+
+func _consume_predators_trance_tile(tile: Tile) -> void:
+	## Consume the Predator's Trance tile after activation.
+	_predators_trance_on_board = false
+
+	# Find tile position
+	var tile_row := -1
+	var tile_col := -1
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			if grid.get_tile(row, col) == tile:
+				tile_row = row
+				tile_col = col
+				break
+		if tile_row >= 0:
+			break
+
+	if tile_row < 0:
+		return
+
+	# Remove the tile from grid
+	grid.clear_tile(tile_row, tile_col)
+	tile.queue_free()
+
+	# Trigger column fall and refill
+	set_state(BoardState.RESOLVING)
+	_process_predators_trance_tile_removal(tile_row, tile_col)
+
+
+func _process_predators_trance_tile_removal(row: int, col: int) -> void:
+	## Async handler for Predator's Trance tile removal cascade.
+	var _result := await _cascade_handler.process_single_removal(row, col)
+	set_state(BoardState.IDLE)
+
+
 func spawn_alpha_command_tile() -> void:
 	## Spawns an Alpha Command tile at a random column (drops from top of board).
 	## Only spawns if there isn't already an Alpha Command tile on the board or on cooldown.
@@ -976,6 +1093,182 @@ func spawn_alpha_command_tile() -> void:
 func has_alpha_command_on_board() -> bool:
 	## Returns true if an Alpha Command tile is currently on the board.
 	return _alpha_command_on_board
+
+
+func spawn_predators_trance_tile() -> void:
+	## Spawns a Predator's Trance tile at a random column (Assassin ultimate).
+	## Only spawns if there isn't already one on the board.
+	if _predators_trance_on_board:
+		return
+
+	# Check if ultimate is on cooldown
+	var fighter := _get_owner_fighter()
+	if fighter and fighter.is_ultimate_on_cooldown():
+		return
+
+	# Load tile data if not cached
+	if not _predators_trance_tile_data:
+		_predators_trance_tile_data = preload("res://resources/tiles/predators_trance.tres")
+	if not _predators_trance_tile_data:
+		push_warning("BoardManager: Could not load Predator's Trance tile data")
+		return
+
+	# Find a random column to spawn in
+	var col := randi() % Grid.COLS
+
+	# Find the top-most row that has a tile to replace
+	var target_row := _find_top_tile_row(col)
+	if target_row < 0:
+		# Try other columns
+		for c in range(Grid.COLS):
+			if c == col:
+				continue
+			target_row = _find_top_tile_row(c)
+			if target_row >= 0:
+				col = c
+				break
+
+	if target_row < 0:
+		push_warning("BoardManager: No valid position to spawn Predator's Trance tile")
+		return
+
+	# Remove the existing tile
+	var existing_tile := grid.get_tile(target_row, col)
+	if existing_tile:
+		grid.clear_tile(target_row, col)
+		existing_tile.queue_free()
+
+	# Create the Predator's Trance tile
+	var tile: Tile = _tile_spawner.tile_scene.instantiate()
+	tile.setup(_predators_trance_tile_data, Vector2i(target_row, col))
+	_place_tile(tile, target_row, col)
+
+	_predators_trance_on_board = true
+	_clickable_dirty = true
+
+
+func has_predators_trance_on_board() -> bool:
+	## Returns true if a Predator's Trance tile is currently on the board.
+	return _predators_trance_on_board
+
+
+# --- Invincibility (Mirror Warden Ultimate) Methods ---
+
+func _activate_invincibility(tile: Tile) -> void:
+	## Activates the Invincibility tile (Mirror Warden ultimate).
+	## Calls CombatManager.activate_ultimate() and consumes the tile.
+	var fighter := _get_owner_fighter()
+	var combat_mgr := _get_combat_manager()
+
+	if not combat_mgr or not fighter:
+		tile_click_failed.emit(tile, "no_combat_manager")
+		return
+
+	# Activate the ultimate ability
+	var success := combat_mgr.activate_ultimate(fighter)
+	if not success:
+		tile_click_failed.emit(tile, "ultimate_activation_failed")
+		return
+
+	# Visual feedback
+	tile.play_activation_animation()
+
+	# Start cooldown on the fighter before spawning another ultimate
+	fighter.start_ultimate_cooldown(ULTIMATE_COOLDOWN_DURATION)
+
+	# Consume the Invincibility tile
+	_consume_invincibility_tile(tile)
+
+
+func _consume_invincibility_tile(tile: Tile) -> void:
+	## Consume the Invincibility tile after activation.
+	_invincibility_on_board = false
+
+	# Find tile position
+	var tile_row := -1
+	var tile_col := -1
+	for row in range(Grid.ROWS):
+		for col in range(Grid.COLS):
+			if grid.get_tile(row, col) == tile:
+				tile_row = row
+				tile_col = col
+				break
+		if tile_row >= 0:
+			break
+
+	if tile_row < 0:
+		return
+
+	# Remove the tile from grid
+	grid.clear_tile(tile_row, tile_col)
+	tile.queue_free()
+
+	# Trigger column fall and refill
+	set_state(BoardState.RESOLVING)
+	_process_invincibility_tile_removal(tile_row, tile_col)
+
+
+func _process_invincibility_tile_removal(row: int, col: int) -> void:
+	## Async handler for Invincibility tile removal cascade.
+	var _result := await _cascade_handler.process_single_removal(row, col)
+	set_state(BoardState.IDLE)
+
+
+func spawn_invincibility_tile() -> void:
+	## Spawns an Invincibility tile at a random column (Mirror Warden ultimate).
+	## Only spawns if there isn't already one on the board.
+	if _invincibility_on_board:
+		return
+
+	# Check if ultimate is on cooldown
+	var fighter := _get_owner_fighter()
+	if fighter and fighter.is_ultimate_on_cooldown():
+		return
+
+	# Load tile data if not cached
+	if not _invincibility_tile_data:
+		_invincibility_tile_data = preload("res://resources/tiles/invincibility_tile.tres")
+	if not _invincibility_tile_data:
+		push_warning("BoardManager: Could not load Invincibility tile data")
+		return
+
+	# Find a random column to spawn in
+	var col := randi() % Grid.COLS
+
+	# Find the top-most row that has a tile to replace
+	var target_row := _find_top_tile_row(col)
+	if target_row < 0:
+		# Try other columns
+		for c in range(Grid.COLS):
+			if c == col:
+				continue
+			target_row = _find_top_tile_row(c)
+			if target_row >= 0:
+				col = c
+				break
+
+	if target_row < 0:
+		push_warning("BoardManager: No valid position to spawn Invincibility tile")
+		return
+
+	# Remove the existing tile
+	var existing_tile := grid.get_tile(target_row, col)
+	if existing_tile:
+		grid.clear_tile(target_row, col)
+		existing_tile.queue_free()
+
+	# Create the Invincibility tile
+	var tile: Tile = _tile_spawner.tile_scene.instantiate()
+	tile.setup(_invincibility_tile_data, Vector2i(target_row, col))
+	_place_tile(tile, target_row, col)
+
+	_invincibility_on_board = true
+	_clickable_dirty = true
+
+
+func has_invincibility_on_board() -> bool:
+	## Returns true if an Invincibility tile is currently on the board.
+	return _invincibility_on_board
 
 
 func _get_pattern_for_pet_type(pet_type: TileTypes.Type) -> SequencePattern:
@@ -1147,6 +1440,10 @@ func set_owner_fighter(fighter: Fighter) -> void:
 		if fighter and fighter.mana_system:
 			_click_condition_checker.set_mana_system(fighter.mana_system)
 
+	# Update tile spawner with fighter reference for Predator's Trance
+	if _tile_spawner and fighter and _combat_manager:
+		_tile_spawner.set_fighter_references(fighter, _combat_manager.status_effect_manager)
+
 	# Connect to mana changes to mark highlights dirty
 	if fighter:
 		if not fighter.mana_changed.is_connected(_on_fighter_mana_changed):
@@ -1162,8 +1459,21 @@ func _on_fighter_mana_changed(_bar_index: int, _current: int, _max_value: int) -
 
 func _on_fighter_ultimate_ready() -> void:
 	## Called when the fighter's mana bars are all full (ultimate ready).
-	## Spawns an Alpha Command tile if one isn't already on the board.
-	spawn_alpha_command_tile()
+	## Spawns the appropriate ultimate tile based on character.
+	if _character_data:
+		match _character_data.character_id:
+			"hunter":
+				spawn_alpha_command_tile()
+			"assassin":
+				spawn_predators_trance_tile()
+			"mirror_warden":
+				spawn_invincibility_tile()
+			_:
+				# Default to alpha command for unknown characters
+				spawn_alpha_command_tile()
+	else:
+		# Fallback when no character data is available
+		spawn_alpha_command_tile()
 
 
 func _update_clickable_highlights() -> void:
@@ -1445,6 +1755,30 @@ func _hide_tile_at(pos: Vector2i, duration: float) -> void:
 	if tile:
 		tile.set_hidden(true)
 		_hidden_tiles[pos] = duration
+
+
+## Tag matches that contain hidden (smoke-obscured) tiles
+## Matches containing hidden tiles will have their effects negated
+func _tag_hidden_tile_matches(matches: Array[MatchDetector.MatchResult]) -> void:
+	if _hidden_tiles.is_empty():
+		return
+
+	for match_result in matches:
+		for pos in match_result.positions:
+			if _hidden_tiles.has(pos):
+				match_result.contains_hidden_tile = true
+				break  # No need to check more positions in this match
+
+
+## Remove hidden tile tracking for positions that are being matched/cleared
+func _clear_hidden_tiles_at_matches(matches: Array[MatchDetector.MatchResult]) -> void:
+	if _hidden_tiles.is_empty():
+		return
+
+	for match_result in matches:
+		for pos in match_result.positions:
+			if _hidden_tiles.has(pos):
+				_hidden_tiles.erase(pos)
 
 
 ## Process hidden tile timers

@@ -6,33 +6,49 @@
 ## The Assassin
 *Archetype: Brawler*
 
-A high-mobility damage dealer who obscures the battlefield and evades attacks. Builds toward an explosive ultimate that chains sword attacks automatically.
+A high-mobility damage dealer who obscures the battlefield and evades attacks. Activates a devastating ultimate when health is critical.
+
+### Stats
+
+| Stat | Value | Effect |
+|------|-------|--------|
+| HP | 105 | Lower than average |
+| Max Armor | 50 | Moderate armor cap |
+| Strength | 6 | Reduced sword damage |
+| Agility | 20 | 20% base dodge chance on all incoming attacks |
 
 ### Mana System
 
-Two separate mana bars for specialty abilities (Smoke Bomb and Shadow Step). Matching specialty tiles adds mana to their respective bars. When full, the ability can be activated. Ultimate requires both bars full and drains both on use.
+Two separate mana bars (50 mana each) for specialty abilities:
+- **Bar 0 (Purple):** Smoke Bomb - matching Smoke Bomb tiles fills this bar
+- **Bar 1 (Blue):** Shadow Step - matching Shadow Step tiles fills this bar
+- **Mana Crystals** fill **both** bars simultaneously, accelerating ability access
+
+Each ability costs 50 mana (full bar) to activate via click.
+
+*Note: Mana does not trigger the ultimate — see Ultimate Ability below.*
 
 ### Basic Tiles
 
 | Tile | Effect |
 |------|--------|
-| Physical Attack | Deals damage to opponent |
+| Physical Attack | Deals damage to opponent (reduced by low Strength) |
 | Stun | Stuns opponent, interrupting their actions |
-| Mana | Fills mana bars |
+| Mana Crystal | Fills **both** mana bars simultaneously |
 | Empty Box | Filler tile; match to clear board space |
 
 ### Specialty Tiles
 
 | Tile | Passive (On Match) | Active (On Click) |
 |------|-------------------|-------------------|
-| Smoke Bomb | Hides 1 enemy tile in smoke for 3 seconds | Hides random enemy row + column for 3 seconds |
-| Shadow Step | Grants dodge chance: 3x = 20%, 4x = 40%, 5x = 75% | Blocks enemy mana generation for 5 seconds |
+| Smoke Bomb | Hides 1/2/3 enemy tiles in smoke for 3 seconds. **Matches containing hidden tiles have no effect.** | Hides random enemy row + column for 3 seconds |
+| Shadow Step | Grants dodge chance: 3x = 20%, 4x = 40%, 5x = 75% | **Shadow Veil:** Evade all attacks for 5 seconds |
 
 ### Ultimate Ability
 
 **Predator's Trance**
 
-Requires both mana bars full. Drains both bars on activation.
+**Trigger:** Spawns when HP drops below 50% (not mana-based). Can re-trigger after cooldown expires if healed above 50% and damaged below again.
 
 During Predator's Trance, all new tiles that drop are swords. When swords are matched, subsequent tile drops also become swords and auto-match:
 
@@ -41,6 +57,8 @@ During Predator's Trance, all new tiles that drop are swords. When swords are ma
 - 5x sword match: Next 3 drops are swords, auto-chain
 
 *Auto-chained tiles are marked as special and cannot continue the combo indefinitely.*
+
+**Cooldown:** 20 seconds after activation before another Predator's Trance tile can spawn.
 
 ---
 
@@ -222,7 +240,7 @@ Initial observations on character interactions. Subject to playtesting.
 | **Hunter vs Apothecary** | Hunter must land Snake to cleanse Transmute; Apothecary wants to poison before Hunter completes sequence |
 | **Assassin vs Mirror Warden** | Smoke obscures Warden's board, making defensive timing harder; Warden's visible defense stance lets Assassin bait with small attacks |
 | **Mirror Warden vs Hunter** | Warden can Reflect/Cancel pet abilities if timed well; Hunter might bait with Hawk before committing to Snake |
-| **Apothecary vs Assassin** | Poison punishes Assassin's reliance on extended combos during Predator's Trance; Assassin's mana block (Shadow Step) delays Transmute |
+| **Apothecary vs Assassin** | Poison punishes Assassin's reliance on extended combos during Predator's Trance; Assassin's Smoke Bomb negates poisoned tile matches |
 
 ---
 
