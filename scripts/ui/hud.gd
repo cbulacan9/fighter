@@ -27,9 +27,14 @@ var _enemy_pet_population_display: PetPopulationDisplay
 var _combo_log_debugger: ComboLogDebugger
 var _combat_log_debugger: CombatLogDebugger
 
+# Warden-specific UI components (created dynamically)
+var _player_warden_display: WardenDefenseDisplay
+var _enemy_warden_display: WardenDefenseDisplay
+
 # Scene references for dynamic instantiation
 const COMBO_TREE_DISPLAY_SCENE := preload("res://scenes/ui/combo_tree_display.tscn")
 const PET_POPULATION_DISPLAY_SCENE := preload("res://scenes/ui/pet_population_display.tscn")
+const WARDEN_DEFENSE_DISPLAY_SCENE := preload("res://scenes/ui/warden_defense_display.tscn")
 
 ## Layout constants - single source of truth for positioning
 ## Change X_OFFSET values to shift all UI elements (panel, portrait, combo tree) together
@@ -674,6 +679,84 @@ func get_player_status_display() -> StatusEffectDisplay:
 
 func get_enemy_status_display() -> StatusEffectDisplay:
 	return enemy_status_display
+
+
+# --- Warden Defense Display ---
+
+func setup_defensive_queue(player_fighter: Fighter, enemy_fighter: Fighter,
+		defensive_queue: DefensiveQueueManager) -> void:
+	"""Setup Warden defense displays positioned on the right side of the board (same as Hunter UI)."""
+	# Clean up any existing displays
+	_cleanup_warden_ui()
+
+	if not defensive_queue:
+		return
+
+	# Create player Warden display if player fighter exists
+	if player_fighter:
+		_create_warden_ui(player_fighter, defensive_queue, true)
+
+	# Create enemy Warden display if enemy fighter exists
+	if enemy_fighter:
+		_create_warden_ui(enemy_fighter, defensive_queue, false)
+
+
+func _create_warden_ui(fighter: Fighter, defensive_queue: DefensiveQueueManager, is_player: bool) -> void:
+	"""Create Warden defense display positioned at COMBO_TREE_BASE_X (same as Hunter UI)."""
+	if not fighter or not defensive_queue:
+		return
+
+	# Determine position (same as Hunter ComboTreeDisplay positioning)
+	var display_pos: Vector2
+	if is_player:
+		display_pos = Vector2(COMBO_TREE_BASE_X + PLAYER_X_OFFSET, PLAYER_UI_Y)
+	else:
+		display_pos = Vector2(COMBO_TREE_BASE_X + ENEMY_X_OFFSET, ENEMY_UI_Y)
+
+	# Create WardenDefenseDisplay
+	var display: WardenDefenseDisplay = WARDEN_DEFENSE_DISPLAY_SCENE.instantiate()
+	display.position = display_pos
+	add_child(display)
+	display.setup(fighter, defensive_queue)
+
+	# Store reference
+	if is_player:
+		_player_warden_display = display
+	else:
+		_enemy_warden_display = display
+
+
+func _cleanup_warden_ui() -> void:
+	"""Clean up Warden defense displays."""
+	if _player_warden_display:
+		_player_warden_display.clear()
+		_player_warden_display.queue_free()
+		_player_warden_display = null
+
+	if _enemy_warden_display:
+		_enemy_warden_display.clear()
+		_enemy_warden_display.queue_free()
+		_enemy_warden_display = null
+
+
+func get_player_warden_display() -> WardenDefenseDisplay:
+	"""Returns the player's WardenDefenseDisplay if active."""
+	return _player_warden_display
+
+
+func get_enemy_warden_display() -> WardenDefenseDisplay:
+	"""Returns the enemy's WardenDefenseDisplay if active."""
+	return _enemy_warden_display
+
+
+## Returns true if the player is using Warden-style UI
+func is_player_using_warden_ui() -> bool:
+	return _player_warden_display != null
+
+
+## Returns true if the enemy is using Warden-style UI
+func is_enemy_using_warden_ui() -> bool:
+	return _enemy_warden_display != null
 
 
 # --- Alpha Command Portrait Swap ---

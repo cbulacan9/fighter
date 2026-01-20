@@ -378,6 +378,17 @@ func _setup_match() -> void:
 		var enemy_announce_pos := Vector2(360, 250)   # Center of enemy board area
 		ability_announcement_spawner.setup(player_announce_pos, enemy_announce_pos)
 
+	# Setup defensive queue displays and damage number integration
+	if combat_manager and combat_manager.defensive_queue_manager:
+		# Setup HUD defensive displays
+		if hud:
+			hud.setup_defensive_queue(combat_manager.player_fighter, combat_manager.enemy_fighter,
+				combat_manager.defensive_queue_manager)
+
+		# Setup damage number spawner for defensive events
+		if damage_spawner:
+			damage_spawner.setup_defensive_queue(combat_manager.defensive_queue_manager)
+
 
 ## Prepares fighter data from selected characters or loads default files.
 func _prepare_fighter_data() -> void:
@@ -432,6 +443,10 @@ func reset_match() -> void:
 
 	if combat_manager:
 		combat_manager.reset()
+		# Clear defensive queue data for both fighters
+		if combat_manager.defensive_queue_manager:
+			combat_manager.defensive_queue_manager.clear_fighter(combat_manager.player_fighter)
+			combat_manager.defensive_queue_manager.clear_fighter(combat_manager.enemy_fighter)
 
 	# Reset boards fully (clears state, sequence tracker, and regenerates)
 	if player_board:
@@ -479,6 +494,13 @@ func reset_match() -> void:
 		var combat_log := hud.get_combat_log_debugger()
 		if combat_log:
 			combat_log.reset()
+		# Reset Warden defense displays
+		var player_warden := hud.get_player_warden_display()
+		if player_warden:
+			player_warden.reset()
+		var enemy_warden := hud.get_enemy_warden_display()
+		if enemy_warden:
+			enemy_warden.reset()
 
 	_stats_tracker.reset()
 
