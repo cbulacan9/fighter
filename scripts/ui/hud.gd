@@ -55,7 +55,8 @@ const PLAYER_BOTTOM_OFFSET := 150.0 # Player board distance from BOTTOM of scree
 
 ## UI positioning relative to boards
 const UI_X := 10.0                  # Left edge for all UI elements
-const UI_BELOW_BOARD := 5.0         # Gap between board bottom and UI
+const UI_ABOVE_PLAYER_BOARD := 5.0  # Gap between player UI and board top
+const UI_BELOW_ENEMY_BOARD := 16.5  # Gap between enemy board bottom and UI
 const CHAR_UI_OFFSET_X := 400.0     # Horizontal offset for character-specific UI from portrait
 
 ## Portrait settings
@@ -83,11 +84,11 @@ static func get_player_board_y() -> float:
 
 ## Player UI Y position (above player board)
 static func get_player_ui_y() -> float:
-	return get_player_board_y() - PORTRAIT_SIZE - UI_BELOW_BOARD
+	return get_player_board_y() - PORTRAIT_SIZE - UI_ABOVE_PLAYER_BOARD
 
 ## Enemy UI Y position (below enemy board)
 static func get_enemy_ui_y() -> float:
-	return get_enemy_board_y() + BOARD_HEIGHT + UI_BELOW_BOARD
+	return get_enemy_board_y() + BOARD_HEIGHT + UI_BELOW_ENEMY_BOARD
 
 ## Damage number positions (centered on boards)
 static func get_player_damage_pos() -> Vector2:
