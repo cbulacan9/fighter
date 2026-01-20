@@ -24,9 +24,9 @@ const TIMER_BAR_WIDTH := 80
 const TIMER_BAR_HEIGHT := 12
 
 # Defense type colors
-const REFLECTION_COLOR := Color(0.7, 0.3, 0.9)  # Purple
-const CANCEL_COLOR := Color(0.3, 0.8, 0.3)  # Green
-const ABSORB_COLOR := Color(0.3, 0.5, 0.9)  # Blue
+const REFLECTION_COLOR := Color(0.3, 0.5, 1.0)  # Blue
+const CANCEL_COLOR := Color(0.9, 0.3, 0.3)  # Red
+const ABSORB_COLOR := Color(0.3, 0.8, 0.3)  # Green
 
 # Defense types in display order
 const DEFENSE_TYPES := [
@@ -115,6 +115,8 @@ func setup(fighter: Fighter, defensive_queue: DefensiveQueueManager) -> void:
 		defensive_queue.defense_expired.connect(_on_defense_expired)
 	if not defensive_queue.absorb_damage_stored.is_connected(_on_absorb_damage_stored):
 		defensive_queue.absorb_damage_stored.connect(_on_absorb_damage_stored)
+	if not defensive_queue.absorb_damage_released.is_connected(_on_absorb_damage_released):
+		defensive_queue.absorb_damage_released.connect(_on_absorb_damage_released)
 
 
 func clear() -> void:
@@ -138,6 +140,8 @@ func clear() -> void:
 			_defensive_queue.defense_expired.disconnect(_on_defense_expired)
 		if _defensive_queue.absorb_damage_stored.is_connected(_on_absorb_damage_stored):
 			_defensive_queue.absorb_damage_stored.disconnect(_on_absorb_damage_stored)
+		if _defensive_queue.absorb_damage_released.is_connected(_on_absorb_damage_released):
+			_defensive_queue.absorb_damage_released.disconnect(_on_absorb_damage_released)
 
 	# Clear UI elements
 	if _vbox:
@@ -474,6 +478,22 @@ func _on_absorb_damage_stored(fighter: Fighter, _amount: int, total: int) -> voi
 		_track_tween(defense_type, tween)
 		tween.tween_property(absorb_label, "modulate", Color(1.5, 1.5, 1.5, 1.0), 0.1)
 		tween.tween_property(absorb_label, "modulate", Color.WHITE, 0.2)
+
+
+func _on_absorb_damage_released(fighter: Fighter, _amount: int, _multiplier: float) -> void:
+	"""Called when stored absorb damage is released via Magic Attack."""
+	if fighter != _fighter:
+		return
+
+	var defense_type := StatusTypes.StatusType.ABSORB_QUEUED
+	if not _defense_rows.has(defense_type):
+		return
+
+	var row_data: Dictionary = _defense_rows[defense_type]
+	var absorb_label: Label = row_data.get("absorb_label")
+
+	if absorb_label:
+		absorb_label.text = ""
 
 
 ## Reset the display for a new match.

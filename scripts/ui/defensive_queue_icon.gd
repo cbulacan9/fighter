@@ -8,9 +8,9 @@ signal triggered()
 signal expired()
 
 const COLORS := {
-	StatusTypes.StatusType.REFLECTION_QUEUED: Color(0.8, 0.3, 1.0),   # Purple
-	StatusTypes.StatusType.CANCEL_QUEUED: Color(0.4, 1.0, 0.4),       # Green
-	StatusTypes.StatusType.ABSORB_QUEUED: Color(0.3, 0.7, 1.0),       # Blue
+	StatusTypes.StatusType.REFLECTION_QUEUED: Color(0.3, 0.5, 1.0),   # Blue
+	StatusTypes.StatusType.CANCEL_QUEUED: Color(0.9, 0.3, 0.3),       # Red
+	StatusTypes.StatusType.ABSORB_QUEUED: Color(0.3, 0.8, 0.3),       # Green
 }
 
 const LABELS := {

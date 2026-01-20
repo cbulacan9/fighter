@@ -112,6 +112,7 @@ var _player_original_portrait: Texture2D
 var _enemy_original_portrait: Texture2D
 var _player_portrait_glow_tween: Tween
 var _enemy_portrait_glow_tween: Tween
+var _status_manager: StatusEffectManager
 
 @onready var _player_panel: Control = $PlayerPanel
 @onready var _enemy_panel: Control = $EnemyPanel
@@ -489,21 +490,28 @@ func _cleanup_hunter_ui(is_player: bool) -> void:
 
 func _setup_status_displays() -> void:
 	# Get status manager reference
-	var status_manager := _get_status_manager()
+	_status_manager = _get_status_manager()
 
 	# Setup player status display
 	if player_status_display and _player_fighter:
-		player_status_display.setup(_player_fighter, status_manager)
+		player_status_display.setup(_player_fighter, _status_manager)
 		player_status_display.visible = true
 	elif player_status_display:
 		player_status_display.visible = false
 
 	# Setup enemy status display
 	if enemy_status_display and _enemy_fighter:
-		enemy_status_display.setup(_enemy_fighter, status_manager)
+		enemy_status_display.setup(_enemy_fighter, _status_manager)
 		enemy_status_display.visible = true
 	elif enemy_status_display:
 		enemy_status_display.visible = false
+
+	# Connect to status effect signals for invincibility portrait swap
+	if _status_manager:
+		if not _status_manager.effect_applied.is_connected(_on_status_effect_applied):
+			_status_manager.effect_applied.connect(_on_status_effect_applied)
+		if not _status_manager.effect_removed.is_connected(_on_status_effect_removed):
+			_status_manager.effect_removed.connect(_on_status_effect_removed)
 
 
 func _get_status_manager() -> StatusEffectManager:
@@ -995,6 +1003,36 @@ func _on_enemy_alpha_command_deactivated() -> void:
 	if _enemy_original_portrait and enemy_portrait:
 		enemy_portrait.texture = _enemy_original_portrait
 	_stop_portrait_glow(enemy_portrait, false)
+
+
+# --- Invincibility Portrait Swap ---
+
+func _on_status_effect_applied(target: Fighter, effect: StatusEffect) -> void:
+	if effect.data.effect_type != StatusTypes.StatusType.INVINCIBILITY:
+		return
+
+	if target == _player_fighter:
+		if _player_character_data and _player_character_data.ultimate_portrait and player_portrait:
+			player_portrait.texture = _player_character_data.ultimate_portrait
+		_start_portrait_glow(player_portrait, true)
+	elif target == _enemy_fighter:
+		if _enemy_character_data and _enemy_character_data.ultimate_portrait and enemy_portrait:
+			enemy_portrait.texture = _enemy_character_data.ultimate_portrait
+		_start_portrait_glow(enemy_portrait, false)
+
+
+func _on_status_effect_removed(target: Fighter, effect_type: StatusTypes.StatusType) -> void:
+	if effect_type != StatusTypes.StatusType.INVINCIBILITY:
+		return
+
+	if target == _player_fighter:
+		if _player_original_portrait and player_portrait:
+			player_portrait.texture = _player_original_portrait
+		_stop_portrait_glow(player_portrait, true)
+	elif target == _enemy_fighter:
+		if _enemy_original_portrait and enemy_portrait:
+			enemy_portrait.texture = _enemy_original_portrait
+		_stop_portrait_glow(enemy_portrait, false)
 
 
 func _start_portrait_glow(portrait: TextureRect, is_player: bool) -> void:

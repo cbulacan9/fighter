@@ -190,17 +190,17 @@ Matching defensive tiles queues that effect with a countdown timer:
 
 ### Specialty Tiles
 
-| Tile | Timing Window | Effect |
-|------|---------------|--------|
-| Reflection | Pre-attack (within 2 sec before hit) | Reflects enemy attack back at them |
-| Cancel | Post-attack (within 2 sec after hit) | Cancels the enemy's attack effect |
-| Absorb | On receiving attack | Stores damage; releases on next attack combo (scales with 4x/5x matches) |
+| Tile | Color | Timing Window | Effect |
+|------|-------|---------------|--------|
+| Reflection | Blue | Pre-attack (within 2 sec before hit) | Reflects enemy attack back at them |
+| Cancel | Red | Post-attack (within 2 sec after hit) | Cancels the enemy's attack effect and heals damage taken |
+| Absorb | Green | On receiving attack | Stores damage; releases on next Magic Attack (1.5x for 4-match, 2x for 5-match) |
 
 ### Ultimate Ability
 
 **Invincibility**
 
-Requires full mana bar. Grants complete damage immunity for 8 seconds.
+Requires full mana bar. Grants complete damage immunity for 8 seconds. The Warden's portrait transforms during activation.
 
 ---
 

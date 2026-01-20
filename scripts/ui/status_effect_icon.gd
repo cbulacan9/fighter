@@ -124,13 +124,13 @@ func _get_placeholder_color(type: StatusTypes.StatusType) -> Color:
 			return Color(0.6, 0.2, 0.8)  # Purple
 		# Defensive queue status colors (Mirror Warden)
 		StatusTypes.StatusType.REFLECTION_QUEUED:
-			return Color(0.8, 0.3, 1.0)  # Purple
+			return Color(0.3, 0.5, 1.0)  # Blue
 		StatusTypes.StatusType.CANCEL_QUEUED:
-			return Color(0.4, 1.0, 0.4)  # Green
+			return Color(0.9, 0.3, 0.3)  # Red
 		StatusTypes.StatusType.ABSORB_QUEUED:
-			return Color(0.3, 0.7, 1.0)  # Blue
+			return Color(0.3, 0.8, 0.3)  # Green
 		StatusTypes.StatusType.ABSORB_STORED:
-			return Color(0.3, 0.7, 1.0)  # Blue
+			return Color(0.3, 0.8, 0.3)  # Green
 		StatusTypes.StatusType.INVINCIBILITY:
 			return Color(1.0, 0.9, 0.3)  # Gold
 		_:

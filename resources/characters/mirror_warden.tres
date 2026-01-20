@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=14 format=3 uid="uid://kdtklc445f6m"]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=15 format=3 uid="uid://kdtklc445f6m"]
 
 [ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
 [ext_resource type="Texture2D" uid="uid://jdx0mcay4vse" path="res://assets/portraits/mirrorwarden_portrait.png" id="1_portrait"]
+[ext_resource type="Texture2D" path="res://assets/portraits/mirrorwarden_invinc_portrait.png" id="1_invinc_portrait"]
 [ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1_tile"]
 [ext_resource type="Resource" uid="uid://c7p4xihwm5ay2" path="res://resources/tiles/magic_attack.tres" id="2_magic"]
 [ext_resource type="Resource" uid="uid://fv70s103catj" path="res://resources/tiles/shield.tres" id="3_shield"]
@@ -21,6 +22,7 @@ display_name = "The Mirror Warden"
 archetype = "Tank"
 description = "A defensive specialist who uses a unique Defensive Queue System to counter enemy attacks. Match defensive tiles to queue Reflection, Cancel, or Absorb. Time your defenses to reflect damage, heal back injuries, or store damage for a powerful counterattack."
 portrait = ExtResource("1_portrait")
+ultimate_portrait = ExtResource("1_invinc_portrait")
 basic_tiles = Array[ExtResource("1_tile")]([ExtResource("2_magic"), ExtResource("3_shield"), ExtResource("5_filler"), ExtResource("6_mana")])
 specialty_tiles = Array[ExtResource("1_tile")]([ExtResource("7_reflect"), ExtResource("8_cancel"), ExtResource("9_absorb")])
 spawn_weights = {
