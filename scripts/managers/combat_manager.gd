@@ -15,6 +15,7 @@ signal damage_dodged(target: Fighter, source: Fighter)
 signal status_effect_applied(target: Fighter, effect: StatusEffect)
 signal status_effect_removed(target: Fighter, effect_type: StatusTypes.StatusType)
 signal status_damage_dealt(target: Fighter, damage: float, effect_type: StatusTypes.StatusType)
+signal predators_trance_triggered(fighter: Fighter, match_count: int)  # Emitted when sword match during Predator's Trance
 
 enum MatchResult {
 	ONGOING = 0,
@@ -162,7 +163,21 @@ func _process_mana_from_immediate_matches(fighter: Fighter, matches: Array) -> v
 	if not mana_system.has_fighter(fighter):
 		return
 
+	# Tile types that handle their own mana generation in apply_match_effect
+	# Skip these to avoid double mana generation
+	const SELF_MANA_TILES := [
+		TileTypes.Type.SMOKE_BOMB,
+		TileTypes.Type.SHADOW_STEP,
+		TileTypes.Type.MAGIC_ATTACK,
+		TileTypes.Type.REFLECTION,
+		TileTypes.Type.CANCEL,
+		TileTypes.Type.ABSORB,
+	]
+
 	for match_result in matches:
+		# Skip tiles that handle their own mana
+		if match_result.tile_type in SELF_MANA_TILES:
+			continue
 		var match_count: int = match_result.positions.size()
 		mana_system.add_mana_from_match(fighter, match_count)
 
@@ -200,6 +215,10 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 			# Scale sword damage by strength (10 = baseline, 15 = +50% damage)
 			var strength_scaled := int(float(effect_value) * (float(source.strength) / 10.0))
 			_apply_damage(target, source, strength_scaled)
+			# Check for Predator's Trance bonus chains (only for player-initiated matches, not cascades)
+			if match_result.origin == TileTypes.MatchOrigin.PLAYER_INITIATED:
+				if status_effect_manager and status_effect_manager.has_effect(source, StatusTypes.StatusType.PREDATORS_TRANCE):
+					predators_trance_triggered.emit(source, match_result.count)
 
 		TileTypes.Type.SHIELD:
 			var actual := source.add_armor(effect_value)
@@ -544,8 +563,7 @@ func activate_ultimate(fighter: Fighter) -> bool:
 			fighter.alpha_command_free_activations = 3
 			fighter.alpha_command_activated.emit()
 		"predators_trance":
-			# Assassin: The status effect handles sword-only spawns
-			# Any additional trance-specific behavior goes here
+			# Assassin: The status effect handles sword-only spawns via tile_spawner
 			pass
 		"invincibility":
 			# Mirror Warden: Apply invincibility status effect for 8 seconds
