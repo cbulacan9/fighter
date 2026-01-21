@@ -1,8 +1,8 @@
 [gd_resource type="Resource" script_class="CharacterData" load_steps=15 format=3 uid="uid://kdtklc445f6m"]
 
 [ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://5of1tqem6vbn" path="res://assets/portraits/mirrorwarden_invinc_portrait.png" id="1_invinc_portrait"]
 [ext_resource type="Texture2D" uid="uid://jdx0mcay4vse" path="res://assets/portraits/mirrorwarden_portrait.png" id="1_portrait"]
-[ext_resource type="Texture2D" path="res://assets/portraits/mirrorwarden_invinc_portrait.png" id="1_invinc_portrait"]
 [ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1_tile"]
 [ext_resource type="Resource" uid="uid://c7p4xihwm5ay2" path="res://resources/tiles/magic_attack.tres" id="2_magic"]
 [ext_resource type="Resource" uid="uid://fv70s103catj" path="res://resources/tiles/shield.tres" id="3_shield"]

@@ -39,4 +39,3 @@ passive_description = "Animal Companions: Build sequences by matching tiles in o
 base_hp = 125
 max_armor = 45
 base_strength = 8
-unlock_opponent_id = "hunter"

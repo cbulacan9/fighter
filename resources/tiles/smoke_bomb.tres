@@ -23,4 +23,4 @@ click_condition = 3
 click_effect = ExtResource("4_active")
 mana_bar_index = 0
 passive_effect = ExtResource("3_passive")
-clickable_highlight_color = Color(1.0, 0.5, 1.2, 1.0)
+clickable_highlight_color = Color(1, 0.5, 1.2, 1)

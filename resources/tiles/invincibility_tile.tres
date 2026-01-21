@@ -3,15 +3,15 @@
 [ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Texture2D" uid="uid://chrxnjtgpewt0" path="res://assets/sprites/spritesheettiles.png" id="2"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_invinc"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_iifnh"]
 atlas = ExtResource("2")
-region = Rect2(320, 0, 64, 64)
+region = Rect2(252, 131, 64, 64)
 
 [resource]
 script = ExtResource("1")
 tile_type = 19
 display_name = "Invincibility"
-sprite = SubResource("AtlasTexture_invinc")
+sprite = SubResource("AtlasTexture_iifnh")
 color = Color(1, 0.85, 0.3, 1)
 is_matchable = false
 is_clickable = true
