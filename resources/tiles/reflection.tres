@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="PuzzleTileData" load_steps=5 format=3 uid="uid://d1o4iys8qvfey"]
 
-[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/effects/reflection_passive.tres" id="3"]
 [ext_resource type="Texture2D" uid="uid://b22ingg8egy2" path="res://assets/sprites/spritesheettiles_hunter.png" id="3_rw4rt"]
 

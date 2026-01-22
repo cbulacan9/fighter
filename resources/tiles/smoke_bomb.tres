@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="PuzzleTileData" load_steps=6 format=3 uid="uid://csm0k3b0mb111"]
 
-[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Resource" uid="uid://csm0k3p4ss1v3" path="res://resources/effects/smoke_passive.tres" id="3_passive"]
 [ext_resource type="Resource" uid="uid://csm0k34ct1v3" path="res://resources/effects/smoke_active.tres" id="4_active"]
-[ext_resource type="Texture2D" uid="uid://30kwhxfj58f5" path="res://assets/sprites/spritesheet_assassin_2.png" id="4_gohpm"]
+[ext_resource type="Texture2D" uid="uid://do77bhbi0j5nr" path="res://assets/sprites/assassin_spritesheet_pixel.png" id="4_gohpm"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_vk03i"]
 atlas = ExtResource("4_gohpm")
-region = Rect2(487, 104, 64, 64)
+region = Rect2(0, 0, 64, 64)
 
 [resource]
 script = ExtResource("1")

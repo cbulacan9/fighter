@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="PuzzleTileData" load_steps=5 format=3 uid="uid://fv70s103catj"]
 
-[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Texture2D" uid="uid://chrxnjtgpewt0" path="res://assets/sprites/spritesheettiles.png" id="2"]
 [ext_resource type="Resource" path="res://resources/effects/armor_effect.tres" id="3"]
 
