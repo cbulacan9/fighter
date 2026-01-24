@@ -1,17 +1,17 @@
 [gd_resource type="Resource" script_class="PuzzleTileData" load_steps=4 format=3 uid="uid://c22cbshsif3r1"]
 
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://chrxnjtgpewt0" path="res://assets/sprites/spritesheettiles.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://c7clipr8g6ucc" path="res://assets/sprites/mirrorwarden_spritesheet_pixel.png" id="2_iifnh"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_iifnh"]
-atlas = ExtResource("2")
-region = Rect2(252, 131, 64, 64)
+[sub_resource type="AtlasTexture" id="AtlasTexture_8v0lq"]
+atlas = ExtResource("2_iifnh")
+region = Rect2(0, 128, 64, 64)
 
 [resource]
 script = ExtResource("1")
 tile_type = 19
 display_name = "Invincibility"
-sprite = SubResource("AtlasTexture_iifnh")
+sprite = SubResource("AtlasTexture_8v0lq")
 color = Color(1, 0.85, 0.3, 1)
 is_matchable = false
 is_clickable = true
