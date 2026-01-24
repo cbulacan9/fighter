@@ -1,9 +1,7 @@
 [gd_resource type="Resource" script_class="CharacterData" load_steps=16 format=3 uid="uid://b2gircexmyslo"]
 
 [ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://nl3000gd3h5l" path="res://assets/portraits/hunter_portrait.png" id="1_portrait"]
-[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1_qk07p"]
-[ext_resource type="Texture2D" uid="uid://dpkd8mhj2ywge" path="res://assets/portraits/hunter_alphacommand_portrait.png" id="1_ultimate_portrait"]
+[ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1_qk07p"]
 [ext_resource type="Resource" uid="uid://hqjrruvp3k4f" path="res://resources/tiles/sword.tres" id="2"]
 [ext_resource type="Resource" uid="uid://fv70s103catj" path="res://resources/tiles/shield.tres" id="3"]
 [ext_resource type="Resource" uid="uid://bvvx783fyguoc" path="res://resources/tiles/focus.tres" id="4"]
@@ -11,10 +9,12 @@
 [ext_resource type="Resource" uid="uid://bw6e8gp45gjsj" path="res://resources/tiles/mana.tres" id="6"]
 [ext_resource type="Resource" path="res://resources/mana/single_bar.tres" id="7"]
 [ext_resource type="Resource" path="res://resources/sequences/bear_sequence.tres" id="8"]
+[ext_resource type="Texture2D" uid="uid://cvxwipyv1tegp" path="res://assets/portraits/hunter_pixel.png" id="8_sklmi"]
 [ext_resource type="Resource" path="res://resources/sequences/hawk_sequence.tres" id="9"]
 [ext_resource type="Script" uid="uid://bwoblebvd71ob" path="res://scripts/data/sequence_pattern.gd" id="9_sklmi"]
 [ext_resource type="Resource" path="res://resources/sequences/snake_sequence.tres" id="10"]
 [ext_resource type="Resource" path="res://resources/abilities/alpha_command.tres" id="11"]
+[ext_resource type="Texture2D" uid="uid://chi2160mkatns" path="res://assets/portraits/hunter_pixel_ultimate.png" id="15_ofhc0"]
 
 [resource]
 script = ExtResource("1")
@@ -22,8 +22,8 @@ character_id = "hunter"
 display_name = "The Hunter"
 archetype = "Combo Specialist"
 description = "A combo-sequence specialist who commands animal companions to devastate foes. The Hunter builds sequences by matching specific tile patterns. When a combo completes, the corresponding Pet tile (Bear, Hawk, or Snake) drops from above. Click a Pet tile to activate its ability."
-portrait = ExtResource("1_portrait")
-ultimate_portrait = ExtResource("1_ultimate_portrait")
+portrait = ExtResource("8_sklmi")
+ultimate_portrait = ExtResource("15_ofhc0")
 basic_tiles = Array[ExtResource("1_qk07p")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
 spawn_weights = {
 0: 24.0,

@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/effects/reflection_passive.tres" id="3"]
-[ext_resource type="Texture2D" uid="uid://b22ingg8egy2" path="res://assets/sprites/spritesheettiles_hunter.png" id="3_rw4rt"]
+[ext_resource type="Texture2D" uid="uid://c7clipr8g6ucc" path="res://assets/sprites/mirrorwarden_spritesheet_pixel.png" id="3_rw4rt"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_nf6xv"]
 atlas = ExtResource("3_rw4rt")
-region = Rect2(63, 65, 64, 64)
+region = Rect2(128, 64, 64, 64)
 
 [resource]
 script = ExtResource("1")

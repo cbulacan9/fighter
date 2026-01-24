@@ -1,19 +1,19 @@
 [gd_resource type="Resource" script_class="PuzzleTileData" load_steps=5 format=3 uid="uid://fv70s103catj"]
 
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://chrxnjtgpewt0" path="res://assets/sprites/spritesheettiles.png" id="2"]
 [ext_resource type="Resource" path="res://resources/effects/armor_effect.tres" id="3"]
+[ext_resource type="Texture2D" uid="uid://c7clipr8g6ucc" path="res://assets/sprites/mirrorwarden_spritesheet_pixel.png" id="3_4lmrh"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_shield"]
-atlas = ExtResource("2")
-region = Rect2(0, 66, 64, 64)
+[sub_resource type="AtlasTexture" id="AtlasTexture_lbq3e"]
+atlas = ExtResource("3_4lmrh")
+region = Rect2(128, 0, 64, 64)
 
 [resource]
 script = ExtResource("1")
 tile_type = 1
 display_name = "Shield"
-sprite = SubResource("AtlasTexture_shield")
-color = Color(0.2, 0.4, 0.8, 1)
+sprite = SubResource("AtlasTexture_lbq3e")
+color = Color(0.41625902, 0.25402173, 0.059593663, 1)
 match_3_value = 5
 match_4_value = 8
 match_5_value = 14

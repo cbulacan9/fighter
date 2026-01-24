@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=13 format=3 uid="uid://c3kjmapi0rps3"]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=14 format=3 uid="uid://c3kjmapi0rps3"]
 
 [ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1_tile"]
@@ -12,6 +12,7 @@
 [ext_resource type="Resource" path="res://resources/mana/dual_bar.tres" id="8"]
 [ext_resource type="Script" uid="uid://bwoblebvd71ob" path="res://scripts/data/sequence_pattern.gd" id="9_88jes"]
 [ext_resource type="Resource" uid="uid://cpr3d4t0r5ab" path="res://resources/abilities/predators_trance.tres" id="9_ultimate"]
+[ext_resource type="Texture2D" uid="uid://cayg0h8ecp744" path="res://assets/portraits/assasin_pixel_ultimate.png" id="13_g7ekq"]
 
 [resource]
 script = ExtResource("1")
@@ -20,7 +21,7 @@ display_name = "The Assassin"
 archetype = "Brawler"
 description = "A high-mobility damage dealer who uses smoke and shadows to confuse enemies. The Assassin builds two separate mana bars through Smoke Bomb and Shadow Step tiles. When both bars are full, unleash Predator's Trance for devastating sword combos."
 portrait = ExtResource("7_88jes")
-ultimate_portrait = ExtResource("7_88jes")
+ultimate_portrait = ExtResource("13_g7ekq")
 basic_tiles = Array[ExtResource("1_tile")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
 specialty_tiles = Array[ExtResource("1_tile")]([ExtResource("6"), ExtResource("7")])
 spawn_weights = {
