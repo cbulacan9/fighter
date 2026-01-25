@@ -3,11 +3,11 @@
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Resource" uid="uid://csh4d0wp4ss1v" path="res://resources/effects/shadow_passive.tres" id="3_passive"]
 [ext_resource type="Resource" uid="uid://csh4d0w4ct1v3" path="res://resources/effects/shadow_active.tres" id="4_active"]
-[ext_resource type="Texture2D" uid="uid://do77bhbi0j5nr" path="res://assets/sprites/assassin_spritesheet_pixel.png" id="4_d5fti"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="4_d5fti"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_1k5ui"]
 atlas = ExtResource("4_d5fti")
-region = Rect2(64, 0, 64, 64)
+region = Rect2(192, 0, 64, 64)
 
 [resource]
 script = ExtResource("1")

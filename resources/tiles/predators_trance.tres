@@ -1,11 +1,11 @@
 [gd_resource type="Resource" script_class="PuzzleTileData" load_steps=4 format=3 uid="uid://cpr3d4t0rt1l3"]
 
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://do77bhbi0j5nr" path="res://assets/sprites/assassin_spritesheet_pixel.png" id="2_y28hp"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="2_y28hp"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_680rx"]
 atlas = ExtResource("2_y28hp")
-region = Rect2(128, 0, 64, 64)
+region = Rect2(256, 0, 64, 64)
 
 [resource]
 script = ExtResource("1")

@@ -1,17 +1,17 @@
 [gd_resource type="Resource" script_class="PuzzleTileData" load_steps=4 format=3 uid="uid://bjooggv2wncy1"]
 
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://b22ingg8egy2" path="res://assets/sprites/spritesheettiles_hunter.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="2_vc5sq"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_bear_pet"]
-atlas = ExtResource("2")
-region = Rect2(378, 131, 64, 64)
+[sub_resource type="AtlasTexture" id="AtlasTexture_uxjk0"]
+atlas = ExtResource("2_vc5sq")
+region = Rect2(0, 128, 64, 64)
 
 [resource]
 script = ExtResource("1")
 tile_type = 7
 display_name = "Bear Pet"
-sprite = SubResource("AtlasTexture_bear_pet")
+sprite = SubResource("AtlasTexture_uxjk0")
 color = Color(0.6, 0.3, 0.1, 1)
 is_matchable = false
 is_clickable = true

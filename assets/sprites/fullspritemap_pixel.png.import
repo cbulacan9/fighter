@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c7clipr8g6ucc"
-path="res://.godot/imported/mirrorwarden_spritesheet_pixel.png-465639442e3664a5645d009785170e0d.ctex"
+uid="uid://w04mei6g5bhv"
+path="res://.godot/imported/fullspritemap_pixel.png-635405e38f2acd42c3e9c719c3f83e2c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/mirrorwarden_spritesheet_pixel.png"
-dest_files=["res://.godot/imported/mirrorwarden_spritesheet_pixel.png-465639442e3664a5645d009785170e0d.ctex"]
+source_file="res://assets/sprites/fullspritemap_pixel.png"
+dest_files=["res://.godot/imported/fullspritemap_pixel.png-635405e38f2acd42c3e9c719c3f83e2c.ctex"]
 
 [params]
 

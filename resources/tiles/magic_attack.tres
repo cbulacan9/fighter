@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Resource" uid="uid://dgqjytn3wryu1" path="res://resources/effects/magic_damage_effect.tres" id="3"]
-[ext_resource type="Texture2D" uid="uid://c7clipr8g6ucc" path="res://assets/sprites/mirrorwarden_spritesheet_pixel.png" id="3_cnxmh"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="3_cnxmh"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_wa0bc"]
 atlas = ExtResource("3_cnxmh")
-region = Rect2(0, 0, 64, 64)
+region = Rect2(0, 64, 64, 64)
 
 [resource]
 script = ExtResource("1")

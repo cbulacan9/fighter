@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Resource" uid="uid://csm0k3p4ss1v3" path="res://resources/effects/smoke_passive.tres" id="3_passive"]
 [ext_resource type="Resource" uid="uid://csm0k34ct1v3" path="res://resources/effects/smoke_active.tres" id="4_active"]
-[ext_resource type="Texture2D" uid="uid://do77bhbi0j5nr" path="res://assets/sprites/assassin_spritesheet_pixel.png" id="4_gohpm"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="4_gohpm"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_vk03i"]
 atlas = ExtResource("4_gohpm")

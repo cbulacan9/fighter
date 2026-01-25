@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/effects/stun_effect.tres" id="3"]
-[ext_resource type="Texture2D" uid="uid://do77bhbi0j5nr" path="res://assets/sprites/assassin_spritesheet_pixel.png" id="3_chq2i"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="3_chq2i"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_2e7kj"]
 atlas = ExtResource("3_chq2i")
-region = Rect2(128, 64, 64, 64)
+region = Rect2(256, 192, 64, 64)
 
 [resource]
 script = ExtResource("1")
