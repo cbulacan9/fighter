@@ -1,9 +1,15 @@
-[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=2 format=3 uid="uid://i0bojd4lhc4f"]
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=4 format=3 uid="uid://i0bojd4lhc4f"]
 
-[ext_resource type="Script" uid="uid://c7fdwafowuu0p" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="2_yqy1b"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_u5obl"]
+atlas = ExtResource("2_yqy1b")
+region = Rect2(128, 64, 64, 64)
 
 [resource]
 script = ExtResource("1")
 tile_type = 4
 display_name = "Filler"
+sprite = SubResource("AtlasTexture_u5obl")
 color = Color(0.5, 0.5, 0.5, 1)

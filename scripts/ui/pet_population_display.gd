@@ -73,7 +73,7 @@ func _build_display() -> void:
 	_hbox.add_child(spacer1)
 
 	# Create Hawk counter
-	_hawk_counter = _create_counter("Hawk", Color(0.3, 0.6, 0.9))  # Light blue
+	_hawk_counter = _create_counter("Hawk", Color(0.573, 0.581, 0.604, 1.0))  # Light blue
 	_hawk_label = _hawk_counter.get_node("CountLabel") as Label
 	_hbox.add_child(_hawk_counter)
 

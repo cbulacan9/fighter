@@ -318,13 +318,13 @@ func _get_tile_color(tile_type: int) -> Color:
 		TileTypes.Type.SWORD:
 			return Color(0.9, 0.2, 0.2)  # Red
 		TileTypes.Type.SHIELD:
-			return Color(0.3, 0.5, 0.95)  # Blue
+			return Color(0.6, 0.4, 0.3, 1.0)  # Brown
 		TileTypes.Type.POTION:
 			return Color(0.2, 0.9, 0.2)  # Green
 		TileTypes.Type.LIGHTNING:
 			return Color(0.95, 0.95, 0.2)  # Yellow
 		TileTypes.Type.FILLER:
-			return Color(0.5, 0.5, 0.5)  # Gray
+			return Color(0.995, 0.83, 0.622, 1.0)  # Gray
 		TileTypes.Type.PET:
 			return Color(0.8, 0.4, 0.95)  # Purple
 		TileTypes.Type.MANA:

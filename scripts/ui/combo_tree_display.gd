@@ -10,7 +10,7 @@ extends Control
 ## ┌──────────────────────────────────────────────────┐
 ## │  0/3 [■] BEAR:  [SWORD] → [SHIELD] → [SHIELD]   │
 ## │  0/3 [■] HAWK:  [SHIELD] → [LIGHTNING]          │
-## │  0/3 [■] SNAKE: [LIGHTNING] → [SWORD] → [SHIELD]│
+## │  0/3 [■] SNAKE: [FOCUS] → [SWORD] → [SHIELD]│
 ## └──────────────────────────────────────────────────┘
 
 const DIM_MODULATE := Color(0.4, 0.4, 0.4, 1.0)
@@ -314,7 +314,7 @@ func _get_tile_color(tile_type: int) -> Color:
 		TileTypes.Type.SWORD:
 			return Color(0.9, 0.2, 0.2)  # Red
 		TileTypes.Type.SHIELD:
-			return Color(0.3, 0.5, 0.95)  # Blue
+			return Color(0.6, 0.4, 0.3, 1.0)  # Brown
 		TileTypes.Type.POTION:
 			return Color(0.2, 0.9, 0.2)  # Green
 		TileTypes.Type.LIGHTNING:
