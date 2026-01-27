@@ -128,9 +128,9 @@ func _get_placeholder_color(type: StatusTypes.StatusType) -> Color:
 		StatusTypes.StatusType.CANCEL_QUEUED:
 			return Color(0.9, 0.3, 0.3)  # Red
 		StatusTypes.StatusType.ABSORB_QUEUED:
-			return Color(0.3, 0.8, 0.3)  # Green
+			return Color(0.6, 0.3, 1, 1.0)  # Purple
 		StatusTypes.StatusType.ABSORB_STORED:
-			return Color(0.3, 0.8, 0.3)  # Green
+			return Color(0.6, 0.3, 1, 1.0)  # Purple
 		StatusTypes.StatusType.INVINCIBILITY:
 			return Color(1.0, 0.9, 0.3)  # Gold
 		_:

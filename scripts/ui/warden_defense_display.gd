@@ -26,7 +26,7 @@ const TIMER_BAR_HEIGHT := 12
 # Defense type colors
 const REFLECTION_COLOR := Color(0.3, 0.5, 1.0)  # Blue
 const CANCEL_COLOR := Color(0.9, 0.3, 0.3)  # Red
-const ABSORB_COLOR := Color(0.3, 0.8, 0.3)  # Green
+const ABSORB_COLOR := Color(0.6, 0.3, 1, 1.0)  # Purple
 
 # Defense types in display order
 const DEFENSE_TYPES := [
