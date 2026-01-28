@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=16 format=3 uid="uid://b2gircexmyslo"]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=17 format=3 uid="uid://b2gircexmyslo"]
 
 [ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1_qk07p"]
@@ -8,6 +8,7 @@
 [ext_resource type="Resource" uid="uid://i0bojd4lhc4f" path="res://resources/tiles/filler.tres" id="5"]
 [ext_resource type="Resource" uid="uid://bw6e8gp45gjsj" path="res://resources/tiles/mana.tres" id="6"]
 [ext_resource type="Resource" path="res://resources/mana/single_bar.tres" id="7"]
+[ext_resource type="Texture2D" uid="uid://dsk1wbxvbfcfi" path="res://assets/portraits/hunter_character card.png" id="7_ofhc0"]
 [ext_resource type="Resource" path="res://resources/sequences/bear_sequence.tres" id="8"]
 [ext_resource type="Texture2D" uid="uid://cvxwipyv1tegp" path="res://assets/portraits/hunter_pixel.png" id="8_sklmi"]
 [ext_resource type="Resource" path="res://resources/sequences/hawk_sequence.tres" id="9"]
@@ -24,6 +25,7 @@ archetype = "Combo Specialist"
 description = "A combo-sequence specialist who commands animal companions to devastate foes. The Hunter builds sequences by matching specific tile patterns. When a combo completes, the corresponding Pet tile (Bear, Hawk, or Snake) drops from above. Click a Pet tile to activate its ability."
 portrait = ExtResource("8_sklmi")
 ultimate_portrait = ExtResource("15_ofhc0")
+character_card_texture = ExtResource("7_ofhc0")
 basic_tiles = Array[ExtResource("1_qk07p")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
 spawn_weights = {
 0: 24.0,

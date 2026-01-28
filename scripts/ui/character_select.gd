@@ -11,10 +11,10 @@ signal back_pressed()
 
 @onready var title_label: Label = $VBoxContainer/Title
 @onready var cards_container: GridContainer = $VBoxContainer/CardsContainer
-@onready var description_panel: Panel = $VBoxContainer/DescriptionPanel
-@onready var description_label: Label = $VBoxContainer/DescriptionPanel/MarginContainer/VBoxContainer/Description
-@onready var archetype_label: Label = $VBoxContainer/DescriptionPanel/MarginContainer/VBoxContainer/Archetype
-@onready var character_name_label: Label = $VBoxContainer/DescriptionPanel/MarginContainer/VBoxContainer/CharacterName
+@onready var character_card_panel: Panel = $VBoxContainer/CharacterCardPanel
+@onready var character_card_display: TextureRect = $VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer/CharacterCardDisplay
+@onready var left_arrow: Button = $VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer/LeftArrow
+@onready var right_arrow: Button = $VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer/RightArrow
 @onready var select_button: Button = $VBoxContainer/ButtonContainer/SelectButton
 @onready var back_button: Button = $VBoxContainer/ButtonContainer/BackButton
 
@@ -22,6 +22,7 @@ var _characters: Array[CharacterData] = []
 var _unlocked_ids: Array[String] = []
 var _selected_character: CharacterData = null
 var _character_cards: Array[CharacterCard] = []
+var _current_index: int = 0
 
 
 func _ready() -> void:
@@ -31,6 +32,12 @@ func _ready() -> void:
 
 	if back_button:
 		back_button.pressed.connect(_on_back_pressed)
+	
+	if left_arrow:
+		left_arrow.pressed.connect(_on_left_arrow_pressed)
+	
+	if right_arrow:
+		right_arrow.pressed.connect(_on_right_arrow_pressed)
 
 
 ## Sets up the character select screen with available characters and unlocked IDs.
@@ -39,13 +46,17 @@ func setup(characters: Array[CharacterData], unlocked: Array[String] = []) -> vo
 	_unlocked_ids = unlocked
 	_selected_character = null
 	_populate_cards()
+	
+	# Default select first character if available
+	if _characters.size() > 0:
+		var first_unlocked_index := _get_first_unlocked_index()
+		if first_unlocked_index >= 0:
+			_current_index = first_unlocked_index
+			_select_character_by_index(_current_index)
 
 	# Update button states
 	if select_button:
-		select_button.disabled = true
-
-	# Clear description
-	_update_description(null)
+		select_button.disabled = false
 
 
 ## Populates the cards container with character cards.
@@ -106,46 +117,107 @@ func _is_unlocked(char_data: CharacterData) -> bool:
 
 ## Called when a character card is pressed.
 func _on_card_pressed(char_data: CharacterData) -> void:
-	# Deselect all cards
+	# Find the index of the pressed character
+	for i in range(_characters.size()):
+		if _characters[i] == char_data:
+			_current_index = i
+			_select_character_by_index(_current_index)
+			break
+
+
+## Selects a character by index and updates all UI elements.
+func _select_character_by_index(index: int) -> void:
+	if index < 0 or index >= _characters.size():
+		return
+	
+	_current_index = index
+	var char_data := _characters[index]
+	
+	# Check if character is unlocked
+	if not _is_unlocked(char_data):
+		return
+	
+	_selected_character = char_data
+	
+	# Update thumbnail selection highlights
 	for card in _character_cards:
 		card.set_selected(false)
-
-	# Select the pressed card
+	
+	# Highlight the selected card
 	for card in _character_cards:
 		if card.get_character() == char_data:
 			card.set_selected(true)
 			break
-
-	_selected_character = char_data
-	_update_description(char_data)
-
-	# Enable select button
-	if select_button:
-		select_button.disabled = false
+	
+	# Update character card display
+	_update_character_card_display(char_data)
 
 
-## Updates the description panel with character info.
-func _update_description(char_data: CharacterData) -> void:
-	if not char_data:
-		if description_label:
-			description_label.text = "Select a character to view their abilities."
-		if archetype_label:
-			archetype_label.text = ""
-		if character_name_label:
-			character_name_label.text = ""
+## Updates the central character card display.
+func _update_character_card_display(char_data: CharacterData) -> void:
+	if character_card_display:
+		# Use character_card_texture if available, otherwise use portrait as fallback
+		if char_data.character_card_texture:
+			character_card_display.texture = char_data.character_card_texture
+		elif char_data.portrait:
+			character_card_display.texture = char_data.portrait
+		else:
+			character_card_display.texture = null
+
+
+## Called when left arrow is pressed.
+func _on_left_arrow_pressed() -> void:
+	var unlocked_indices := _get_unlocked_indices()
+	if unlocked_indices.is_empty():
 		return
+	
+	# Find current position in unlocked list
+	var current_pos := unlocked_indices.find(_current_index)
+	if current_pos == -1:
+		# Current index not in unlocked list, start from last unlocked
+		_current_index = unlocked_indices[-1]
+	else:
+		# Move to previous (wrapping around)
+		var new_pos := (current_pos - 1 + unlocked_indices.size()) % unlocked_indices.size()
+		_current_index = unlocked_indices[new_pos]
+	
+	_select_character_by_index(_current_index)
 
-	if character_name_label:
-		character_name_label.text = char_data.display_name
 
-	if archetype_label:
-		archetype_label.text = char_data.archetype
+## Called when right arrow is pressed.
+func _on_right_arrow_pressed() -> void:
+	var unlocked_indices := _get_unlocked_indices()
+	if unlocked_indices.is_empty():
+		return
+	
+	# Find current position in unlocked list
+	var current_pos := unlocked_indices.find(_current_index)
+	if current_pos == -1:
+		# Current index not in unlocked list, start from first unlocked
+		_current_index = unlocked_indices[0]
+	else:
+		# Move to next (wrapping around)
+		var new_pos := (current_pos + 1) % unlocked_indices.size()
+		_current_index = unlocked_indices[new_pos]
+	
+	_select_character_by_index(_current_index)
 
-	if description_label:
-		var desc := char_data.description
-		if not char_data.passive_description.is_empty():
-			desc += "\n\nPassive: " + char_data.passive_description
-		description_label.text = desc
+
+## Returns an array of indices of all unlocked characters.
+func _get_unlocked_indices() -> Array[int]:
+	var indices: Array[int] = []
+	for i in range(_characters.size()):
+		if _is_unlocked(_characters[i]):
+			indices.append(i)
+	return indices
+
+
+## Returns the index of the first unlocked character, or -1 if none.
+func _get_first_unlocked_index() -> int:
+	var unlocked_indices := _get_unlocked_indices()
+	if unlocked_indices.is_empty():
+		return -1
+	return unlocked_indices[0]
 
 
 ## Called when the select button is pressed.
@@ -166,10 +238,11 @@ func get_selected_character() -> CharacterData:
 
 ## Programmatically selects a character by ID.
 func select_character(character_id: String) -> void:
-	for card in _character_cards:
-		var char_data := card.get_character()
-		if char_data and char_data.character_id == character_id and card.is_unlocked():
-			_on_card_pressed(char_data)
+	for i in range(_characters.size()):
+		var char_data := _characters[i]
+		if char_data.character_id == character_id and _is_unlocked(char_data):
+			_current_index = i
+			_select_character_by_index(_current_index)
 			return
 
 
