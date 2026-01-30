@@ -24,7 +24,7 @@ grow_vertical = 2
 color = Color(0.1, 0.1, 0.15, 1)
 
 [node name="Background1" type="Sprite2D" parent="Background"]
-modulate = Color(1, 1, 1, 0.19607843)
+modulate = Color(1, 1, 1, 0.39215687)
 texture = ExtResource("3_gp4m6")
 centered = false
 
