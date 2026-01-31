@@ -1,11 +1,13 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=9 format=3 uid="uid://bsaqvp25cc578"]
 
-[ext_resource type="Script" path="res://scripts/data/character_data.gd" id="1"]
-[ext_resource type="Resource" path="res://resources/tiles/sword.tres" id="2"]
-[ext_resource type="Resource" path="res://resources/tiles/shield.tres" id="3"]
-[ext_resource type="Resource" path="res://resources/tiles/potion.tres" id="4"]
-[ext_resource type="Resource" path="res://resources/tiles/lightning.tres" id="5"]
-[ext_resource type="Resource" path="res://resources/tiles/filler.tres" id="6"]
+[ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1_cyggf"]
+[ext_resource type="Resource" uid="uid://hqjrruvp3k4f" path="res://resources/tiles/sword.tres" id="2"]
+[ext_resource type="Resource" uid="uid://fv70s103catj" path="res://resources/tiles/shield.tres" id="3"]
+[ext_resource type="Resource" uid="uid://d3rjj3potup4" path="res://resources/tiles/potion.tres" id="4"]
+[ext_resource type="Resource" uid="uid://dyobk44i85nnq" path="res://resources/tiles/lightning.tres" id="5"]
+[ext_resource type="Resource" uid="uid://i0bojd4lhc4f" path="res://resources/tiles/filler.tres" id="6"]
+[ext_resource type="Script" uid="uid://bwoblebvd71ob" path="res://scripts/data/sequence_pattern.gd" id="8_8rp5r"]
 
 [resource]
 script = ExtResource("1")
@@ -13,8 +15,7 @@ character_id = "basic"
 display_name = "Squire"
 archetype = "Balanced"
 description = "A balanced fighter learning the ways of combat. The Squire has no special abilities but excels at mastering the fundamentals of matching tiles and managing resources. A perfect choice for beginners."
-basic_tiles = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
-specialty_tiles = []
+basic_tiles = Array[ExtResource("1_cyggf")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
 spawn_weights = {
 0: 1.0,
 1: 1.0,
@@ -22,10 +23,5 @@ spawn_weights = {
 3: 1.0,
 4: 1.0
 }
-sequences = []
-passive_description = ""
-base_hp = 100
-base_armor = 0
 max_armor = 30
 is_starter = true
-unlock_opponent_id = ""

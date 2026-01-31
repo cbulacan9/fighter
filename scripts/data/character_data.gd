@@ -23,6 +23,9 @@ extends Resource
 ## Portrait shown during ultimate ability activation
 @export var ultimate_portrait: Texture2D
 
+## Large character card image for character selection screen
+@export var character_card_texture: Texture2D
+
 # Tiles
 ## Basic tiles available to all characters or shared between archetypes
 @export var basic_tiles: Array[PuzzleTileData] = []

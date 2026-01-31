@@ -1,7 +1,10 @@
-[gd_scene load_steps=3 format=3 uid="uid://character_select_scene"]
+[gd_scene load_steps=6 format=3 uid="uid://c0d41a7noj8mi"]
 
-[ext_resource type="Script" path="res://scripts/ui/character_select.gd" id="1"]
-[ext_resource type="PackedScene" uid="uid://character_card_scene" path="res://scenes/ui/character_card.tscn" id="2"]
+[ext_resource type="Script" uid="uid://c2ytg7akq8mee" path="res://scripts/ui/character_select.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/ui/character_card.tscn" id="2"]
+[ext_resource type="Texture2D" uid="uid://6kxewnd4qbf1" path="res://assets/ui/gamebackground_apothecary_720x1280.png" id="3_gp4m6"]
+[ext_resource type="Texture2D" uid="uid://dodo7jdn75a5y" path="res://assets/ui/arrow_left.png" id="4_iufww"]
+[ext_resource type="Texture2D" uid="uid://dlqiwbnoosaqu" path="res://assets/ui/arrow_right.png" id="5_ejph0"]
 
 [node name="CharacterSelect" type="Control"]
 layout_mode = 3
@@ -21,6 +24,18 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.1, 0.1, 0.15, 1)
+
+[node name="Background1" type="TextureRect" parent="Background"]
+modulate = Color(1, 1, 1, 0.39215687)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_gp4m6")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -44,17 +59,15 @@ horizontal_alignment = 1
 [node name="CardsContainer" type="GridContainer" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 1
 theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 16
 columns = 5
 
-[node name="DescriptionPanel" type="Panel" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 300)
+[node name="CharacterCardPanel" type="Panel" parent="VBoxContainer"]
+custom_minimum_size = Vector2(600, 840)
 layout_mode = 2
-size_flags_vertical = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/DescriptionPanel"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/CharacterCardPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -62,31 +75,31 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 12
+theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_bottom = 16
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/DescriptionPanel/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/CharacterCardPanel/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 16
 
-[node name="CharacterName" type="Label" parent="VBoxContainer/DescriptionPanel/MarginContainer/VBoxContainer"]
+[node name="LeftArrow" type="Button" parent="VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer"]
+modulate = Color(1, 1, 1, 0.19607843)
+custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
-horizontal_alignment = 1
+icon = ExtResource("4_iufww")
 
-[node name="Archetype" type="Label" parent="VBoxContainer/DescriptionPanel/MarginContainer/VBoxContainer"]
+[node name="CharacterCardDisplay" type="TextureRect" parent="VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(600, 840)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-horizontal_alignment = 1
+expand_mode = 1
+stretch_mode = 6
 
-[node name="Description" type="Label" parent="VBoxContainer/DescriptionPanel/MarginContainer/VBoxContainer"]
+[node name="RightArrow" type="Button" parent="VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer"]
+modulate = Color(1, 1, 1, 0.19607843)
+custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
-size_flags_vertical = 3
-text = "Select a character to view their abilities."
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 2
+icon = ExtResource("5_ejph0")
 
 [node name="ButtonContainer" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
