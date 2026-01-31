@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=14 format=3 uid="uid://c3kjmapi0rps3"]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=15 format=3 uid="uid://c3kjmapi0rps3"]
 
 [ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1_tile"]
@@ -7,6 +7,7 @@
 [ext_resource type="Resource" uid="uid://bw6e8gp45gjsj" path="res://resources/tiles/mana.tres" id="4"]
 [ext_resource type="Resource" uid="uid://i0bojd4lhc4f" path="res://resources/tiles/filler.tres" id="5"]
 [ext_resource type="Resource" uid="uid://csm0k3b0mb111" path="res://resources/tiles/smoke_bomb.tres" id="6"]
+[ext_resource type="Texture2D" uid="uid://dff8rua75s744" path="res://assets/portraits/assassin_character card.png" id="6_2afe6"]
 [ext_resource type="Resource" uid="uid://csh4d0wst3p22" path="res://resources/tiles/shadow_step.tres" id="7"]
 [ext_resource type="Texture2D" uid="uid://cw4j0mg2eocx6" path="res://assets/portraits/assassin_pixel.png" id="7_88jes"]
 [ext_resource type="Resource" path="res://resources/mana/dual_bar.tres" id="8"]
@@ -22,6 +23,7 @@ archetype = "Brawler"
 description = "A high-mobility damage dealer who uses smoke and shadows to confuse enemies. The Assassin builds two separate mana bars through Smoke Bomb and Shadow Step tiles. When both bars are full, unleash Predator's Trance for devastating sword combos."
 portrait = ExtResource("7_88jes")
 ultimate_portrait = ExtResource("13_g7ekq")
+character_card_texture = ExtResource("6_2afe6")
 basic_tiles = Array[ExtResource("1_tile")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
 specialty_tiles = Array[ExtResource("1_tile")]([ExtResource("6"), ExtResource("7")])
 spawn_weights = {
