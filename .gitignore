@@ -6,6 +6,7 @@
 # Build artifacts
 *.apk
 *.idsig
+*.keystore
 
 # Visual Studio
 .vs/
@@ -30,3 +31,4 @@
 TestResults/
 *.trx
 *.coverage*
+
