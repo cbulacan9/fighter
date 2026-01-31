@@ -1,8 +1,10 @@
-[gd_scene load_steps=4 format=3 uid="uid://c0d41a7noj8mi"]
+[gd_scene load_steps=6 format=3 uid="uid://c0d41a7noj8mi"]
 
 [ext_resource type="Script" uid="uid://c2ytg7akq8mee" path="res://scripts/ui/character_select.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/character_card.tscn" id="2"]
 [ext_resource type="Texture2D" uid="uid://6kxewnd4qbf1" path="res://assets/ui/gamebackground_apothecary_720x1280.png" id="3_gp4m6"]
+[ext_resource type="Texture2D" uid="uid://dodo7jdn75a5y" path="res://assets/ui/arrow_left.png" id="4_iufww"]
+[ext_resource type="Texture2D" uid="uid://dlqiwbnoosaqu" path="res://assets/ui/arrow_right.png" id="5_ejph0"]
 
 [node name="CharacterSelect" type="Control"]
 layout_mode = 3
@@ -24,13 +26,13 @@ grow_vertical = 2
 color = Color(0.1, 0.1, 0.15, 1)
 
 [node name="Background1" type="TextureRect" parent="Background"]
+modulate = Color(1, 1, 1, 0.39215687)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-modulate = Color(1, 1, 1, 0.39215687)
 texture = ExtResource("3_gp4m6")
 expand_mode = 1
 stretch_mode = 6
@@ -82,8 +84,10 @@ layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="LeftArrow" type="Button" parent="VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer"]
+modulate = Color(1, 1, 1, 0.19607843)
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
+icon = ExtResource("4_iufww")
 
 [node name="CharacterCardDisplay" type="TextureRect" parent="VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(600, 840)
@@ -92,8 +96,10 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="RightArrow" type="Button" parent="VBoxContainer/CharacterCardPanel/MarginContainer/HBoxContainer"]
+modulate = Color(1, 1, 1, 0.19607843)
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
+icon = ExtResource("5_ejph0")
 
 [node name="ButtonContainer" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
