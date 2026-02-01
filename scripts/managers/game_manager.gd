@@ -382,10 +382,14 @@ func _setup_match() -> void:
 	# Setup enemy AI
 	if ai_controller and enemy_board:
 		ai_controller.setup(enemy_board, enemy_board._match_detector)
+		# Set difficulty for enemy AI
+		_set_ai_difficulty(ai_controller, current_difficulty)
 
 	# Setup player AI for AI vs AI mode
 	if current_mode == GameMode.AI_VS_AI and player_ai_controller and player_board:
 		player_ai_controller.setup(player_board, player_board._match_detector)
+		# Set difficulty for player AI
+		_set_ai_difficulty(player_ai_controller, current_difficulty)
 		# Disable player input since AI controls the board
 		player_board.is_player_controlled = false
 
@@ -866,6 +870,21 @@ func _on_character_unlocked(character_id: String) -> void:
 	var char_data := character_registry.get_character(character_id)
 	if char_data:
 		_show_unlock_notification(char_data)
+
+
+## Sets the difficulty for an AI controller.
+func _set_ai_difficulty(ai: AIController, difficulty: Difficulty) -> void:
+	if not ai:
+		return
+
+	# Convert GameManager Difficulty to AIController Difficulty
+	match difficulty:
+		Difficulty.EASY:
+			ai.set_difficulty(AIController.Difficulty.EASY)
+		Difficulty.MEDIUM:
+			ai.set_difficulty(AIController.Difficulty.MEDIUM)
+		Difficulty.HARD:
+			ai.set_difficulty(AIController.Difficulty.HARD)
 
 
 ## Shows the unlock notification UI for a character.
