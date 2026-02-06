@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=9 format=3 uid="uid://bsaqvp25cc578"]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3 uid="uid://bsaqvp25cc578"]
 
 [ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1_cyggf"]
@@ -7,6 +7,7 @@
 [ext_resource type="Resource" uid="uid://d3rjj3potup4" path="res://resources/tiles/potion.tres" id="4"]
 [ext_resource type="Resource" uid="uid://dyobk44i85nnq" path="res://resources/tiles/lightning.tres" id="5"]
 [ext_resource type="Resource" uid="uid://i0bojd4lhc4f" path="res://resources/tiles/filler.tres" id="6"]
+[ext_resource type="Texture2D" uid="uid://dwvxnmiyhllfh" path="res://assets/portraits/librarian_character card.png" id="7_8rp5r"]
 [ext_resource type="Script" uid="uid://bwoblebvd71ob" path="res://scripts/data/sequence_pattern.gd" id="8_8rp5r"]
 
 [resource]
@@ -15,6 +16,7 @@ character_id = "basic"
 display_name = "Squire"
 archetype = "Balanced"
 description = "A balanced fighter learning the ways of combat. The Squire has no special abilities but excels at mastering the fundamentals of matching tiles and managing resources. A perfect choice for beginners."
+character_card_texture = ExtResource("7_8rp5r")
 basic_tiles = Array[ExtResource("1_cyggf")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
 spawn_weights = {
 0: 1.0,
