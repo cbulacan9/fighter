@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=16 format=3 uid="uid://kdtklc445f6m"]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=15 format=3 uid="uid://kdtklc445f6m"]
 
 [ext_resource type="Script" uid="uid://bv3yc6y6v72sx" path="res://scripts/data/character_data.gd" id="1"]
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1_tile"]
@@ -7,14 +7,13 @@
 [ext_resource type="Resource" uid="uid://i0bojd4lhc4f" path="res://resources/tiles/filler.tres" id="5_filler"]
 [ext_resource type="Resource" uid="uid://bw6e8gp45gjsj" path="res://resources/tiles/mana.tres" id="6_mana"]
 [ext_resource type="Texture2D" uid="uid://bep070k6srksj" path="res://assets/portraits/mirrorwarden_character card.png" id="6_ohrw5"]
-[ext_resource type="Texture2D" uid="uid://bjrfie01ymx1a" path="res://assets/portraits/mirrorwarden_pixel.png" id="7_jqhlb"]
 [ext_resource type="Resource" uid="uid://d1o4iys8qvfey" path="res://resources/tiles/reflection.tres" id="7_reflect"]
 [ext_resource type="Resource" uid="uid://c75rwgffssur5" path="res://resources/tiles/cancel.tres" id="8_cancel"]
+[ext_resource type="Texture2D" uid="uid://jdx0mcay4vse" path="res://assets/portraits/mirrorwarden_portrait.png" id="8_jqhlb"]
 [ext_resource type="Script" uid="uid://bwoblebvd71ob" path="res://scripts/data/sequence_pattern.gd" id="9_7gqlg"]
 [ext_resource type="Resource" uid="uid://bi4giqldymewg" path="res://resources/tiles/absorb.tres" id="9_absorb"]
 [ext_resource type="Resource" path="res://resources/mana/single_bar.tres" id="10_mana_config"]
 [ext_resource type="Resource" path="res://resources/abilities/invincibility.tres" id="11_ultimate"]
-[ext_resource type="Texture2D" uid="uid://ddjexbwt8phi" path="res://assets/portraits/mirrorwarden_pixel_ultimate.png" id="14_ohrw5"]
 
 [resource]
 script = ExtResource("1")
@@ -22,8 +21,9 @@ character_id = "mirror_warden"
 display_name = "The Mirror Warden"
 archetype = "Tank"
 description = "A defensive specialist who uses a unique Defensive Queue System to counter enemy attacks. Match defensive tiles to queue Reflection, Cancel, or Absorb. Time your defenses to reflect damage, heal back injuries, or store damage for a powerful counterattack."
-portrait = ExtResource("7_jqhlb")
-ultimate_portrait = ExtResource("14_ohrw5")
+portrait = ExtResource("8_jqhlb")
+portrait_small = ExtResource("8_jqhlb")
+ultimate_portrait = ExtResource("8_jqhlb")
 character_card_texture = ExtResource("6_ohrw5")
 basic_tiles = Array[ExtResource("1_tile")]([ExtResource("2_magic"), ExtResource("3_shield"), ExtResource("5_filler"), ExtResource("6_mana")])
 specialty_tiles = Array[ExtResource("1_tile")]([ExtResource("7_reflect"), ExtResource("8_cancel"), ExtResource("9_absorb")])
