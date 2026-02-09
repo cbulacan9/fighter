@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://byll08k44ekb5"
-path="res://.godot/imported/gamebackground_mirrorwarden_720x1280.png-27036b0cd7141662f5ce1cfc3fe9720f.ctex"
+uid="uid://buff35wefx455"
+path="res://.godot/imported/startscreen_background1.png-7fdc40baa3b5db317c3908554b75d6a7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/gamebackground_mirrorwarden_720x1280.png"
-dest_files=["res://.godot/imported/gamebackground_mirrorwarden_720x1280.png-27036b0cd7141662f5ce1cfc3fe9720f.ctex"]
+source_file="res://assets/ui/startscreen_background1.png"
+dest_files=["res://.godot/imported/startscreen_background1.png-7fdc40baa3b5db317c3908554b75d6a7.ctex"]
 
 [params]
 

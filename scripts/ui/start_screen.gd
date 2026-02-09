@@ -12,6 +12,12 @@ signal library_pressed()
 @onready var play_button: Button = $Panel/VBox/PlayButton
 @onready var settings_button: Button = $Panel/VBox/SettingsButton
 @onready var library_button: Button = $Panel/VBox/LibraryButton
+@onready var mosaic_panel1: TextureButton = $Panel/Mosaic/Panel1
+@onready var mosaic_panel2: TextureButton = $Panel/Mosaic/Panel2
+@onready var mosaic_panel3: TextureButton = $Panel/Mosaic/Panel3
+@onready var mosaic_panel4: TextureButton = $Panel/Mosaic/Panel4
+@onready var mosaic_panel5: TextureButton = $Panel/Mosaic/Panel5
+@onready var mosaic_panel6: TextureButton = $Panel/Mosaic/Panel6
 
 
 func _ready() -> void:
@@ -26,6 +32,14 @@ func _connect_buttons() -> void:
 		settings_button.pressed.connect(_on_settings_pressed)
 	if library_button:
 		library_button.pressed.connect(_on_library_pressed)
+
+	# connect mosaic panels: map a few panels to the same actions so images are selectable
+	if mosaic_panel1:
+		mosaic_panel1.pressed.connect(_on_library_pressed)
+	if mosaic_panel2:
+		mosaic_panel2.pressed.connect(_on_settings_pressed)
+	if mosaic_panel6:
+		mosaic_panel6.pressed.connect(_on_play_pressed)
 
 
 func show_screen() -> void:
