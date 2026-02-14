@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2tqro5lr1dqy"
-path="res://.godot/imported/gamebackground_hunter_720x1280.png-d9e8ad4cde94c354b4c5f7652f27ad8f.ctex"
+uid="uid://2tgk07rwc4ro"
+path="res://.godot/imported/startscreen_background3.png-3aacdbfb1af684d6c57923a99320289c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/gamebackground_hunter_720x1280.png"
-dest_files=["res://.godot/imported/gamebackground_hunter_720x1280.png-d9e8ad4cde94c354b4c5f7652f27ad8f.ctex"]
+source_file="res://assets/ui/startscreen_background3.png"
+dest_files=["res://.godot/imported/startscreen_background3.png-3aacdbfb1af684d6c57923a99320289c.ctex"]
 
 [params]
 

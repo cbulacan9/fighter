@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://clfb1s2agg6ea"
-path="res://.godot/imported/gamebackground_assassin_720x1280.png-3ec8416553caf149c5f8e346d3a5bbb2.ctex"
+uid="uid://cc3ovj4l7wj37"
+path="res://.godot/imported/startscreen_background2.png-04687ec165ef9d1a5f7a666065dc9bbc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/gamebackground_assassin_720x1280.png"
-dest_files=["res://.godot/imported/gamebackground_assassin_720x1280.png-3ec8416553caf149c5f8e346d3a5bbb2.ctex"]
+source_file="res://assets/ui/startscreen_background2.png"
+dest_files=["res://.godot/imported/startscreen_background2.png-04687ec165ef9d1a5f7a666065dc9bbc.ctex"]
 
 [params]
 

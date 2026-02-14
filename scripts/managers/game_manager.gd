@@ -6,6 +6,7 @@ const UNLOCK_NOTIFICATION_SCENE := preload("res://scenes/ui/unlock_notification.
 signal state_changed(new_state: GameState)
 
 enum GameState {
+	START,
 	MODE_SELECT,
 	CHARACTER_SELECT,
 	INIT,
@@ -30,7 +31,7 @@ enum Difficulty {
 @export var player_data_path: String = "res://resources/fighters/default_player.tres"
 @export var enemy_data_path: String = "res://resources/fighters/default_enemy.tres"
 
-var current_state: GameState = GameState.STATS  # Start at STATS so transition to MODE_SELECT actually triggers
+var current_state: GameState = GameState.STATS  # Start at STATS so transition to START actually triggers
 var current_mode: GameMode = GameMode.PLAYER_VS_AI
 var current_difficulty: Difficulty = Difficulty.MEDIUM
 var match_timer: float = 0.0
@@ -56,6 +57,7 @@ var player_stun_overlay: StunOverlay
 var enemy_stun_overlay: StunOverlay
 var mode_select_screen: ModeSelectScreen
 var character_select_screen: CharacterSelect
+var start_screen: StartScreen
 var ability_announcement_spawner: AbilityAnnouncementSpawner
 
 # Character selection tracking
@@ -112,8 +114,8 @@ func _initialize_systems() -> void:
 	# Connect signals
 	_connect_signals()
 
-	# Start at mode selection
-	change_state(GameState.MODE_SELECT)
+	# Start at start screen
+	change_state(GameState.START)
 
 
 func _find_node_references() -> void:
@@ -145,6 +147,7 @@ func _find_node_references() -> void:
 		enemy_stun_overlay = ui.get_node_or_null("EnemyStunOverlay")
 		mode_select_screen = ui.get_node_or_null("ModeSelectScreen")
 		character_select_screen = ui.get_node_or_null("CharacterSelectScreen")
+		start_screen = ui.get_node_or_null("StartScreen")
 		ability_announcement_spawner = ui.get_node_or_null("AbilityAnnouncements")
 
 	# Position boards and stun overlays using HUD layout constants
@@ -208,6 +211,10 @@ func _update_spawner_positions() -> void:
 
 
 func _connect_signals() -> void:
+	# StartScreen signals
+	if start_screen:
+		start_screen.play_pressed.connect(_on_play_pressed)
+
 	# ModeSelectScreen signals
 	if mode_select_screen:
 		mode_select_screen.mode_selected.connect(_on_mode_selected)
@@ -265,6 +272,11 @@ func change_state(new_state: GameState) -> void:
 
 func _enter_state(state: GameState) -> void:
 	match state:
+		GameState.START:
+			_disable_gameplay()
+			if start_screen:
+				start_screen.show_screen()
+
 		GameState.MODE_SELECT:
 			_disable_gameplay()
 			if mode_select_screen:
@@ -310,6 +322,10 @@ func _enter_state(state: GameState) -> void:
 
 func _exit_state(state: GameState) -> void:
 	match state:
+		GameState.START:
+			if start_screen:
+				start_screen.hide_screen()
+
 		GameState.MODE_SELECT:
 			if mode_select_screen:
 				mode_select_screen.hide_screen()
@@ -611,6 +627,11 @@ func _on_character_selected(character_id: String) -> void:
 		change_state(GameState.INIT)
 
 
+## Called when play is pressed on start screen.
+func _on_play_pressed() -> void:
+	change_state(GameState.MODE_SELECT)
+
+
 ## Called when back is pressed on character select screen.
 func _on_character_select_back() -> void:
 	if _selecting_player:
@@ -647,7 +668,7 @@ func _on_rematch_pressed() -> void:
 
 
 func _on_new_game_pressed() -> void:
-	change_state(GameState.MODE_SELECT)
+	change_state(GameState.START)
 
 
 func _on_match_ended(result: int) -> void:
