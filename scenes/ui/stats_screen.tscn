@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://dqtwqr5jaitj8"]
 
-[ext_resource type="Script" uid="uid://bugqr6co5npu0" path="res://scripts/ui/stats_screen.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/stats_screen.gd" id="1"]
 
 [node name="StatsScreen" type="CanvasLayer"]
 layer = 10

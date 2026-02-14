@@ -25,16 +25,15 @@ portrait = ExtResource("8_jqhlb")
 portrait_small = ExtResource("8_jqhlb")
 ultimate_portrait = ExtResource("8_jqhlb")
 character_card_texture = ExtResource("6_ohrw5")
-basic_tiles = Array[ExtResource("1_tile")]([ExtResource("2_magic"), ExtResource("3_shield"), ExtResource("5_filler"), ExtResource("6_mana")])
+basic_tiles = Array[ExtResource("1_tile")]([ExtResource("2_magic"), ExtResource("5_filler"), ExtResource("6_mana")])
 specialty_tiles = Array[ExtResource("1_tile")]([ExtResource("7_reflect"), ExtResource("8_cancel"), ExtResource("9_absorb")])
 spawn_weights = {
-1: 20.0,
-4: 18.0,
-6: 15.0,
-15: 22.0,
-16: 10.0,
-17: 9.0,
-18: 6.0
+4: 20.0,
+6: 20.0,
+15: 24.0,
+16: 11.0,
+17: 14.0,
+18: 11.0
 }
 mana_config = ExtResource("10_mana_config")
 ultimate_ability = ExtResource("11_ultimate")

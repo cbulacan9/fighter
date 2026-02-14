@@ -44,7 +44,12 @@ enum TargetType {
 ## Base value for the effect (damage amount, heal amount, tile count, etc.)
 @export var base_value: int = 0
 
+## Optional reference to source tile data for match values (single source of truth)
+## If set, get_value_for_match() will use the tile's values instead of values_by_match_size
+@export var source_tile: PuzzleTileData
+
 ## Values for different match sizes (match-3, match-4, match-5)
+## Only used if source_tile is not set
 @export var values_by_match_size: Dictionary = {3: 10, 4: 25, 5: 50}
 
 ## Duration in seconds (for timed effects like stun)
@@ -106,6 +111,11 @@ func _target_string() -> String:
 
 ## Get the effect value for a specific match size
 func get_value_for_match(match_count: int) -> int:
+	# Use source tile values if available (single source of truth)
+	if source_tile:
+		return source_tile.get_value(match_count)
+	
+	# Fall back to local values_by_match_size
 	var capped := mini(match_count, 5)
 	if values_by_match_size.has(capped):
 		return values_by_match_size[capped]

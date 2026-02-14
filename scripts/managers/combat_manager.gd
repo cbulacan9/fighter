@@ -124,7 +124,7 @@ func _setup_fighter_mana(fighter: Fighter, data: FighterData) -> void:
 		mana_system.setup_fighter(fighter, data.mana_config)
 
 
-func process_cascade_result(source_is_player: bool, result: CascadeHandler.CascadeResult) -> void:
+func process_cascade_result(_source_is_player: bool, _result: CascadeHandler.CascadeResult) -> void:
 	# NOTE: Combat effects are now applied immediately via process_immediate_matches
 	# This function is kept for backwards compatibility but no longer processes combat
 	pass

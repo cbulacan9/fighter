@@ -54,9 +54,9 @@ func queue_defense(fighter: Fighter, defense_type: StatusTypes.StatusType, match
 	# Track consecutive matches for enhancement
 	_update_consecutive_matches(fighter, defense_type)
 
-	var is_enhanced := _is_enhanced(fighter, defense_type)
+	var enhanced := _is_enhanced(fighter, defense_type)
 	var duration := _get_duration_for_type(defense_type)
-	if is_enhanced:
+	if enhanced:
 		duration *= ENHANCED_DURATION_MULTIPLIER
 
 	# Determine stacks from match count
@@ -68,7 +68,7 @@ func queue_defense(fighter: Fighter, defense_type: StatusTypes.StatusType, match
 	_queued_defenses[fighter][defense_type] = {
 		"time_remaining": duration,
 		"stacks": stacks,
-		"enhanced": is_enhanced
+		"enhanced": enhanced
 	}
 
 	defense_queued.emit(fighter, defense_type)

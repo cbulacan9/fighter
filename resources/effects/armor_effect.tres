@@ -8,13 +8,10 @@ effect_id = "basic_armor"
 display_name = "Shield"
 effect_type = 3
 target = 1
-base_value = 10
-values_by_match_size = {
-3: 10,
-4: 25,
-5: 50
-}
+base_value = 8
+source_tile = null
+values_by_match_size = {}
 duration = 0.0
 custom_effect_id = ""
 status_types_to_remove = []
-description = "Grants shield (armor) to self."
+description = "Grants shield (armor) to self. Click effect uses base_value."

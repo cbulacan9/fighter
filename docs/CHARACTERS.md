@@ -185,7 +185,6 @@ Matching defensive tiles queues that effect with a countdown timer:
 | Tile | Effect |
 |------|--------|
 | Magic Attack | Deals magic damage to opponent |
-| Shield | Adds defensive protection |
 | Health | Restores Warden's health |
 
 ### Specialty Tiles

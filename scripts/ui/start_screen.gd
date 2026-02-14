@@ -1,0 +1,76 @@
+class_name StartScreen
+extends CanvasLayer
+
+signal play_pressed()
+signal settings_pressed()
+signal library_pressed()
+
+@onready var panel: Control = $Panel
+@onready var background: ColorRect = $Panel/Background
+@onready var mosaic_panel1: TextureButton = $Panel/Mosaic/Panel1
+@onready var mosaic_panel2: TextureButton = $Panel/Mosaic/Panel2
+@onready var mosaic_panel3: TextureButton = $Panel/Mosaic/Panel3
+@onready var mosaic_panel4: TextureButton = $Panel/Mosaic/Panel4
+@onready var mosaic_panel5: TextureButton = $Panel/Mosaic/Panel5
+@onready var mosaic_panel6: TextureButton = $Panel/Mosaic/Panel6
+
+# Map mosaic panels to their functions
+@onready var library_button: TextureButton = mosaic_panel1
+@onready var settings_button: TextureButton = mosaic_panel5
+@onready var play_button: TextureButton = mosaic_panel6
+
+
+func _ready() -> void:
+	visible = true
+	_connect_buttons()
+
+
+func _connect_buttons() -> void:
+	# Connect mosaic panels to their functions
+	if mosaic_panel1:
+		mosaic_panel1.pressed.connect(_on_library_pressed)
+	if mosaic_panel5:
+		mosaic_panel5.pressed.connect(_on_settings_pressed)
+	if mosaic_panel6:
+		mosaic_panel6.pressed.connect(_on_play_pressed)
+
+
+func show_screen() -> void:
+	visible = true
+
+
+func hide_screen() -> void:
+	visible = false
+
+
+func _on_play_pressed() -> void:
+	hide_screen()
+	play_pressed.emit()
+
+
+func _on_settings_pressed() -> void:
+	settings_pressed.emit()
+
+
+func _on_library_pressed() -> void:
+	library_pressed.emit()
+
+
+## Sets the background image for the start screen
+func set_background_image(texture: Texture2D) -> void:
+	# Note: The current UI uses a mosaic layout, not a single background texture
+	# This function is kept for compatibility but does nothing in the current design
+	pass
+
+
+## Clears the background image and returns to solid color
+func clear_background_image() -> void:
+	# Note: The current UI uses a mosaic layout, not a single background texture
+	# This function is kept for compatibility but does nothing in the current design
+	pass
+
+
+## Sets the background color
+func set_background_color(color: Color) -> void:
+	if background:
+		background.color = color

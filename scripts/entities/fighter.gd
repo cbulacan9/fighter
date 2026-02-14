@@ -13,6 +13,7 @@ signal ultimate_ready()
 signal status_effect_applied(effect: StatusEffect)
 @warning_ignore("unused_signal")  # Emitted by StatusEffectManager
 signal status_effect_removed(effect_type: StatusTypes.StatusType)
+@warning_ignore("unused_signal")  # Alpha Command state tracking
 signal alpha_command_activated()
 signal alpha_command_deactivated()
 

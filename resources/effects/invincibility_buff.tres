@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="EffectData" load_steps=3 format=3 uid="uid://mw4rd3n_1nv1nc_buff"]
 
 [ext_resource type="Script" uid="uid://dnhpvmpj0050n" path="res://scripts/data/effect_data.gd" id="1"]
-[ext_resource type="Resource" uid="uid://mw4rd3n_1nv1nc_st4t" path="res://resources/status_effects/invincibility.tres" id="2_status"]
+[ext_resource type="Resource" uid="uid://dus7pasmnit5o" path="res://resources/status_effects/invincibility.tres" id="2_status"]
 
 [resource]
 script = ExtResource("1")

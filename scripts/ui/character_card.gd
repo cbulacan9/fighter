@@ -60,10 +60,10 @@ func is_unlocked() -> bool:
 
 
 ## Sets the selected state of this card.
-func set_selected(is_selected: bool) -> void:
-	_is_selected = is_selected
+func set_selected(selected: bool) -> void:
+	_is_selected = selected
 	if selection_highlight:
-		selection_highlight.visible = is_selected
+		selection_highlight.visible = _is_selected
 
 
 ## Returns true if this card is currently selected.

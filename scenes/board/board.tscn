@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/managers/board_manager.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/systems/grid.gd" id="2"]
-[ext_resource type="PackedScene" uid="uid://tile_scene" path="res://scenes/board/tile.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://12rqsm13tchk" path="res://scenes/board/tile.tscn" id="3"]
 [ext_resource type="Script" path="res://scripts/systems/input_handler.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/systems/match_detector.gd" id="5"]
 [ext_resource type="Script" path="res://scripts/systems/tile_spawner.gd" id="6"]

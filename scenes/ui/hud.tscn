@@ -1,11 +1,11 @@
 [gd_scene load_steps=8 format=3 uid="uid://babfl5iawwsm0"]
 
-[ext_resource type="Script" uid="uid://dybbk7mx7eb26" path="res://scripts/ui/hud.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/health_bar.tscn" id="2"]
-[ext_resource type="Script" uid="uid://fmhr2k0arls0" path="res://scripts/ui/mana_bar_container.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/ui/mana_bar_container.gd" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/ui/mana_bar.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/ui/sequence_indicator.tscn" id="5"]
-[ext_resource type="Script" uid="uid://4wingrbrc2ny" path="res://scripts/ui/status_effect_display.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/ui/status_effect_display.gd" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/ui/status_effect_icon.tscn" id="7"]
 
 [node name="HUD" type="Control"]

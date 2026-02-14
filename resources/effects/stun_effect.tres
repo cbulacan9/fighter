@@ -8,13 +8,10 @@ effect_id = "basic_stun"
 display_name = "Stun"
 effect_type = 6
 target = 2
-base_value = 0
-values_by_match_size = {
-3: 1,
-4: 2,
-5: 3
-}
+base_value = 1
+source_tile = null
+values_by_match_size = {}
 duration = 1.0
 custom_effect_id = ""
 status_types_to_remove = []
-description = "Stuns enemy board temporarily."
+description = "Stuns enemy board temporarily. Click effect uses base_value."

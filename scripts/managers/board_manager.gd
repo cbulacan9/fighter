@@ -1624,16 +1624,16 @@ func _ensure_minimum_tiles() -> void:
 		# No empty positions - need to replace existing tiles
 		# Get all non-specialty tile positions (excluding special tiles like pets and Alpha Command)
 		var replaceable: Array[Vector2i] = []
-		for row in range(Grid.ROWS):
+		for r in range(Grid.ROWS):
 			for col in range(Grid.COLS):
-				var tile := grid.get_tile(row, col)
+				var tile := grid.get_tile(r, col)
 				if tile and tile.tile_data:
 					# Never replace special tiles (pets, Alpha Command)
 					if TileTypeHelper.is_special_tile(tile.tile_data.tile_type):
 						continue
 					# Only replace tiles without min/max rules
 					if tile.tile_data.min_on_board == 0 and tile.tile_data.max_on_board <= 0:
-						replaceable.append(Vector2i(row, col))
+						replaceable.append(Vector2i(r, col))
 
 		if replaceable.is_empty():
 			# Cannot place tiles - free the spawned ones

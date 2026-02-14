@@ -35,6 +35,7 @@ signal sequence_broken()
 signal sequence_activated(pattern: SequencePattern, stacks: int)
 
 ## Signal for history updates (for UI) - now reports active tree info
+@warning_ignore("unused_signal")  # Legacy signal kept for backward compatibility
 signal history_updated(history: Array, highlighted_indices: Array)
 
 # === Multi-Tree State ===

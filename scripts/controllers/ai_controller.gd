@@ -440,6 +440,7 @@ func execute_move(move: Move) -> void:
 	move_executed.emit(move)
 
 
+@warning_ignore("unused_parameter")  # Move parameter not used in animation
 func _animate_move(tiles_data: Array[Dictionary], _move: Move) -> void:
 	## Animates tiles to their new positions, then processes matches
 	const ANIM_DURATION := 0.15

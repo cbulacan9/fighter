@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://dciefndl6v4ei"]
 
-[ext_resource type="Script" uid="uid://ckbmc0ymfi6le" path="res://scripts/ui/combo_tree_display.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/combo_tree_display.gd" id="1"]
 
 [node name="ComboTreeDisplay" type="Control"]
 custom_minimum_size = Vector2(275, 90)
