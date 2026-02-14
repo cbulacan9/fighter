@@ -11,14 +11,10 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/damage_number.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/ui/stun_overlay.tscn" id="10"]
 [ext_resource type="PackedScene" uid="uid://ns50i34klnpd" path="res://scenes/ui/mode_select_screen.tscn" id="11"]
-[ext_resource type="Script" uid="uid://b87rb21f2g0ut" path="res://scripts/ui/ability_announcement_spawner.gd" id="12"]
-[ext_resource type="PackedScene" path="res://scenes/ui/ability_announcement.tscn" id="13"]
-<<<<<<< Updated upstream
-[ext_resource type="PackedScene" path="res://scenes/ui/character_select.tscn" id="14"]
-=======
 [ext_resource type="PackedScene" uid="uid://c0d41a7noj8mi" path="res://scenes/ui/character_select.tscn" id="14"]
 [ext_resource type="PackedScene" uid="uid://b8m1n8h8wgn4b" path="res://scenes/ui/start_screen.tscn" id="15"]
->>>>>>> Stashed changes
+[ext_resource type="Script" uid="uid://b87rb21f2g0ut" path="res://scripts/ui/ability_announcement_spawner.gd" id="12"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ability_announcement.tscn" id="13"]
 
 [node name="Main" type="Node"]
 
@@ -78,6 +74,8 @@ number_scene = ExtResource("9")
 
 [node name="CharacterSelectScreen" parent="UI" instance=ExtResource("14")]
 visible = false
+
+[node name="StartScreen" parent="UI" instance=ExtResource("15")]
 
 [node name="AbilityAnnouncements" type="Node2D" parent="UI"]
 script = ExtResource("12")
