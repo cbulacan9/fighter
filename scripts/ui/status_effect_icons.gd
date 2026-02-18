@@ -58,6 +58,10 @@ static func _get_effect_color(effect_type: StatusTypes.StatusType) -> Color:
 			return Color(0.5, 0.5, 0.6)  # Gray
 		StatusTypes.StatusType.MANA_BLOCK:
 			return Color(0.6, 0.2, 0.8)  # Purple
+		StatusTypes.StatusType.ADRENALINE_BOOST:
+			return Color(1.0, 0.4, 0.1)  # Bright orange
+		StatusTypes.StatusType.ADRENALINE_DRAIN:
+			return Color(0.7, 0.1, 0.1)  # Dark red
 		_:
 			return Color(0.4, 0.4, 0.4)  # Default gray
 
@@ -77,6 +81,10 @@ static func _get_effect_symbol(effect_type: StatusTypes.StatusType) -> String:
 			return "ghost"  # Ghost outline
 		StatusTypes.StatusType.MANA_BLOCK:
 			return "cross"  # X mark / block
+		StatusTypes.StatusType.ADRENALINE_BOOST:
+			return "arrow_up"  # Upward arrow (strength boost)
+		StatusTypes.StatusType.ADRENALINE_DRAIN:
+			return "drops"  # Draining drops
 		_:
 			return "dot"
 
