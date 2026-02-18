@@ -108,6 +108,19 @@ func overheal(amount: int) -> int:
 	return amount
 
 
+## Drains HP directly, bypassing armor (for Adrenaline self-drain).
+func drain_hp(amount: int) -> int:
+	var old_hp := current_hp
+	current_hp = maxi(0, current_hp - amount)
+	var actual := old_hp - current_hp
+	if actual > 0:
+		hp_changed.emit(current_hp, max_hp)
+	if current_hp == 0 and not is_defeated:
+		is_defeated = true
+		defeated.emit()
+	return actual
+
+
 func add_armor(amount: int) -> int:
 	var armor_cap := max_armor if max_armor > 0 else max_hp
 	var actual := mini(amount, armor_cap - armor)

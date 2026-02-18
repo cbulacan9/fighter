@@ -6,6 +6,7 @@ var remaining_duration: float
 var stacks: int = 1
 var source: Fighter  # Who applied it
 var tick_timer: float = 0.0
+var value_override: float = -1.0  # If >= 0, overrides data.base_value
 
 
 func _init(effect_data: StatusEffectData, source_fighter: Fighter = null) -> void:
@@ -16,7 +17,8 @@ func _init(effect_data: StatusEffectData, source_fighter: Fighter = null) -> voi
 
 
 func get_value() -> float:
-	return data.base_value + (data.value_per_stack * (stacks - 1))
+	var base := value_override if value_override >= 0 else data.base_value
+	return base + (data.value_per_stack * (stacks - 1))
 
 
 func is_expired() -> bool:

@@ -314,22 +314,30 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 			var actual := source.overheal(effect_value)
 			healing_done.emit(source, actual)
 			source.reset_health_ultimate_trigger()
-			# Apply strength buff (ADRENALINE_BOOST) - replaces existing on re-match
+			# Clear existing adrenaline effects before reapplying
 			if status_effect_manager:
-				var boost_effect := preload("res://resources/status_effects/adrenaline_boost.tres").duplicate()
-				match match_result.count:
-					3: boost_effect.base_value = 0.4
-					4: boost_effect.base_value = 0.6
-					_: boost_effect.base_value = 0.8
-				status_effect_manager.apply(source, boost_effect, source, 1)
-			# Apply self HP drain (ADRENALINE_DRAIN) - replaces existing on re-match
+				status_effect_manager.remove(source, StatusTypes.StatusType.ADRENALINE_BOOST)
+				status_effect_manager.remove(source, StatusTypes.StatusType.ADRENALINE_DRAIN)
+			# Apply strength buff (ADRENALINE_BOOST)
 			if status_effect_manager:
-				var drain_effect := preload("res://resources/status_effects/adrenaline_drain.tres").duplicate()
-				match match_result.count:
-					3: drain_effect.base_value = 3.0
-					4: drain_effect.base_value = 6.0
-					_: drain_effect.base_value = 12.0
-				status_effect_manager.apply(source, drain_effect, source, 1)
+				var boost_data := preload("res://resources/status_effects/adrenaline_boost.tres")
+				status_effect_manager.apply(source, boost_data, source, 1)
+				var boost_effect := status_effect_manager.get_effect(source, StatusTypes.StatusType.ADRENALINE_BOOST)
+				if boost_effect:
+					match match_result.count:
+						3: boost_effect.value_override = 0.4
+						4: boost_effect.value_override = 0.6
+						_: boost_effect.value_override = 0.8
+			# Apply self HP drain (ADRENALINE_DRAIN)
+			if status_effect_manager:
+				var drain_data := preload("res://resources/status_effects/adrenaline_drain.tres")
+				status_effect_manager.apply(source, drain_data, source, 1)
+				var drain_effect := status_effect_manager.get_effect(source, StatusTypes.StatusType.ADRENALINE_DRAIN)
+				if drain_effect:
+					match match_result.count:
+						3: drain_effect.value_override = 3.0
+						4: drain_effect.value_override = 6.0
+						_: drain_effect.value_override = 12.0
 
 
 func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:

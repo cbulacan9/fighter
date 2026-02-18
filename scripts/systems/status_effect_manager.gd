@@ -331,9 +331,9 @@ func _process_tick(target: Fighter, effect: StatusEffect) -> void:
 			effect_ticked.emit(target, effect, damage)
 
 		StatusTypes.StatusType.ADRENALINE_DRAIN:
-			# Self-inflicted HP drain from adrenaline injection
+			# Self-inflicted HP drain bypasses armor (it's internal, not an attack)
 			var drain_damage := effect.get_value()
-			target.take_damage(int(drain_damage))
+			target.drain_hp(int(drain_damage))
 			effect_ticked.emit(target, effect, drain_damage)
 
 		StatusTypes.StatusType.BLEED:

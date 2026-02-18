@@ -133,6 +133,10 @@ func _get_placeholder_color(type: StatusTypes.StatusType) -> Color:
 			return Color(0.6, 0.3, 1, 1.0)  # Purple
 		StatusTypes.StatusType.INVINCIBILITY:
 			return Color(1.0, 0.9, 0.3)  # Gold
+		StatusTypes.StatusType.ADRENALINE_BOOST:
+			return Color(1.0, 0.4, 0.1)  # Bright orange
+		StatusTypes.StatusType.ADRENALINE_DRAIN:
+			return Color(0.7, 0.1, 0.1)  # Dark red
 		_:
 			return Color(0.5, 0.5, 0.5)  # Default gray
 
@@ -163,5 +167,9 @@ func _get_type_symbol(type: StatusTypes.StatusType) -> String:
 			return "S"
 		StatusTypes.StatusType.INVINCIBILITY:
 			return "I"
+		StatusTypes.StatusType.ADRENALINE_BOOST:
+			return "+"
+		StatusTypes.StatusType.ADRENALINE_DRAIN:
+			return "-"
 		_:
 			return "?"
