@@ -316,25 +316,19 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 			source.reset_health_ultimate_trigger()
 			# Apply strength buff (ADRENALINE_BOOST) - replaces existing on re-match
 			if status_effect_manager:
-				var boost_effect: StatusEffectData
+				var boost_effect := preload("res://resources/status_effects/adrenaline_boost.tres").duplicate()
 				match match_result.count:
-					3:
-						boost_effect = preload("res://resources/status_effects/adrenaline_boost_3.tres")
-					4:
-						boost_effect = preload("res://resources/status_effects/adrenaline_boost_4.tres")
-					_:
-						boost_effect = preload("res://resources/status_effects/adrenaline_boost_5.tres")
+					3: boost_effect.base_value = 0.4
+					4: boost_effect.base_value = 0.6
+					_: boost_effect.base_value = 0.8
 				status_effect_manager.apply(source, boost_effect, source, 1)
 			# Apply self HP drain (ADRENALINE_DRAIN) - replaces existing on re-match
 			if status_effect_manager:
-				var drain_effect: StatusEffectData
+				var drain_effect := preload("res://resources/status_effects/adrenaline_drain.tres").duplicate()
 				match match_result.count:
-					3:
-						drain_effect = preload("res://resources/status_effects/adrenaline_drain_3.tres")
-					4:
-						drain_effect = preload("res://resources/status_effects/adrenaline_drain_4.tres")
-					_:
-						drain_effect = preload("res://resources/status_effects/adrenaline_drain_5.tres")
+					3: drain_effect.base_value = 3.0
+					4: drain_effect.base_value = 6.0
+					_: drain_effect.base_value = 12.0
 				status_effect_manager.apply(source, drain_effect, source, 1)
 
 
