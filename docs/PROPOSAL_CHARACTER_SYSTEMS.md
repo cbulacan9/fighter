@@ -861,7 +861,7 @@ The AI will need updates to handle:
 - Serves as tutorial/onboarding character
 - No specialty tiles, no mana, no sequences
 - Simple ultimate: could be a powerful version of existing effects (e.g., "deals 50 damage" or "heals 50 HP")
-- Design TBD — consider a "Squire" or "Recruit" archetype
+- Design TBD — consider a "Detective" archetype
 
 ---
 

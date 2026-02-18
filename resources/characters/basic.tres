@@ -14,9 +14,9 @@
 [resource]
 script = ExtResource("1")
 character_id = "basic"
-display_name = "Squire"
+display_name = "The Detective"
 archetype = "Balanced"
-description = "A balanced fighter learning the ways of combat. The Squire has no special abilities but excels at mastering the fundamentals of matching tiles and managing resources. A perfect choice for beginners."
+description = "A balanced fighter learning the ways of combat. The Detective has no special abilities but excels at mastering the fundamentals of matching tiles and managing resources. A perfect choice for beginners."
 portrait = ExtResource("8_b2d3j")
 portrait_small = ExtResource("8_b2d3j")
 ultimate_portrait = ExtResource("8_b2d3j")

@@ -98,7 +98,7 @@ Create `/resources/characters/basic.tres`:
 
 ```gdscript
 character_id = "basic"
-display_name = "Squire"
+display_name = "The Detective"
 archetype = "Balanced"
 description = "A balanced fighter with no special abilities. Master the basics before advancing."
 
