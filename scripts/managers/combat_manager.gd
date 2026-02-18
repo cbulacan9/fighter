@@ -310,8 +310,8 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 				mana_system.add_mana_from_match(source, match_result.count)
 
 		TileTypes.Type.ADRENALINE:
-			# Burst heal based on match size
-			var actual := source.heal(effect_value)
+			# Burst overheal based on match size (can exceed max HP)
+			var actual := source.overheal(effect_value)
 			healing_done.emit(source, actual)
 			source.reset_health_ultimate_trigger()
 			# Apply strength buff (ADRENALINE_BOOST) - replaces existing on re-match
