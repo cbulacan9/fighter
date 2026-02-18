@@ -309,6 +309,34 @@ func apply_match_effect(source: Fighter, match_result: MatchDetector.MatchResult
 			if mana_system and not source.is_mana_blocked():
 				mana_system.add_mana_from_match(source, match_result.count)
 
+		TileTypes.Type.ADRENALINE:
+			# Burst heal based on match size
+			var actual := source.heal(effect_value)
+			healing_done.emit(source, actual)
+			source.reset_health_ultimate_trigger()
+			# Apply strength buff (ADRENALINE_BOOST) - replaces existing on re-match
+			if status_effect_manager:
+				var boost_effect: StatusEffectData
+				match match_result.count:
+					3:
+						boost_effect = preload("res://resources/status_effects/adrenaline_boost_3.tres")
+					4:
+						boost_effect = preload("res://resources/status_effects/adrenaline_boost_4.tres")
+					_:
+						boost_effect = preload("res://resources/status_effects/adrenaline_boost_5.tres")
+				status_effect_manager.apply(source, boost_effect, source, 1)
+			# Apply self HP drain (ADRENALINE_DRAIN) - replaces existing on re-match
+			if status_effect_manager:
+				var drain_effect: StatusEffectData
+				match match_result.count:
+					3:
+						drain_effect = preload("res://resources/status_effects/adrenaline_drain_3.tres")
+					4:
+						drain_effect = preload("res://resources/status_effects/adrenaline_drain_4.tres")
+					_:
+						drain_effect = preload("res://resources/status_effects/adrenaline_drain_5.tres")
+				status_effect_manager.apply(source, drain_effect, source, 1)
+
 
 func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 	var final_damage := base_damage
@@ -333,6 +361,12 @@ func _apply_damage(target: Fighter, source: Fighter, base_damage: int) -> void:
 			var attack_bonus := status_effect_manager.get_modifier(source, StatusTypes.StatusType.ATTACK_UP)
 			if attack_bonus > 0:
 				final_damage = int(float(final_damage) * (1.0 + attack_bonus))
+
+		# Apply ADRENALINE_BOOST buff (Detective's strength bonus from adrenaline)
+		if source != null and status_effect_manager.has_effect(source, StatusTypes.StatusType.ADRENALINE_BOOST):
+			var adrenaline_bonus := status_effect_manager.get_modifier(source, StatusTypes.StatusType.ADRENALINE_BOOST)
+			if adrenaline_bonus > 0:
+				final_damage = int(float(final_damage) * (1.0 + adrenaline_bonus))
 
 		# Apply Focus bonus (7.5% per stack, consumes all stacks)
 		if source != null and status_effect_manager.has_effect(source, StatusTypes.StatusType.FOCUS):
@@ -480,6 +514,7 @@ func _load_tile_data() -> void:
 	_tile_data_cache[TileTypes.Type.CANCEL] = preload("res://resources/tiles/cancel.tres")
 	_tile_data_cache[TileTypes.Type.ABSORB] = preload("res://resources/tiles/absorb.tres")
 	_tile_data_cache[TileTypes.Type.INVINCIBILITY_TILE] = preload("res://resources/tiles/invincibility_tile.tres")
+	_tile_data_cache[TileTypes.Type.ADRENALINE] = preload("res://resources/tiles/adrenaline.tres")
 
 
 func _get_effect_value(tile_type: TileTypes.Type, count: int) -> int:

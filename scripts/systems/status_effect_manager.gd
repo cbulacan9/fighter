@@ -330,6 +330,12 @@ func _process_tick(target: Fighter, effect: StatusEffect) -> void:
 			target.take_damage(int(damage))
 			effect_ticked.emit(target, effect, damage)
 
+		StatusTypes.StatusType.ADRENALINE_DRAIN:
+			# Self-inflicted HP drain from adrenaline injection
+			var drain_damage := effect.get_value()
+			target.take_damage(int(drain_damage))
+			effect_ticked.emit(target, effect, drain_damage)
+
 		StatusTypes.StatusType.BLEED:
 			# Bleed triggers on match via _on_target_matched, not on time
 			pass
@@ -420,7 +426,7 @@ func get_total_dot_damage(target: Fighter) -> float:
 	for effect in get_all_effects(target):
 		if effect.data.tick_behavior == StatusTypes.TickBehavior.ON_TIME:
 			match effect.data.effect_type:
-				StatusTypes.StatusType.POISON, StatusTypes.StatusType.BLEED:
+				StatusTypes.StatusType.POISON, StatusTypes.StatusType.BLEED, StatusTypes.StatusType.ADRENALINE_DRAIN:
 					total += effect.get_value()
 
 	return total

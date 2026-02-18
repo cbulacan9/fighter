@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1_cyggf"]
 [ext_resource type="Resource" uid="uid://hqjrruvp3k4f" path="res://resources/tiles/sword.tres" id="2"]
 [ext_resource type="Resource" uid="uid://fv70s103catj" path="res://resources/tiles/shield.tres" id="3"]
-[ext_resource type="Resource" uid="uid://d3rjj3potup4" path="res://resources/tiles/potion.tres" id="4"]
+[ext_resource type="Resource" uid="uid://cadrenalinetile" path="res://resources/tiles/adrenaline.tres" id="4"]
 [ext_resource type="Resource" uid="uid://dyobk44i85nnq" path="res://resources/tiles/lightning.tres" id="5"]
 [ext_resource type="Resource" uid="uid://i0bojd4lhc4f" path="res://resources/tiles/filler.tres" id="6"]
 [ext_resource type="Texture2D" uid="uid://dwvxnmiyhllfh" path="res://assets/portraits/librarian_character card.png" id="7_8rp5r"]
@@ -25,9 +25,9 @@ basic_tiles = Array[ExtResource("1_cyggf")]([ExtResource("2"), ExtResource("3"),
 spawn_weights = {
 0: 1.0,
 1: 1.0,
-2: 1.0,
 3: 1.0,
-4: 1.0
+4: 1.0,
+20: 1.0
 }
 max_armor = 30
 is_starter = true

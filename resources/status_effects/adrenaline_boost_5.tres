@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3 uid="uid://cadrboost5det"]
+
+[ext_resource type="Script" uid="uid://solsx176iov7" path="res://scripts/data/status_effect_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+effect_id = "adrenaline_boost_5"
+display_name = "Adrenaline Rush"
+effect_type = 14
+duration = 5.0
+max_stacks = 1
+stack_behavior = 3
+base_value = 0.8

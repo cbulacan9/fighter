@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PuzzleTileData" load_steps=4 format=3 uid="uid://n1cwrwq3o8oc"]
+
+[ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="2"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_adr01"]
+atlas = ExtResource("2")
+region = Rect2(256, 64, 64, 64)
+
+[resource]
+script = ExtResource("1")
+tile_type = 20
+display_name = "Adrenaline"
+sprite = SubResource("AtlasTexture_adr01")
+color = Color(1.0, 0.5, 0.0, 1)
+match_3_value = 15
+match_4_value = 30
+match_5_value = 60

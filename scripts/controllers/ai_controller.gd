@@ -565,6 +565,7 @@ func _load_tile_data() -> void:
 	_tile_data_cache[TileTypes.Type.CANCEL] = preload("res://resources/tiles/cancel.tres")
 	_tile_data_cache[TileTypes.Type.ABSORB] = preload("res://resources/tiles/absorb.tres")
 	_tile_data_cache[TileTypes.Type.INVINCIBILITY_TILE] = preload("res://resources/tiles/invincibility_tile.tres")
+	_tile_data_cache[TileTypes.Type.ADRENALINE] = preload("res://resources/tiles/adrenaline.tres")
 
 
 func _get_effect_value(tile_type: TileTypes.Type, count: int) -> int:
