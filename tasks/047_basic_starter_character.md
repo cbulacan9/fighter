@@ -1,7 +1,7 @@
 # Task 047: Basic Starter Character
 
 ## Objective
-Complete the Basic/Squire starter character using MVP tile mechanics.
+Complete the Basic/Detective starter character using MVP tile mechanics.
 
 ## Dependencies
 - Task 045 (Character Data Resource)
@@ -19,7 +19,7 @@ Create `/resources/characters/basic.tres`:
 [gd_resource type="Resource" script_class="CharacterData"]
 
 character_id = "basic"
-display_name = "Squire"
+display_name = "The Detective"
 archetype = "Balanced"
 description = "A balanced fighter learning the ways of combat. No special abilities, but reliable and consistent. Master the basics here before facing greater challenges."
 

@@ -1,6 +1,6 @@
 extends Node
 
-## Integration test for the Basic/Squire starter character.
+## Integration test for the Basic/Detective starter character.
 ## Validates that all pieces are properly configured and work together.
 
 var _passed: int = 0
@@ -59,8 +59,8 @@ func _test_basic_character_properties() -> void:
 
 	if basic.character_id != "basic":
 		errors.append("character_id should be 'basic', got '%s'" % basic.character_id)
-	if basic.display_name != "Squire":
-		errors.append("display_name should be 'Squire', got '%s'" % basic.display_name)
+	if basic.display_name != "The Detective":
+		errors.append("display_name should be 'The Detective', got '%s'" % basic.display_name)
 	if basic.archetype != "Balanced":
 		errors.append("archetype should be 'Balanced', got '%s'" % basic.archetype)
 	if basic.base_hp != 100:

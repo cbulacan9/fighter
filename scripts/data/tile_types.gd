@@ -23,6 +23,7 @@ enum Type {
 	CANCEL = 17,  # Warden - queues cancel defense
 	ABSORB = 18,  # Warden - queues absorb defense
 	INVINCIBILITY_TILE = 19,  # Warden ultimate - spawns when mana full, click to activate
+	ADRENALINE = 20,  # Detective - burst heal + strength buff + self HP drain
 }
 
 enum ClickCondition {

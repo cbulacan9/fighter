@@ -16,6 +16,8 @@ enum StatusType {
 	ABSORB_QUEUED,  # Warden - defense queued, absorbs damage
 	ABSORB_STORED,  # Warden - storing absorbed damage for release
 	INVINCIBILITY,  # Warden ultimate - complete damage immunity
+	ADRENALINE_BOOST,  # Detective - strength multiplier from adrenaline
+	ADRENALINE_DRAIN,  # Detective - self-damage DoT from adrenaline
 }
 
 enum StackBehavior {

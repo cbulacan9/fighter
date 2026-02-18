@@ -100,6 +100,14 @@ func heal(amount: int) -> int:
 	return actual
 
 
+## Heals beyond max HP (for Adrenaline). Returns actual amount healed.
+func overheal(amount: int) -> int:
+	if amount > 0:
+		current_hp += amount
+		hp_changed.emit(current_hp, max_hp)
+	return amount
+
+
 func add_armor(amount: int) -> int:
 	var armor_cap := max_armor if max_armor > 0 else max_hp
 	var actual := mini(amount, armor_cap - armor)
