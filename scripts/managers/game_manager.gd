@@ -362,6 +362,12 @@ func _setup_match() -> void:
 	winner_id = 0
 	_stats_tracker.reset()
 
+	# Clear stun overlays from previous match
+	if player_stun_overlay:
+		player_stun_overlay.hide_stun()
+	if enemy_stun_overlay:
+		enemy_stun_overlay.hide_stun()
+
 	# Prepare fighter data from selected characters or use defaults
 	_prepare_fighter_data()
 
