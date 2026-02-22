@@ -1,18 +1,18 @@
 [gd_resource type="Resource" script_class="PuzzleTileData" load_steps=4 format=3 uid="uid://crlvh5j8x2mwk"]
 
 [ext_resource type="Script" uid="uid://cg0v4521y8tg3" path="res://scripts/data/tile_data.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://b22ingg8egy2" path="res://assets/sprites/spritesheettiles_hunter.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://w04mei6g5bhv" path="res://assets/sprites/fullspritemap_pixel.png" id="2_42vd8"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_alpha_command"]
-atlas = ExtResource("2")
-region = Rect2(252, 66, 64, 64)
+[sub_resource type="AtlasTexture" id="AtlasTexture_2cquv"]
+atlas = ExtResource("2_42vd8")
+region = Rect2(0, 256, 64, 64)
 
 [resource]
 script = ExtResource("1")
 tile_type = 11
 display_name = "Alpha Command"
-sprite = SubResource("AtlasTexture_alpha_command")
-color = Color(0.6, 0.2, 0.8, 1)
+sprite = SubResource("AtlasTexture_2cquv")
+color = Color(0.76066303, 0.36263078, 0.16318989, 1)
 is_matchable = false
 is_clickable = true
 click_condition = 1
